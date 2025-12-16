@@ -299,6 +299,3 @@ flowchart TD
 * Staff: List + New + Profile + Edit
 * Finance: Overview + Daily + Monthly
 * Settings (Admin-only): Salon + Hours + Rules
-
-```
-```
