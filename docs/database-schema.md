@@ -22,11 +22,14 @@ erDiagram
 ## Prisma Schema (نسخه جدید)
 
 ```prisma
-// enums
+// =======================
+// Enums
+// =======================
+
 enum UserRole { MANAGER RECEPTIONIST STAFF }
 
 enum BookingStatus {
-  PENDING      // درخواست رزرو آنلاین (اختیاری، ولی پیشنهاد می‌شود)
+  PENDING
   CONFIRMED
   DONE
   CANCELED
@@ -37,10 +40,8 @@ enum BookingSource { IN_PERSON ONLINE }
 
 enum PaymentMethod { CASH CARD ONLINE }
 
-// وضعیت هر تراکنش پرداخت
 enum PaymentStatus { PAID REFUNDED VOID }
 
-// وضعیت کلی پرداخت روی رزرو (برای MVP مالی خیلی مهم)
 enum BookingPaymentState { UNPAID PARTIALLY_PAID PAID REFUNDED OVERPAID }
 
 // =======================
@@ -51,12 +52,12 @@ model Salon {
   id        String   @id @default(cuid())
   name      String
 
-  users     User[]
-  customers Customer[]
-  services  Service[]
-  bookings  Booking[]
-  shifts    Shift[]
-  settings  Settings?
+  users      User[]
+  services   Service[]
+  bookings   Booking[]
+  shifts     Shift[]
+  settings   Settings?
+  customers  SalonCustomerProfile[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -73,14 +74,16 @@ model Settings {
   workStartTime   String? // "09:00" (HH:mm)
   workEndTime     String? // "21:00" (HH:mm)
 
-  // رزرو آنلاین اگر فعال باشد می‌تواند PENDING بسازد
-  allowOnlineBooking Boolean @default(false)
+  allowOnlineBooking      Boolean @default(false)
   onlineBookingAutoConfirm Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+// -----------------------
+// Staff / Panel Users
+// -----------------------
 model User {
   id           String   @id @default(cuid())
   salonId      String
@@ -92,7 +95,6 @@ model User {
   role         UserRole
   isActive     Boolean  @default(true)
 
-  // Auth sessions (اگر JWT stateless دارید می‌توانید حذف کنید)
   sessions         Session[]
 
   shifts           Shift[]
@@ -115,9 +117,7 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // هش/توکن refresh (ترجیحاً hash ذخیره شود نه raw token)
   tokenHash String   @unique
-
   revokedAt DateTime?
   expiresAt DateTime
 
@@ -127,24 +127,58 @@ model Session {
   @@index([userId, expiresAt])
 }
 
-model Customer {
-  id        String @id @default(cuid())
-  salonId   String
-  salon     Salon  @relation(fields: [salonId], references: [id])
+// -----------------------
+// Global Customer Identity (cross-salon)
+// -----------------------
+model CustomerAccount {
+  id        String   @id @default(cuid())
 
-  fullName  String
-  phone     String
-  note      String?
+  // یک اکانت سراسری با شماره موبایل
+  phone     String   @unique
+  fullName  String?
 
-  bookings  Booking[]
+  // اگر OTP دارید (اختیاری برای MVP):
+  // otpHash      String?
+  // otpExpiresAt DateTime?
+
+  profiles  SalonCustomerProfile[]
+  bookings  Booking[] // برای تاریخچه سراسری مشتری
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([salonId, phone])
-  @@index([salonId, fullName])
+  @@index([phone])
 }
 
+// -----------------------
+// Per-salon CRM Profile
+// -----------------------
+model SalonCustomerProfile {
+  id                String @id @default(cuid())
+
+  salonId           String
+  salon             Salon  @relation(fields: [salonId], references: [id])
+
+  customerAccountId String
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+
+  // CRM مخصوص همین سالن
+  displayName       String?
+  note              String?
+
+  bookings          Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // هر مشتری در هر سالن فقط یک پروفایل
+  @@unique([salonId, customerAccountId])
+  @@index([salonId, displayName])
+}
+
+// -----------------------
+// Services / Shifts
+// -----------------------
 model Service {
   id              String @id @default(cuid())
   salonId         String
@@ -154,10 +188,9 @@ model Service {
   durationMinutes Int
   price           Int       // smallest unit (e.g. Rial)
   currency        String?   // "IRR"
+  isActive        Boolean   @default(true)
 
-  isActive        Boolean @default(true)
-
-  staff           User[]  @relation("UserServices")
+  staff           User[]    @relation("UserServices")
   bookings        Booking[]
 
   createdAt DateTime @default(now())
@@ -176,8 +209,8 @@ model Shift {
   user      User   @relation(fields: [userId], references: [id])
 
   dayOfWeek Int    // 0..6
-  startTime String // "10:00" (HH:mm) - validation in app
-  endTime   String // "18:00" (HH:mm) - validation in app
+  startTime String // "10:00"
+  endTime   String // "18:00"
   isActive  Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -187,13 +220,21 @@ model Shift {
   @@index([salonId, dayOfWeek])
 }
 
+// -----------------------
+// Booking (always belongs to a salon)
+// -----------------------
 model Booking {
   id              String @id @default(cuid())
   salonId         String
   salon           Salon  @relation(fields: [salonId], references: [id])
 
-  customerId      String
-  customer        Customer @relation(fields: [customerId], references: [id])
+  // رزرو به پروفایل سالن وصل است (CRM per-salon)
+  customerProfileId String
+  customerProfile   SalonCustomerProfile @relation(fields: [customerProfileId], references: [id])
+
+  // لینک مستقیم به اکانت سراسری برای history/پرتال مشتری
+  customerAccountId String
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id])
 
   serviceId       String
   service         Service @relation(fields: [serviceId], references: [id])
@@ -207,13 +248,12 @@ model Booking {
   startAt         DateTime @db.Timestamptz(6)
   endAt           DateTime @db.Timestamptz(6)
 
-  // Snapshot (رزروهای قدیمی با تغییرات سرویس خراب نمی‌شن)
+  // Snapshot
   serviceNameSnapshot     String
   serviceDurationSnapshot Int
   servicePriceSnapshot    Int
   currencySnapshot        String?
 
-  // مبلغ قابل پرداخت روی رزرو (برای پرداخت جزئی/چند تراکنشی)
   amountDueSnapshot       Int
   paymentState            BookingPaymentState @default(UNPAID)
 
@@ -221,7 +261,6 @@ model Booking {
   source          BookingSource @default(IN_PERSON)
   note            String?
 
-  // Cancellation / Completion metadata
   canceledAt       DateTime? @db.Timestamptz(6)
   cancelReason     String?
   canceledByUserId String?
@@ -235,25 +274,22 @@ model Booking {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Helpful constraints-ish:
-  // - enforce endAt > startAt in application or DB CHECK constraint
-  // - prevent overlaps in application or DB exclusion constraint
-
   @@index([salonId, startAt])
   @@index([salonId, staffId, startAt])
-  @@index([salonId, customerId, startAt])
   @@index([salonId, status, startAt])
-  @@index([salonId, paymentState, startAt])
+  @@index([customerAccountId, startAt]) // تاریخچه سراسری مشتری
+  @@index([customerProfileId, startAt]) // تاریخچه مشتری در یک سالن
 }
 
+// -----------------------
+// Payments
+// -----------------------
 model Payment {
   id        String @id @default(cuid())
 
   bookingId String
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  // نکته: برای refund می‌توانید amount را مثبت بگذارید و status=REFUNDED،
-  // یا مدل "amountSigned" بسازید. برای MVP این ساده‌تر است.
   amount    Int
   currency  String?
 
@@ -261,7 +297,6 @@ model Payment {
   method    PaymentMethod?
   paidAt    DateTime? @db.Timestamptz(6)
 
-  // optional: reference / gateway tracking
   referenceCode String?
 
   createdAt DateTime @default(now())
@@ -270,6 +305,7 @@ model Payment {
   @@index([bookingId, paidAt])
   @@index([status, paidAt])
 }
+
 
 ```
 
