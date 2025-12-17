@@ -64,17 +64,18 @@ model Salon {
 }
 
 model Settings {
-  id              String @id @default(cuid())
-  salonId         String @unique
-  salon           Salon  @relation(fields: [salonId], references: [id])
+  id        String @id @default(cuid())
+
+  salonId   String @unique
+  salon     Salon  @relation(fields: [salonId], references: [id])
 
   preventOverlaps Boolean @default(true)
 
-  timeZone        String? // e.g. "Asia/Tehran"
-  workStartTime   String? // "09:00" (HH:mm)
-  workEndTime     String? // "21:00" (HH:mm)
+  timeZone      String?
+  workStartTime String?
+  workEndTime   String?
 
-  allowOnlineBooking      Boolean @default(false)
+  allowOnlineBooking       Boolean @default(false)
   onlineBookingAutoConfirm Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -86,6 +87,7 @@ model Settings {
 // -----------------------
 model User {
   id           String   @id @default(cuid())
+
   salonId      String
   salon        Salon    @relation(fields: [salonId], references: [id])
 
@@ -102,10 +104,11 @@ model User {
   bookingsCreated  Booking[] @relation("BookingCreator")
   canceledBookings Booking[] @relation("BookingCanceler")
 
-  services     Service[] @relation("UserServices")
+  // join table (explicit)
+  userServices UserService[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([salonId, phone])
   @@index([salonId, role])
@@ -114,6 +117,7 @@ model User {
 
 model Session {
   id        String   @id @default(cuid())
+
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -131,18 +135,12 @@ model Session {
 // Global Customer Identity (cross-salon)
 // -----------------------
 model CustomerAccount {
-  id        String   @id @default(cuid())
+  id       String   @id @default(cuid())
+  phone    String   @unique
+  fullName String?
 
-  // یک اکانت سراسری با شماره موبایل
-  phone     String   @unique
-  fullName  String?
-
-  // اگر OTP دارید (اختیاری برای MVP):
-  // otpHash      String?
-  // otpExpiresAt DateTime?
-
-  profiles  SalonCustomerProfile[]
-  bookings  Booking[] // برای تاریخچه سراسری مشتری
+  profiles SalonCustomerProfile[]
+  bookings Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -162,18 +160,17 @@ model SalonCustomerProfile {
   customerAccountId String
   customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
 
-  // CRM مخصوص همین سالن
-  displayName       String?
-  note              String?
+  displayName String?
+  note        String?
 
-  bookings          Booking[]
+  bookings Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // هر مشتری در هر سالن فقط یک پروفایل
   @@unique([salonId, customerAccountId])
   @@index([salonId, displayName])
+  @@index([customerAccountId])
 }
 
 // -----------------------
@@ -181,17 +178,20 @@ model SalonCustomerProfile {
 // -----------------------
 model Service {
   id              String @id @default(cuid())
+
   salonId         String
   salon           Salon  @relation(fields: [salonId], references: [id])
 
   name            String
   durationMinutes Int
-  price           Int       // smallest unit (e.g. Rial)
-  currency        String?   // "IRR"
-  isActive        Boolean   @default(true)
+  price           Int
+  currency        String // NON-NULL (aligned with DBML)
+  isActive        Boolean @default(true)
 
-  staff           User[]    @relation("UserServices")
   bookings        Booking[]
+
+  // join table (explicit)
+  userServices UserService[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -200,17 +200,30 @@ model Service {
   @@index([salonId, name])
 }
 
+model UserService {
+  userId    String
+  serviceId String
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, serviceId])
+  @@index([serviceId])
+  @@index([userId])
+}
+
 model Shift {
   id        String @id @default(cuid())
+
   salonId   String
   salon     Salon  @relation(fields: [salonId], references: [id])
 
   userId    String
   user      User   @relation(fields: [userId], references: [id])
 
-  dayOfWeek Int    // 0..6
-  startTime String // "10:00"
-  endTime   String // "18:00"
+  dayOfWeek Int
+  startTime String
+  endTime   String
   isActive  Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -221,55 +234,54 @@ model Shift {
 }
 
 // -----------------------
-// Booking (always belongs to a salon)
+// Booking
 // -----------------------
 model Booking {
-  id              String @id @default(cuid())
-  salonId         String
-  salon           Salon  @relation(fields: [salonId], references: [id])
+  id        String @id @default(cuid())
 
-  // رزرو به پروفایل سالن وصل است (CRM per-salon)
+  salonId   String
+  salon     Salon  @relation(fields: [salonId], references: [id])
+
   customerProfileId String
   customerProfile   SalonCustomerProfile @relation(fields: [customerProfileId], references: [id])
 
-  // لینک مستقیم به اکانت سراسری برای history/پرتال مشتری
   customerAccountId String
   customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id])
 
-  serviceId       String
-  service         Service @relation(fields: [serviceId], references: [id])
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
 
-  staffId         String
-  staff           User @relation("BookingStaff", fields: [staffId], references: [id])
+  staffId   String
+  staff     User @relation("BookingStaff", fields: [staffId], references: [id])
 
   createdByUserId String
   createdBy       User @relation("BookingCreator", fields: [createdByUserId], references: [id])
 
-  startAt         DateTime @db.Timestamptz(6)
-  endAt           DateTime @db.Timestamptz(6)
+  startAt   DateTime @db.Timestamptz(6)
+  endAt     DateTime @db.Timestamptz(6)
 
-  // Snapshot
+  // Snapshot (NON-NULL)
   serviceNameSnapshot     String
   serviceDurationSnapshot Int
   servicePriceSnapshot    Int
-  currencySnapshot        String?
+  currencySnapshot        String
 
-  amountDueSnapshot       Int
-  paymentState            BookingPaymentState @default(UNPAID)
+  amountDueSnapshot Int
+  paymentState      BookingPaymentState @default(UNPAID)
 
-  status          BookingStatus @default(CONFIRMED)
-  source          BookingSource @default(IN_PERSON)
-  note            String?
+  status BookingStatus @default(CONFIRMED)
+  source BookingSource @default(IN_PERSON)
+  note   String?
 
   canceledAt       DateTime? @db.Timestamptz(6)
   cancelReason     String?
   canceledByUserId String?
   canceledBy       User? @relation("BookingCanceler", fields: [canceledByUserId], references: [id])
 
-  completedAt      DateTime? @db.Timestamptz(6)
-  noShowAt         DateTime? @db.Timestamptz(6)
+  completedAt DateTime? @db.Timestamptz(6)
+  noShowAt    DateTime? @db.Timestamptz(6)
 
-  payments         Payment[]
+  payments Payment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -277,25 +289,26 @@ model Booking {
   @@index([salonId, startAt])
   @@index([salonId, staffId, startAt])
   @@index([salonId, status, startAt])
-  @@index([customerAccountId, startAt]) // تاریخچه سراسری مشتری
-  @@index([customerProfileId, startAt]) // تاریخچه مشتری در یک سالن
+  @@index([salonId, paymentState, startAt]) // ✅ was missing before
+  @@index([customerAccountId, startAt])
+  @@index([customerProfileId, startAt])
 }
 
 // -----------------------
 // Payments
 // -----------------------
 model Payment {
-  id        String @id @default(cuid())
+  id String @id @default(cuid())
 
   bookingId String
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  amount    Int
-  currency  String?
+  amount   Int
+  currency String
 
-  status    PaymentStatus @default(PAID)
-  method    PaymentMethod?
-  paidAt    DateTime? @db.Timestamptz(6)
+  status PaymentStatus @default(PAID)
+  method PaymentMethod
+  paidAt  DateTime? @db.Timestamptz(6)
 
   referenceCode String?
 
