@@ -9,14 +9,26 @@
 ```mermaid
 erDiagram
   SALON ||--o{ USER : has
-  SALON ||--o{ CUSTOMER : has
+  SALON ||--o{ SALON_CUSTOMER_PROFILE : has
+  CUSTOMER_ACCOUNT ||--o{ SALON_CUSTOMER_PROFILE : has
   SALON ||--o{ SERVICE : has
   SALON ||--o{ BOOKING : has
   USER  ||--o{ SHIFT : has
-  CUSTOMER ||--o{ BOOKING : books
+  SALON_CUSTOMER_PROFILE ||--o{ BOOKING : books
+  CUSTOMER_ACCOUNT ||--o{ BOOKING : identity
   SERVICE  ||--o{ BOOKING : used_in
   BOOKING  ||--o{ PAYMENT : has
   USER ||--o{ BOOKING : staff
+  BOOKING ||--|| BOOKING_COMMISSION : may_have
+  SALON ||--|| SALON_COMMISSION_POLICY : has
+  BOOKING ||--o{ REVIEW : has
+  SALON ||--o{ SALON_PAGE : has
+  SALON_PAGE ||--o{ SALON_PAGE_SECTION : has
+  SALON ||--o{ SALON_MEDIA : has
+  SALON ||--o{ SALON_LINK : has
+  SALON ||--o{ SALON_ADDRESS : has
+  SALON ||--o{ SALON_SLUG_HISTORY : has
+  SALON_PAGE ||--o{ SALON_PAGE_SLUG_HISTORY : has
 ```
 
 ## Prisma Schema (نسخه جدید)
@@ -112,7 +124,7 @@ model Salon {
   id        String   @id @default(cuid())
   name      String
 
-  // ✅ Public identity (site)
+  // Public identity (site)
   slug      String   @unique
   description    String?
   seoTitle       String?
@@ -139,7 +151,7 @@ model Salon {
   reviews Review[]
 
   // Commission
-  commissionPolicy SalonCommissionPolicy?
+  commissionPolicy   SalonCommissionPolicy?
   bookingCommissions BookingCommission[]
 
   createdAt DateTime @default(now())
@@ -182,7 +194,7 @@ model User {
   role         UserRole
   isActive     Boolean  @default(true)
 
-  // ✅ Public profile (Team page)
+  // Public profile (Team page)
   isPublic   Boolean @default(false)
   publicName String?
   bio        String?
@@ -375,8 +387,8 @@ model Booking {
   completedAt DateTime? @db.Timestamptz(6)
   noShowAt    DateTime? @db.Timestamptz(6)
 
-  payments Payment[]
-  reviews  Review[]
+  payments   Payment[]
+  reviews    Review[]
   commission BookingCommission?
 
   createdAt DateTime @default(now())
@@ -442,6 +454,7 @@ model Review {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // allows: 1 SALON review per booking + 1 SERVICE review per booking+service
   @@unique([bookingId, target, serviceId])
   @@index([salonId, status, createdAt])
   @@index([serviceId, status, createdAt])
@@ -468,8 +481,11 @@ model SalonCommissionPolicy {
   fixedAmount Int?
   currency    String?
 
+  // Usually only charge commission for ONLINE bookings
   applyToOnlineOnly Boolean @default(true)
-  minimumFeeAmount  Int?
+
+  // Optional minimum fee
+  minimumFeeAmount Int?
 
   isActive Boolean @default(true)
 
@@ -490,6 +506,7 @@ model BookingCommission {
 
   status CommissionStatus @default(PENDING)
 
+  // base used to calculate commission (choose: amountDueSnapshot or paid sum)
   baseAmount Int
   currency   String
 
@@ -498,6 +515,7 @@ model BookingCommission {
   percentBps Int?
   fixedAmount Int?
 
+  // final commission amount
   commissionAmount Int
 
   calculatedAt DateTime? @db.Timestamptz(6)
@@ -576,6 +594,7 @@ model SalonPage {
   status      PageStatus @default(DRAFT)
   publishedAt DateTime? @db.Timestamptz(6)
 
+  // SEO per-page
   seoTitle       String?
   seoDescription String?
   canonicalPath  String?
@@ -588,7 +607,7 @@ model SalonPage {
 
   structuredDataJson String?
 
-  sections SalonPageSection[]
+  sections    SalonPageSection[]
   slugHistory SalonPageSlugHistory[]
 
   createdAt DateTime @default(now())
@@ -607,7 +626,7 @@ model SalonPageSection {
   page   SalonPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   type PageSectionType
-  dataJson String
+  dataJson String // block config JSON (NO HTML)
 
   sortOrder Int @default(0)
   isEnabled Boolean @default(true)
@@ -631,6 +650,8 @@ model SalonMedia {
 
   url      String
   thumbUrl String?
+
+  // SEO for images
   altText  String?
 
   category String?
@@ -652,9 +673,9 @@ model SalonLink {
   salonId String
   salon   Salon @relation(fields: [salonId], references: [id])
 
-  type  LinkType
-  label String?
-  value String
+  type   LinkType
+  label  String?
+  value  String
 
   isPrimary Boolean @default(false)
   isActive  Boolean @default(true)
@@ -667,6 +688,7 @@ model SalonLink {
   @@index([salonId, isActive])
 }
 
+// Address (Iran-friendly)
 model SalonAddress {
   id String @id @default(cuid())
 
@@ -696,6 +718,7 @@ model SalonAddress {
   @@index([city])
 }
 
+// Slug history for 301 redirects (SEO)
 model SalonSlugHistory {
   id String @id @default(cuid())
 
@@ -721,15 +744,12 @@ model SalonPageSlugHistory {
   @@index([pageId, createdAt])
   @@index([oldSlug])
 }
-
-
 ```
 
 ## نکات اجرایی کوتاه
 
-- **Snapshotها** (serviceNameSnapshot, servicePriceSnapshot, amountDueSnapshot) را هنگام ساخت رزرو از Service پر کنید.
-- **paymentState** را بعد از هر Payment با جمع پرداخت‌ها/ریفاندها به‌روزرسانی کنید.
+- **Snapshotها** (`serviceNameSnapshot`, `servicePriceSnapshot`, `amountDueSnapshot`) را هنگام ساخت رزرو از `Service` پر کنید.
+- `paymentState` را بعد از هر `Payment` با جمع پرداخت‌ها/ریفاندها به‌روزرسانی کنید.
 - **جلوگیری از تداخل رزروها**:
   - MVP: در لایه اپلیکیشن با چک بازه زمانی `[startAt, endAt)` برای همان `staffId`.
   - Production (Postgres): استفاده از *Exclusion Constraint* برای جلوگیری قطعی overlap.
-  - db diagram https://dbdiagram.io/d/693e5c1ce877c63074bdfa38
