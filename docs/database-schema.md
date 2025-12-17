@@ -753,3 +753,4 @@ model SalonPageSlugHistory {
 - **جلوگیری از تداخل رزروها**:
   - MVP: در لایه اپلیکیشن با چک بازه زمانی `[startAt, endAt)` برای همان `staffId`.
   - Production (Postgres): استفاده از *Exclusion Constraint* برای جلوگیری قطعی overlap.
+  - RDB Diagram https://dbdiagram.io/d/693e5c1ce877c63074bdfa38
