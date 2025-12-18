@@ -1,0 +1,74 @@
+// src/config/env.ts
+import "dotenv/config";
+import { z } from "zod";
+
+const toBool = (v: unknown) => {
+  if (typeof v !== "string") return v;
+  const s = v.trim().toLowerCase();
+  if (["true", "1", "yes", "y", "on"].includes(s)) return true;
+  if (["false", "0", "no", "n", "off"].includes(s)) return false;
+  return v;
+};
+
+const corsOriginTransform = (v: unknown) => {
+  if (typeof v !== "string") return v;
+  const trimmed = v.trim();
+  if (!trimmed) return [];
+  // allow "*" OR comma-separated
+  if (trimmed === "*") return "*";
+  return trimmed.split(",").map((x) => x.trim()).filter(Boolean);
+};
+
+const EnvSchema = z.object({
+  // App
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_NAME: z.string().default("sevra"),
+  PORT: z.coerce.number().int().positive().default(3000),
+  LOG_LEVEL: z.string().default("info"),
+
+  // JWT / Security
+  JWT_ACCESS_SECRET: z.string().min(10, "JWT_ACCESS_SECRET is too short"),
+  JWT_REFRESH_SECRET: z.string().min(10, "JWT_REFRESH_SECRET is too short"),
+  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
+  JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+  COOKIE_SECRET: z.string().min(10).optional(),
+
+  // CORS
+  CORS_ORIGIN: z
+    .preprocess(corsOriginTransform, z.union([z.literal("*"), z.array(z.string().min(1))]))
+    .default([]),
+  CORS_CREDENTIALS: z.preprocess(toBool, z.boolean()).default(true),
+
+  // Database
+  DATABASE_URL: z.string().min(1),
+
+  // Redis
+  REDIS_URL: z.string().min(1).optional(),
+
+  // Rate Limiting
+  RATE_LIMIT_ENABLED: z.preprocess(toBool, z.boolean()).default(true),
+  RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(10),
+  RATE_LIMIT_DURATION: z.coerce.number().int().positive().default(1), // seconds
+  RATE_LIMIT_KEY_PREFIX: z.string().default("rl"),
+  RATE_LIMIT_BLOCK_DURATION: z.coerce.number().int().nonnegative().default(60),
+  RATE_LIMIT_STORE: z.enum(["redis", "memory"]).default("redis"),
+
+  // Optional flags
+  COMPRESSION_ENABLED: z.preprocess(toBool, z.boolean()).default(true),
+  HELMET_ENABLED: z.preprocess(toBool, z.boolean()).default(true),
+
+  // Proxy
+  TRUST_PROXY: z.coerce.number().int().nonnegative().default(0),
+});
+
+const parsed = EnvSchema.safeParse(process.env);
+
+if (!parsed.success) {
+  // خروجی خطاها برای دیباگ
+  console.error("❌ Invalid environment variables:");
+  console.error(parsed.error.flatten().fieldErrors);
+  throw new Error("Invalid environment variables");
+}
+
+export const env = parsed.data;
+export type Env = typeof env;
