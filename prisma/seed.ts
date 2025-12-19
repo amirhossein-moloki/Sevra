@@ -195,6 +195,35 @@ function tehranYMDKey(date: Date) {
   return `${y}-${m}-${day}`;
 }
 
+type PayPlan = {
+  amount: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  paidAt: Date | null;
+  referenceCode?: string | null;
+};
+
+function derivePaymentState(amountDue: number, payments: PayPlan[]): BookingPaymentState {
+  const paidTotal = payments
+    .filter((p) => p.status === PaymentStatus.PAID)
+    .reduce((sum, p) => sum + p.amount, 0);
+  const refundedTotal = payments
+    .filter((p) => p.status === PaymentStatus.REFUNDED)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const netPaid = paidTotal - refundedTotal;
+
+  if (payments.some((p) => p.status === PaymentStatus.REFUNDED) && netPaid <= 0) {
+    return BookingPaymentState.REFUNDED;
+  }
+
+  if (netPaid <= 0) return BookingPaymentState.UNPAID;
+  if (netPaid < amountDue) return BookingPaymentState.PARTIALLY_PAID;
+  if (netPaid === amountDue) return BookingPaymentState.PAID;
+
+  return BookingPaymentState.OVERPAID;
+}
+
 async function clearAll() {
   await prisma.commissionPayment.deleteMany();
   await prisma.bookingCommission.deleteMany();
@@ -964,10 +993,7 @@ async function main() {
         const amountDue = service.price;
 
         // Payment plan
-        type PayPlan = { amount: number; method: PaymentMethod; status: PaymentStatus; paidAt: Date | null; referenceCode?: string | null };
         const paymentsPlan: PayPlan[] = [];
-
-        let paymentState: BookingPaymentState = BookingPaymentState.UNPAID;
 
         if (status === BookingStatus.DONE) {
           const method =
@@ -982,7 +1008,6 @@ async function main() {
               paidAt: new Date(endAt.getTime() - randInt(0, 20) * 60_000),
               referenceCode: method === PaymentMethod.ONLINE ? `TRX-${randInt(100000, 999999)}` : null,
             });
-            paymentState = BookingPaymentState.PAID;
           } else {
             // partial
             const paid = Math.round(amountDue * 0.5);
@@ -993,7 +1018,6 @@ async function main() {
               paidAt: new Date(endAt.getTime() - randInt(0, 20) * 60_000),
               referenceCode: null,
             });
-            paymentState = BookingPaymentState.PARTIALLY_PAID;
           }
 
           // خیلی کم overpaid (مثلاً انعام یا اشتباه)
@@ -1005,7 +1029,6 @@ async function main() {
               paidAt: new Date(endAt.getTime()),
               referenceCode: null,
             });
-            paymentState = BookingPaymentState.OVERPAID;
           }
         }
 
@@ -1020,7 +1043,6 @@ async function main() {
               paidAt: status === BookingStatus.PENDING ? null : new Date(startAt.getTime() - 2 * 60 * 60_000),
               referenceCode: `TRX-${randInt(100000, 999999)}`,
             });
-            paymentState = status === BookingStatus.PENDING ? BookingPaymentState.UNPAID : BookingPaymentState.PARTIALLY_PAID;
           }
         }
 
@@ -1050,9 +1072,6 @@ async function main() {
               paidAt: new Date(canceledAt.getTime() + randInt(5, 60) * 60_000),
               referenceCode: `RF-${randInt(100000, 999999)}`,
             });
-            paymentState = BookingPaymentState.REFUNDED;
-          } else {
-            paymentState = BookingPaymentState.UNPAID;
           }
         }
 
@@ -1072,9 +1091,10 @@ async function main() {
               paidAt: new Date(startAt.getTime() - 3 * 60 * 60_000),
               referenceCode: `TRX-${randInt(100000, 999999)}`,
             });
-            paymentState = BookingPaymentState.PARTIALLY_PAID;
           }
         }
+
+        const paymentState = derivePaymentState(amountDue, paymentsPlan);
 
         const booking = await prisma.booking.create({
           data: {
