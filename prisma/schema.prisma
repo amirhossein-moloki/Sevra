@@ -1,0 +1,784 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =======================
+// Enums
+// =======================
+
+enum UserRole {
+  MANAGER
+  RECEPTIONIST
+  STAFF
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  DONE
+  CANCELED
+  NO_SHOW
+}
+
+enum BookingSource {
+  IN_PERSON
+  ONLINE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  ONLINE
+}
+
+// ✅ updated: needed for online flows
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  VOID
+}
+
+enum BookingPaymentState {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+  OVERPAID
+}
+
+// ---- Site/CMS + SEO ----
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PageType {
+  HOME
+  ABOUT
+  SERVICES
+  GALLERY
+  TEAM
+  CONTACT
+  CUSTOM
+}
+
+enum PageSectionType {
+  HERO
+  RICH_TEXT
+  HIGHLIGHTS
+  SERVICES_GRID
+  STAFF_GRID
+  GALLERY_GRID
+  TESTIMONIALS
+  CONTACT_CARD
+  MAP
+  FAQ
+  CTA
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum MediaPurpose {
+  COVER
+  GALLERY
+  BEFORE_AFTER
+  LOGO
+}
+
+enum LinkType {
+  INSTAGRAM
+  WHATSAPP
+  TELEGRAM
+  WEBSITE
+  PHONE
+  GOOGLE_MAP
+}
+
+enum ReviewTarget {
+  SALON
+  SERVICE
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+  DELETED
+}
+
+enum RobotsIndex {
+  INDEX
+  NOINDEX
+}
+
+enum RobotsFollow {
+  FOLLOW
+  NOFOLLOW
+}
+
+// ---- Commission ----
+enum CommissionType {
+  PERCENT
+  FIXED
+}
+
+enum CommissionStatus {
+  PENDING
+  ACCRUED
+  CHARGED
+  WAIVED
+  REFUNDED
+}
+
+enum CommissionPaymentMethod {
+  CASH
+  CARD
+  ONLINE
+  TRANSFER
+}
+
+enum CommissionPaymentStatus {
+  PENDING
+  PAID
+  VOID
+  REFUNDED
+}
+
+// =======================
+// Models
+// =======================
+
+model Salon {
+  id        String   @id @default(cuid())
+  name      String
+
+  // Public identity (site)
+  slug      String   @unique
+  description    String?
+  seoTitle       String?
+  seoDescription String?
+
+  users      User[]
+  services   Service[]
+  bookings   Booking[]
+  shifts     Shift[]
+  settings   Settings?
+
+  // CRM
+  customers  SalonCustomerProfile[]
+
+  // Site builder / SEO
+  siteSettings SalonSiteSettings?
+  pages        SalonPage[]
+  media        SalonMedia[]
+  links        SalonLink[]
+  addresses    SalonAddress[]
+  slugHistory  SalonSlugHistory[]
+
+  // Reviews
+  reviews Review[]
+
+  // Commission
+  commissionPolicy   SalonCommissionPolicy?
+  bookingCommissions BookingCommission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+}
+
+model Settings {
+  id        String @id @default(cuid())
+
+  salonId   String @unique
+  salon     Salon  @relation(fields: [salonId], references: [id])
+
+  preventOverlaps Boolean @default(true)
+
+  timeZone      String?
+  workStartTime String?
+  workEndTime   String?
+
+  allowOnlineBooking       Boolean @default(false)
+  onlineBookingAutoConfirm Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------
+// Staff / Panel Users
+// -----------------------
+model User {
+  id           String   @id @default(cuid())
+
+  salonId      String
+  salon        Salon    @relation(fields: [salonId], references: [id])
+
+  fullName     String
+  phone        String
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+
+  // Public profile (Team page)
+  isPublic   Boolean @default(false)
+  publicName String?
+  bio        String?
+  avatarUrl  String?
+
+  sessions         Session[]
+
+  shifts           Shift[]
+  bookingsAsStaff  Booking[] @relation("BookingStaff")
+  bookingsCreated  Booking[] @relation("BookingCreator")
+  canceledBookings Booking[] @relation("BookingCanceler")
+
+  // join table (explicit)
+  userServices UserService[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([salonId, phone])
+  @@index([salonId, role])
+  @@index([salonId, isActive])
+  @@index([salonId, isPublic])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  revokedAt DateTime?
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, expiresAt])
+}
+
+// -----------------------
+// Global Customer Identity (cross-salon)
+// -----------------------
+model CustomerAccount {
+  id       String   @id @default(cuid())
+  phone    String   @unique
+  fullName String?
+
+  profiles SalonCustomerProfile[]
+  bookings Booking[]
+  reviews  Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phone])
+}
+
+// -----------------------
+// Per-salon CRM Profile
+// -----------------------
+model SalonCustomerProfile {
+  id                String @id @default(cuid())
+
+  salonId           String
+  salon             Salon  @relation(fields: [salonId], references: [id])
+
+  customerAccountId String
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+
+  displayName String?
+  note        String?
+
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([salonId, customerAccountId])
+  @@index([salonId, displayName])
+  @@index([customerAccountId])
+}
+
+// -----------------------
+// Services / Shifts
+// -----------------------
+model Service {
+  id              String @id @default(cuid())
+
+  salonId         String
+  salon           Salon  @relation(fields: [salonId], references: [id])
+
+  name            String
+  durationMinutes Int
+  price           Int
+  currency        String
+  isActive        Boolean @default(true)
+
+  bookings        Booking[]
+  reviews         Review[]
+
+  // join table (explicit)
+  userServices UserService[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salonId, isActive])
+  @@index([salonId, name])
+}
+
+model UserService {
+  userId    String
+  serviceId String
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, serviceId])
+  @@index([serviceId])
+  @@index([userId])
+}
+
+model Shift {
+  id        String @id @default(cuid())
+
+  salonId   String
+  salon     Salon  @relation(fields: [salonId], references: [id])
+
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salonId, userId, dayOfWeek])
+  @@index([salonId, dayOfWeek])
+}
+
+// -----------------------
+// Booking
+// -----------------------
+model Booking {
+  id        String @id @default(cuid())
+
+  salonId   String
+  salon     Salon  @relation(fields: [salonId], references: [id])
+
+  customerProfileId String
+  customerProfile   SalonCustomerProfile @relation(fields: [customerProfileId], references: [id])
+
+  customerAccountId String
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id])
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  staffId   String
+  staff     User @relation("BookingStaff", fields: [staffId], references: [id])
+
+  createdByUserId String
+  createdBy       User @relation("BookingCreator", fields: [createdByUserId], references: [id])
+
+  startAt   DateTime @db.Timestamptz(6)
+  endAt     DateTime @db.Timestamptz(6)
+
+  // Snapshot (NON-NULL)
+  serviceNameSnapshot     String
+  serviceDurationSnapshot Int
+  servicePriceSnapshot    Int
+  currencySnapshot        String
+
+  amountDueSnapshot Int
+  paymentState      BookingPaymentState @default(UNPAID)
+
+  status BookingStatus @default(CONFIRMED)
+  source BookingSource @default(IN_PERSON)
+  note   String?
+
+  canceledAt       DateTime? @db.Timestamptz(6)
+  cancelReason     String?
+  canceledByUserId String?
+  canceledBy       User? @relation("BookingCanceler", fields: [canceledByUserId], references: [id])
+
+  completedAt DateTime? @db.Timestamptz(6)
+  noShowAt    DateTime? @db.Timestamptz(6)
+
+  payments   Payment[]
+  reviews    Review[]
+  commission BookingCommission?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salonId, startAt])
+  @@index([salonId, staffId, startAt])
+  @@index([salonId, status, startAt])
+  @@index([customerAccountId, startAt])
+  @@index([customerProfileId, startAt])
+  @@index([salonId, paymentState, startAt])
+}
+
+// -----------------------
+// Payments
+// -----------------------
+model Payment {
+  id String @id @default(cuid())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  amount   Int
+  currency String
+
+  status PaymentStatus @default(PAID)
+  method PaymentMethod
+  paidAt  DateTime? @db.Timestamptz(6)
+
+  referenceCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId, paidAt])
+  @@index([status, paidAt])
+}
+
+// =====================================================
+// Reviews
+// =====================================================
+model Review {
+  id String @id @default(cuid())
+
+  salonId String
+  salon   Salon @relation(fields: [salonId], references: [id])
+
+  customerAccountId String
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id])
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  target  ReviewTarget
+  serviceId String?
+  service  Service? @relation(fields: [serviceId], references: [id])
+
+  rating  Int
+  comment String?
+
+  status ReviewStatus @default(PUBLISHED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // allows: 1 SALON review per booking + 1 SERVICE review per booking+service
+  @@unique([bookingId, target, serviceId])
+  @@index([salonId, status, createdAt])
+  @@index([serviceId, status, createdAt])
+  @@index([bookingId])
+  @@index([customerAccountId, createdAt])
+}
+
+// =====================================================
+// Commission
+// =====================================================
+
+model SalonCommissionPolicy {
+  id      String @id @default(cuid())
+
+  salonId String @unique
+  salon   Salon  @relation(fields: [salonId], references: [id])
+
+  type CommissionType @default(PERCENT)
+
+  // PERCENT: basis points (e.g., 250 = 2.5%)
+  percentBps Int?
+
+  // FIXED
+  fixedAmount Int?
+  currency    String?
+
+  // Usually only charge commission for ONLINE bookings
+  applyToOnlineOnly Boolean @default(true)
+
+  // Optional minimum fee
+  minimumFeeAmount Int?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salonId, isActive])
+}
+
+model BookingCommission {
+  id        String @id @default(cuid())
+
+  bookingId String @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  salonId String
+  salon   Salon @relation(fields: [salonId], references: [id])
+
+  status CommissionStatus @default(PENDING)
+
+  // base used to calculate commission (choose: amountDueSnapshot or paid sum)
+  baseAmount Int
+  currency   String
+
+  // snapshot of applied policy
+  type CommissionType
+  percentBps Int?
+  fixedAmount Int?
+
+  // final commission amount
+  commissionAmount Int
+
+  calculatedAt DateTime? @db.Timestamptz(6)
+  chargedAt    DateTime? @db.Timestamptz(6)
+
+  note String?
+
+  payments CommissionPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salonId, status, createdAt])
+  @@index([chargedAt])
+}
+
+model CommissionPayment {
+  id           String @id @default(cuid())
+
+  commissionId String
+  commission   BookingCommission @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+
+  amount   Int
+  currency String
+
+  status CommissionPaymentStatus @default(PENDING)
+  method CommissionPaymentMethod?
+  paidAt  DateTime? @db.Timestamptz(6)
+
+  referenceCode String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([commissionId, paidAt])
+  @@index([status, paidAt])
+}
+
+// =====================================================
+// Site / Page Builder / SEO
+// =====================================================
+
+model SalonSiteSettings {
+  id      String @id @default(cuid())
+
+  salonId String @unique
+  salon   Salon  @relation(fields: [salonId], references: [id])
+
+  logoUrl    String?
+  faviconUrl String?
+
+  defaultSeoTitle       String?
+  defaultSeoDescription String?
+  defaultOgImageUrl     String?
+
+  googleSiteVerification String?
+  analyticsTag           String?
+
+  robotsIndex  RobotsIndex  @default(INDEX)
+  robotsFollow RobotsFollow @default(FOLLOW)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SalonPage {
+  id      String @id @default(cuid())
+
+  salonId String
+  salon   Salon  @relation(fields: [salonId], references: [id])
+
+  slug  String
+  title String
+  type  PageType @default(CUSTOM)
+
+  status      PageStatus @default(DRAFT)
+  publishedAt DateTime? @db.Timestamptz(6)
+
+  // SEO per-page
+  seoTitle       String?
+  seoDescription String?
+  canonicalPath  String?
+  ogTitle        String?
+  ogDescription  String?
+  ogImageUrl     String?
+
+  robotsIndex  RobotsIndex  @default(INDEX)
+  robotsFollow RobotsFollow @default(FOLLOW)
+
+  structuredDataJson String?
+
+  sections    SalonPageSection[]
+  slugHistory SalonPageSlugHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([salonId, slug])
+  @@index([salonId, status])
+  @@index([salonId, type])
+  @@index([salonId, publishedAt])
+}
+
+model SalonPageSection {
+  id String @id @default(cuid())
+
+  pageId String
+  page   SalonPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  type PageSectionType
+  dataJson String // block config JSON (NO HTML)
+
+  sortOrder Int @default(0)
+  isEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pageId, sortOrder])
+  @@index([pageId, isEnabled])
+  @@index([pageId, type])
+}
+
+model SalonMedia {
+  id String @id @default(cuid())
+
+  salonId String
+  salon   Salon @relation(fields: [salonId], references: [id])
+
+  type    MediaType    @default(IMAGE)
+  purpose MediaPurpose @default(GALLERY)
+
+  url      String
+  thumbUrl String?
+
+  // SEO for images
+  altText  String?
+
+  category String?
+  caption  String?
+
+  sortOrder Int @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salonId, purpose, isActive, sortOrder])
+  @@index([salonId, category])
+}
+
+model SalonLink {
+  id String @id @default(cuid())
+
+  salonId String
+  salon   Salon @relation(fields: [salonId], references: [id])
+
+  type   LinkType
+  label  String?
+  value  String
+
+  isPrimary Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salonId, type])
+  @@index([salonId, isPrimary])
+  @@index([salonId, isActive])
+}
+
+// Address (Iran-friendly)
+model SalonAddress {
+  id String @id @default(cuid())
+
+  salonId String
+  salon   Salon @relation(fields: [salonId], references: [id])
+
+  title String?
+
+  province String?
+  city     String
+  district String?
+
+  addressLine String
+  postalCode  String?
+
+  lat Decimal?
+  lng Decimal?
+
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([salonId])
+  @@index([salonId, isPrimary])
+  @@index([province])
+  @@index([city])
+}
+
+// Slug history for 301 redirects (SEO)
+model SalonSlugHistory {
+  id String @id @default(cuid())
+
+  salonId String
+  salon   Salon @relation(fields: [salonId], references: [id], onDelete: Cascade)
+
+  oldSlug String
+  createdAt DateTime @default(now())
+
+  @@unique([oldSlug])
+  @@index([salonId, createdAt])
+}
+
+model SalonPageSlugHistory {
+  id String @id @default(cuid())
+
+  pageId String
+  page   SalonPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  oldSlug String
+  createdAt DateTime @default(now())
+
+  @@index([pageId, createdAt])
+  @@index([oldSlug])
+}
