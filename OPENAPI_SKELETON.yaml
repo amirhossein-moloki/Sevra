@@ -1,0 +1,162 @@
+# F) OpenAPI Skeleton
+openapi: 3.0.3
+info:
+  title: Sevra Salon Management API
+  description: |-
+    The official REST API for the Sevra platform.
+    This API allows for the management of salons, staff, services, bookings, and customers.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: Main API endpoint
+tags:
+  - name: Auth
+    description: Authentication and session management
+  - name: Salons
+    description: Operations related to salons
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: User Login
+      description: Authenticates a user and returns a JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  example: '09123456789'
+                password:
+                  type: string
+                  format: password
+                  example: 'password123'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        '401':
+          description: Unauthorized
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Get Current User
+      description: Retrieves the profile of the currently authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful retrieval
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+  /salons/{salonId}:
+    get:
+      tags:
+        - Salons
+      summary: Get Salon Details
+      description: Retrieves public details for a specific salon.
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful retrieval
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Salon'
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: cuid
+        fullName:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [MANAGER, RECEPTIONIST, STAFF]
+        isActive:
+          type: boolean
+    Salon:
+      type: object
+      properties:
+        id:
+          type: string
+          format: cuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          format: cuid
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, DONE, CANCELED, NO_SHOW]
+        serviceId:
+          type: string
+          format: cuid
+        staffId:
+          type: string
+          format: cuid
+        customerProfileId:
+          type: string
+          format: cuid
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []
