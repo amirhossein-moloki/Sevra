@@ -8,6 +8,11 @@ declare global {
 }
 
 const isProd = process.env.NODE_ENV === "production";
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required for Prisma connection");
+}
 
 /**
  * Create a PrismaClient instance with sensible defaults.
@@ -19,6 +24,11 @@ function createPrismaClient() {
     !isProd && (process.env.PRISMA_LOG_QUERIES === "true" || process.env.PRISMA_LOG_QUERIES === "1");
 
   const client = new PrismaClient({
+    datasources: {
+      db: {
+        url: databaseUrl,
+      },
+    },
     log: enableQueryLogs
       ? [
           { level: "query", emit: "event" },
