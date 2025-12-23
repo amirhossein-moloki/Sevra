@@ -1,12 +1,39 @@
-import crypto from "crypto";
-import { PrismaClient, Prisma } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import * as crypto from "crypto";
+import {
+  PrismaClient,
+  Prisma,
+  UserRole,
+  BookingStatus,
+  BookingSource,
+  PaymentMethod,
+  PaymentStatus,
+  BookingPaymentState,
+  ReviewTarget,
+  ReviewStatus,
+  CommissionType,
+  CommissionStatus,
+  CommissionPaymentMethod,
+  CommissionPaymentStatus,
+  PageStatus,
+  PageType,
+  PageSectionType,
+  MediaType,
+  MediaPurpose,
+  LinkType,
+  RobotsIndex,
+  RobotsFollow,
+} from "@prisma/client";
 
-// Prisma v7: اتصال با adapter
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required for seeding");
+}
+
+// Ensure Prisma reads the correct connection string during seed
+process.env.DATABASE_URL = databaseUrl;
+
+const prisma = new PrismaClient();
 
 /**
  * -----------------------------
@@ -30,51 +57,6 @@ const CONFIG = {
 
   tehranUtcOffsetMinutes: 210, // +03:30
 };
-
-// ✅ Prisma v7 enums/types (به جای import مستقیم enumها)
-type UserRole = Prisma.UserRole;
-type BookingStatus = Prisma.BookingStatus;
-type BookingSource = Prisma.BookingSource;
-type PaymentMethod = Prisma.PaymentMethod;
-type PaymentStatus = Prisma.PaymentStatus;
-type BookingPaymentState = Prisma.BookingPaymentState;
-type ReviewTarget = Prisma.ReviewTarget;
-type ReviewStatus = Prisma.ReviewStatus;
-type CommissionType = Prisma.CommissionType;
-type CommissionStatus = Prisma.CommissionStatus;
-type CommissionPaymentMethod = Prisma.CommissionPaymentMethod;
-type CommissionPaymentStatus = Prisma.CommissionPaymentStatus;
-type PageStatus = Prisma.PageStatus;
-type PageType = Prisma.PageType;
-type PageSectionType = Prisma.PageSectionType;
-type MediaType = Prisma.MediaType;
-type MediaPurpose = Prisma.MediaPurpose;
-type LinkType = Prisma.LinkType;
-type RobotsIndex = Prisma.RobotsIndex;
-type RobotsFollow = Prisma.RobotsFollow;
-
-const E = {
-  UserRole: Prisma.UserRole,
-  BookingStatus: Prisma.BookingStatus,
-  BookingSource: Prisma.BookingSource,
-  PaymentMethod: Prisma.PaymentMethod,
-  PaymentStatus: Prisma.PaymentStatus,
-  BookingPaymentState: Prisma.BookingPaymentState,
-  ReviewTarget: Prisma.ReviewTarget,
-  ReviewStatus: Prisma.ReviewStatus,
-  CommissionType: Prisma.CommissionType,
-  CommissionStatus: Prisma.CommissionStatus,
-  CommissionPaymentMethod: Prisma.CommissionPaymentMethod,
-  CommissionPaymentStatus: Prisma.CommissionPaymentStatus,
-  PageStatus: Prisma.PageStatus,
-  PageType: Prisma.PageType,
-  PageSectionType: Prisma.PageSectionType,
-  MediaType: Prisma.MediaType,
-  MediaPurpose: Prisma.MediaPurpose,
-  LinkType: Prisma.LinkType,
-  RobotsIndex: Prisma.RobotsIndex,
-  RobotsFollow: Prisma.RobotsFollow,
-} as const;
 
 type IranCity = {
   province: string;
@@ -223,23 +205,23 @@ type PayPlan = {
 
 function derivePaymentState(amountDue: number, payments: PayPlan[]): BookingPaymentState {
   const paidTotal = payments
-    .filter((p) => p.status === E.PaymentStatus.PAID)
+    .filter((p) => p.status === PaymentStatus.PAID)
     .reduce((sum, p) => sum + p.amount, 0);
   const refundedTotal = payments
-    .filter((p) => p.status === E.PaymentStatus.REFUNDED)
+    .filter((p) => p.status === PaymentStatus.REFUNDED)
     .reduce((sum, p) => sum + p.amount, 0);
 
   const netPaid = paidTotal - refundedTotal;
 
-  if (payments.some((p) => p.status === E.PaymentStatus.REFUNDED) && netPaid <= 0) {
-    return E.BookingPaymentState.REFUNDED;
+  if (payments.some((p) => p.status === PaymentStatus.REFUNDED) && netPaid <= 0) {
+    return BookingPaymentState.REFUNDED;
   }
 
-  if (netPaid <= 0) return E.BookingPaymentState.UNPAID;
-  if (netPaid < amountDue) return E.BookingPaymentState.PARTIALLY_PAID;
-  if (netPaid === amountDue) return E.BookingPaymentState.PAID;
+  if (netPaid <= 0) return BookingPaymentState.UNPAID;
+  if (netPaid < amountDue) return BookingPaymentState.PARTIALLY_PAID;
+  if (netPaid === amountDue) return BookingPaymentState.PAID;
 
-  return E.BookingPaymentState.OVERPAID;
+  return BookingPaymentState.OVERPAID;
 }
 
 async function clearAll() {

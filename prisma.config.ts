@@ -8,6 +8,11 @@ export default defineConfig({
     path: "prisma/migrations",
   },
 
+  seed: {
+    // Prisma 7+ seed command (works with tsx)
+    command: "tsx prisma/seed.ts",
+  },
+
   datasource: {
     // نکته: به جای env("DATABASE_URL") بهتره process.env بذاری تا کمتر به ارورهای env-loader بخوری
     url: process.env.DATABASE_URL!,
