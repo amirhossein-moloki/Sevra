@@ -1,12 +1,31 @@
+import {
+  PrismaClient,
+  Prisma,
+  // Enums
+  UserRole,
+  BookingStatus,
+  BookingSource,
+  PaymentMethod,
+  PaymentStatus,
+  BookingPaymentState,
+  ReviewTarget,
+  ReviewStatus,
+  CommissionType,
+  CommissionStatus,
+  CommissionPaymentMethod,
+  CommissionPaymentStatus,
+  PageStatus,
+  PageType,
+  PageSectionType,
+  MediaType,
+  MediaPurpose,
+  LinkType,
+  RobotsIndex,
+  RobotsFollow,
+} from "@prisma/client";
 import crypto from "crypto";
-import { PrismaClient, Prisma } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 
-// Prisma v7: اتصال با adapter
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 /**
  * -----------------------------
@@ -18,69 +37,27 @@ const CONFIG = {
   totalUsers: 131,
   totalCustomers: 50,
 
+  // پیشنهاد حرفه‌ای: هر سالن 20 سرویس داشته باشد (واقعی‌تر)
   servicesPerSalon: true,
   servicesCount: 20,
 
+  // دیتای عملیاتی سایت
   seedSessions: true,
   seedShifts: true,
   seedBookings: true,
 
-  bookingsPerSalon: 45,
+  // اگر seedBookings=true:
+  bookingsPerSalon: 45, // ~450 booking کل
   maxAttemptsToAvoidOverlap: 25,
 
   tehranUtcOffsetMinutes: 210, // +03:30
 };
 
-// ✅ Prisma v7 enums/types (به جای import مستقیم enumها)
-type UserRole = Prisma.UserRole;
-type BookingStatus = Prisma.BookingStatus;
-type BookingSource = Prisma.BookingSource;
-type PaymentMethod = Prisma.PaymentMethod;
-type PaymentStatus = Prisma.PaymentStatus;
-type BookingPaymentState = Prisma.BookingPaymentState;
-type ReviewTarget = Prisma.ReviewTarget;
-type ReviewStatus = Prisma.ReviewStatus;
-type CommissionType = Prisma.CommissionType;
-type CommissionStatus = Prisma.CommissionStatus;
-type CommissionPaymentMethod = Prisma.CommissionPaymentMethod;
-type CommissionPaymentStatus = Prisma.CommissionPaymentStatus;
-type PageStatus = Prisma.PageStatus;
-type PageType = Prisma.PageType;
-type PageSectionType = Prisma.PageSectionType;
-type MediaType = Prisma.MediaType;
-type MediaPurpose = Prisma.MediaPurpose;
-type LinkType = Prisma.LinkType;
-type RobotsIndex = Prisma.RobotsIndex;
-type RobotsFollow = Prisma.RobotsFollow;
-
-const E = {
-  UserRole: Prisma.UserRole,
-  BookingStatus: Prisma.BookingStatus,
-  BookingSource: Prisma.BookingSource,
-  PaymentMethod: Prisma.PaymentMethod,
-  PaymentStatus: Prisma.PaymentStatus,
-  BookingPaymentState: Prisma.BookingPaymentState,
-  ReviewTarget: Prisma.ReviewTarget,
-  ReviewStatus: Prisma.ReviewStatus,
-  CommissionType: Prisma.CommissionType,
-  CommissionStatus: Prisma.CommissionStatus,
-  CommissionPaymentMethod: Prisma.CommissionPaymentMethod,
-  CommissionPaymentStatus: Prisma.CommissionPaymentStatus,
-  PageStatus: Prisma.PageStatus,
-  PageType: Prisma.PageType,
-  PageSectionType: Prisma.PageSectionType,
-  MediaType: Prisma.MediaType,
-  MediaPurpose: Prisma.MediaPurpose,
-  LinkType: Prisma.LinkType,
-  RobotsIndex: Prisma.RobotsIndex,
-  RobotsFollow: Prisma.RobotsFollow,
-} as const;
-
 type IranCity = {
   province: string;
   city: string;
-  citySlug: string;
-  areaCode: string;
+  citySlug: string;     // برای URL/Slug
+  areaCode: string;     // تلفن ثابت
   lat: string;
   lng: string;
   districts: string[];
@@ -171,15 +148,18 @@ function slugifyLatin(input: string) {
     .replace(/^-|-$/g, "");
 }
 function randomTokenHash() {
+  // فقط برای seed — در محصول واقعی باید امن‌تر/واقعی‌تر باشد
   return crypto.createHash("sha256").update(crypto.randomBytes(32)).digest("hex");
 }
 function passwordHashDummy() {
+  // فقط برای seed (در سیستم واقعی bcrypt واقعی بزنید)
   return "bcrypt$seed_dummy_hash";
 }
 function makeIranMobileUnique(counter: number) {
+  // 09 + 9 رقم
   const prefixes = ["10","11","12","13","14","15","16","17","18","19","20","21","22","30","33","35","36","37","38","39"];
   const p = pick(prefixes);
-  const body = String(counter).padStart(7, "0");
+  const body = String(counter).padStart(7, "0"); // 7 رقم
   return `09${p}${body}`.slice(0, 11);
 }
 function makeIranLandline(areaCode: string) {
@@ -191,6 +171,7 @@ function tehranNow() {
   return new Date(Date.now() + offsetMs);
 }
 function toTehranDate(dayOffset: number, hour: number, minute: number) {
+  // تاریخ را بر اساس "تهران" تولید می‌کنیم و با offset +03:30 به Date تبدیل می‌کنیم
   const nowT = tehranNow();
   const base = new Date(Date.UTC(nowT.getUTCFullYear(), nowT.getUTCMonth(), nowT.getUTCDate()));
   base.setUTCDate(base.getUTCDate() + dayOffset);
@@ -205,41 +186,13 @@ function toTehranDate(dayOffset: number, hour: number, minute: number) {
   return new Date(iso);
 }
 function tehranYMDKey(date: Date) {
+  // برای کلید روز در تقویم کاری، تاریخ را با offset تهران می‌خوانیم
   const offsetMs = CONFIG.tehranUtcOffsetMinutes * 60_000;
   const d = new Date(date.getTime() + offsetMs);
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-type PayPlan = {
-  amount: number;
-  method: PaymentMethod;
-  status: PaymentStatus;
-  paidAt: Date | null;
-  referenceCode?: string | null;
-};
-
-function derivePaymentState(amountDue: number, payments: PayPlan[]): BookingPaymentState {
-  const paidTotal = payments
-    .filter((p) => p.status === E.PaymentStatus.PAID)
-    .reduce((sum, p) => sum + p.amount, 0);
-  const refundedTotal = payments
-    .filter((p) => p.status === E.PaymentStatus.REFUNDED)
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const netPaid = paidTotal - refundedTotal;
-
-  if (payments.some((p) => p.status === E.PaymentStatus.REFUNDED) && netPaid <= 0) {
-    return E.BookingPaymentState.REFUNDED;
-  }
-
-  if (netPaid <= 0) return E.BookingPaymentState.UNPAID;
-  if (netPaid < amountDue) return E.BookingPaymentState.PARTIALLY_PAID;
-  if (netPaid === amountDue) return E.BookingPaymentState.PAID;
-
-  return E.BookingPaymentState.OVERPAID;
 }
 
 async function clearAll() {
@@ -273,6 +226,7 @@ async function clearAll() {
 }
 
 function buildStructuredDataLocalBusiness(salonName: string, city: IranCity, slug: string) {
+  // JSON-LD مناسب SEO / LocalBusiness
   const obj = {
     "@context": "https://schema.org",
     "@type": "BeautySalon",
