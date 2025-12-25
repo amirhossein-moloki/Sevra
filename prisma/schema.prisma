@@ -153,6 +153,22 @@ enum CommissionPaymentStatus {
   REFUNDED
 }
 
+// ---- OTP / Auth (NEW) ----
+enum SessionActorType {
+  USER
+  CUSTOMER
+}
+
+enum OtpPurpose {
+  LOGIN
+  SIGNUP
+}
+
+enum OtpChannel {
+  SMS
+  WHATSAPP
+}
+
 // =======================
 // Models
 // =======================
@@ -227,7 +243,11 @@ model User {
 
   fullName     String
   phone        String
-  passwordHash String
+
+  // ✅ OTP is primary now
+  passwordHash String?
+  phoneVerifiedAt DateTime?
+
   role         UserRole
   isActive     Boolean  @default(true)
 
@@ -237,7 +257,8 @@ model User {
   bio        String?
   avatarUrl  String?
 
-  sessions         Session[]
+  // sessions are now polymorphic, so no direct relation
+  // sessions         Session[]
 
   shifts           Shift[]
   bookingsAsStaff  Booking[] @relation("BookingStaff")
@@ -259,8 +280,9 @@ model User {
 model Session {
   id        String   @id @default(cuid())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // ✅ UPDATED: actor-based session (USER + CUSTOMER)
+  actorType SessionActorType
+  actorId   String
 
   tokenHash String   @unique
   revokedAt DateTime?
@@ -269,7 +291,37 @@ model Session {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId, expiresAt])
+  @@index([actorType, actorId, expiresAt])
+}
+
+// -----------------------
+// OTP (NEW)
+// -----------------------
+model PhoneOtp {
+  id String @id @default(cuid())
+
+  phone   String
+  purpose OtpPurpose
+  channel OtpChannel @default(SMS)
+
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int      @default(0)
+
+  ip        String?
+  userAgent String?
+
+  // optional binding (after verification)
+  targetActorType SessionActorType?
+  targetActorId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([phone, purpose, expiresAt])
+  @@index([phone, createdAt])
+  @@index([consumedAt])
+  @@index([targetActorType, targetActorId])
 }
 
 // -----------------------
@@ -279,6 +331,9 @@ model CustomerAccount {
   id       String   @id @default(cuid())
   phone    String   @unique
   fullName String?
+
+  // ✅ optional but recommended
+  phoneVerifiedAt DateTime?
 
   profiles SalonCustomerProfile[]
   bookings Booking[]
