@@ -9,8 +9,8 @@ This document outlines the necessary steps to reach the Minimum Viable Product (
 These are the absolute prerequisites for any other feature.
 
 ### 1.1: Core Infrastructure
-- [ ] Implement and register global `errorHandler` middleware.
-- [ ] Implement and register `responseEnvelope` middleware.
+- [x] Implement and register global `errorHandler` middleware.
+- [x] Implement and register `responseEnvelope` middleware.
 - [ ] Implement and register `validate` (Zod) middleware.
 - [ ] Implement and register `rateLimit` middleware.
 - [ ] Configure and integrate `logger` (Pino).
