@@ -1,11 +1,14 @@
 import argon2 from 'argon2';
 import crypto from 'crypto';
 import { AuthRepository } from './auth.repository';
-import { generateAccessToken, generateRefreshToken, verifyToken } from './auth.tokens';
-import { env } from '../../config/env';
+import { generateAccessToken } from './auth.tokens';
 import { SessionActorType } from '@prisma/client';
 import createHttpError from 'http-errors';
 import { prisma } from '../../config/prisma';
+
+const hashToken = (token: string) => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
 
 export class AuthService {
   private authRepository: AuthRepository;
@@ -17,14 +20,20 @@ export class AuthService {
   private async createAndSaveSession(actorId: string, actorType: SessionActorType) {
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // We don't store the refresh token directly, but a hash of it.
-    // For simplicity, we'll create a dummy session for now. A more secure approach is needed.
-    const session = await this.authRepository.createSession(actorId, actorType, 'dummy-hash', expiresAt);
+    // 1. Generate a secure, random refresh token.
+    const refreshToken = crypto.randomBytes(32).toString('hex');
 
+    // 2. Hash the refresh token for database storage.
+    const tokenHash = hashToken(refreshToken);
+
+    // 3. Create the session with the hashed token.
+    const session = await this.authRepository.createSession(actorId, actorType, tokenHash, expiresAt);
+
+    // 4. Create the access token.
     const payload = { sessionId: session.id, actorId, actorType };
     const accessToken = generateAccessToken(payload);
-    const refreshToken = generateRefreshToken(payload);
 
+    // 5. Return the raw refresh token to the client. It's sent only once.
     return { accessToken, refreshToken };
   }
 
@@ -65,17 +74,24 @@ export class AuthService {
   }
 
   async refreshAuthToken(token: string) {
-    const payload = verifyToken(token, env.JWT_REFRESH_SECRET);
-    if (!payload) {
-      throw createHttpError(401, 'Invalid refresh token');
-    }
+    // The incoming token is the raw refresh token string.
+    // 1. Hash the incoming token to find it in the database.
+    const tokenHash = hashToken(token);
 
-    const session = await this.authRepository.findSessionByToken('dummy-hash'); // This needs to be fixed with proper token hashing
+    // 2. Find the session.
+    const session = await this.authRepository.findSessionByToken(tokenHash);
     if (!session || session.revokedAt) {
       throw createHttpError(401, 'Session is invalid or has been revoked');
     }
 
-    const newPayload = { sessionId: session.id, actorId: payload.actorId, actorType: payload.actorType };
+    // 3. Check for expiration.
+    if (new Date() > session.expiresAt) {
+      await this.authRepository.revokeSession(session.id);
+      throw createHttpError(401, 'Refresh token has expired');
+    }
+
+    // 4. Create and return a new access token.
+    const newPayload = { sessionId: session.id, actorId: session.actorId, actorType: session.actorType };
     const accessToken = generateAccessToken(newPayload);
 
     return { accessToken };
