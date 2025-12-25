@@ -22,7 +22,12 @@ import {
   LinkType,
   RobotsIndex,
   RobotsFollow,
+  // NEW
+  SessionActorType,
+  OtpPurpose,
+  OtpChannel,
 } from "@prisma/client";
+import "dotenv/config";
 import crypto from "crypto";
 
 const prisma = new PrismaClient();
@@ -196,6 +201,7 @@ function tehranYMDKey(date: Date) {
 }
 
 async function clearAll() {
+  await prisma.phoneOtp.deleteMany();
   await prisma.commissionPayment.deleteMany();
   await prisma.bookingCommission.deleteMany();
   await prisma.review.deleteMany();
@@ -662,6 +668,7 @@ async function main() {
           fullName,
           phone: makeIranMobileUnique(phoneCounter++),
           passwordHash: passwordHashDummy(),
+          phoneVerifiedAt: new Date(),
           role: UserRole.MANAGER,
           isActive: true,
           isPublic: true,
@@ -675,7 +682,8 @@ async function main() {
       if (CONFIG.seedSessions) {
         await prisma.session.create({
           data: {
-            userId: manager.id,
+            actorType: SessionActorType.USER,
+            actorId: manager.id,
             tokenHash: randomTokenHash(),
             expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000),
             revokedAt: null,
@@ -693,6 +701,7 @@ async function main() {
           fullName,
           phone: makeIranMobileUnique(phoneCounter++),
           passwordHash: passwordHashDummy(),
+          phoneVerifiedAt: new Date(),
           role: UserRole.RECEPTIONIST,
           isActive: true,
           isPublic: false,
@@ -703,7 +712,8 @@ async function main() {
       if (CONFIG.seedSessions && chance(0.7)) {
         await prisma.session.create({
           data: {
-            userId: receptionist.id,
+            actorType: SessionActorType.USER,
+            actorId: receptionist.id,
             tokenHash: randomTokenHash(),
             expiresAt: new Date(Date.now() + 14 * 24 * 3600 * 1000),
             revokedAt: chance(0.1) ? new Date() : null,
@@ -725,6 +735,7 @@ async function main() {
           fullName,
           phone: makeIranMobileUnique(phoneCounter++),
           passwordHash: passwordHashDummy(),
+          phoneVerifiedAt: new Date(),
           role: UserRole.STAFF,
           isActive,
           isPublic,
@@ -739,7 +750,8 @@ async function main() {
       if (CONFIG.seedSessions && chance(0.25)) {
         await prisma.session.create({
           data: {
-            userId: staff.id,
+            actorType: SessionActorType.USER,
+            actorId: staff.id,
             tokenHash: randomTokenHash(),
             expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
             revokedAt: chance(0.2) ? new Date() : null,
@@ -831,7 +843,7 @@ async function main() {
     const phone = makeIranMobileUnique(7_000_000 + i);
 
     const ca = await prisma.customerAccount.create({
-      data: { phone, fullName },
+      data: { phone, fullName, phoneVerifiedAt: new Date() },
     });
     customers.push({ id: ca.id, phone, fullName });
 

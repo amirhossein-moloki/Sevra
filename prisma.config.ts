@@ -6,6 +6,7 @@ export default defineConfig({
 
   migrations: {
     path: "prisma/migrations",
+    seed: "node --import tsx --require dotenv/config ./prisma/seed.ts",
   },
 
   datasource: {
