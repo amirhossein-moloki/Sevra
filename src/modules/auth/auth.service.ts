@@ -1,20 +1,61 @@
-import { SmsService } from '../notifications/sms.service';
+import bcrypt from 'bcryptjs';
+import { PrismaClient, UserRole } from '@prisma/client';
+import { generateToken } from './auth.tokens';
+import createHttpError from 'http-errors';
+
+const prisma = new PrismaClient();
 
 export class AuthService {
-  private smsService: SmsService;
+  async register(data: any) {
+    const { fullName, phone, password , salonId} = data;
 
-  constructor() {
-    this.smsService = new SmsService();
+    const existingUser = await prisma.user.findUnique({
+      where: { salonId_phone: { salonId, phone } },
+    });
+
+    if (existingUser) {
+      throw createHttpError(409, 'User with this phone number already exists');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        fullName,
+        phone,
+        passwordHash,
+        salonId,
+        role: UserRole.STAFF,
+      },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
   }
 
-  async loginOrRegister(mobile: string) {
-    // This is a placeholder for the actual logic.
-    // In a real application, you would generate a random code,
-    // store it, and then send it.
-    const templateId = 100000; // Example template ID from sms.ir panel
-    const parameters = [{ name: 'CODE', value: '12345' }];
+  async login(data: any) {
+    const { phone, password, salonId } = data;
 
-    console.log(`Attempting to send verification code to ${mobile}`);
-    return this.smsService.sendVerificationCode(mobile, templateId, parameters);
+    const user = await prisma.user.findUnique({
+      where: { salonId_phone: { salonId, phone } },
+    });
+
+    if (!user || !user.passwordHash) {
+      throw createHttpError(401, 'Invalid credentials');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+
+    if (!isPasswordValid) {
+      throw createHttpError(401, 'Invalid credentials');
+    }
+
+    const token = generateToken({ userId: user.id, salonId: user.salonId, role: user.role });
+
+    // eslint-disable--next-line @typescript-eslint/no-unused-vars
+    const { passwordHash: _, ...userWithoutPassword } = user;
+
+    return { user: userWithoutPassword, token };
   }
 }

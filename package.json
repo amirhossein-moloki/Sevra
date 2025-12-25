@@ -24,8 +24,10 @@
   "homepage": "https://github.com/amirhossein-moloki/Sevra#readme",
   "dependencies": {
     "@prisma/client": "^7.2.0",
-    "argon2": "^0.44.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
