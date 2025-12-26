@@ -75,12 +75,16 @@ describe("Salon API - E2E with Auth", () => {
       await request(app).post("/api/v1/salons").send(newSalonData).expect(401);
     });
 
-    it("should return 403 Forbidden if the user is not a MANAGER", async () => {
-      await request(app)
+    it("should create a new salon and return 201 if the user is STAFF", async () => {
+      const staffSalonData = { ...newSalonData, name: "Staff Salon", slug: "staff-salon" };
+      const response = await request(app)
         .post("/api/v1/salons")
         .set("Authorization", `Bearer ${staffToken}`)
-        .send(newSalonData)
-        .expect(403);
+        .send(staffSalonData)
+        .expect(201);
+
+      expect(response.body.data.name).toBe(staffSalonData.name);
+      expect(response.body.data.slug).toBe(staffSalonData.slug);
     });
 
     it("should create a new salon and return 201 if the user is a MANAGER", async () => {
