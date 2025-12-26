@@ -14,7 +14,6 @@ router.get("/:id", salonController.getSalonById);
 router.post(
   "/",
   authMiddleware,
-  requireRole([UserRole.MANAGER]),
   salonController.createSalon,
 );
 router.patch(
