@@ -17,6 +17,24 @@ export const login = async (req: Request, res: Response) => {
   res.success({ data: result });
 };
 
+export const requestUserOtp = async (req: Request, res: Response) => {
+    const { phone } = req.body;
+    const result = await authService.requestUserOtp(phone);
+    res.success({ data: result });
+};
+
+export const verifyUserOtp = async (req: Request, res: Response) => {
+    const { phone, code } = req.body;
+    const result = await authService.verifyUserOtp(phone, code);
+    res.success({ data: result });
+};
+
+export const loginUserWithOtp = async (req: Request, res: Response) => {
+    const { phone, salonId } = req.body;
+    const result = await authService.loginUserWithOtp(phone, salonId);
+    res.success({ data: result });
+};
+
 export const refresh = async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
   const result = await authService.refreshAuthToken(refreshToken);
