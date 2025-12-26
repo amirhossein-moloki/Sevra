@@ -1,6 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { AnyZodObject, ZodError } from 'zod';
-import createHttpError from 'http-errors';
 
 export const validate =
   (schema: AnyZodObject) =>
@@ -14,8 +13,9 @@ export const validate =
       return next();
     } catch (error) {
       if (error instanceof ZodError) {
+        // The default error handler will catch this and format it
         return next(error);
       }
-      return next(createHttpError(500, 'Internal server error'));
+      return next(new Error('Internal Server Error during validation'));
     }
   };

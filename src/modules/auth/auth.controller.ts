@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { SessionActorType } from '@prisma/client';
+import { AuthRequest } from '../../common/middleware/auth';
 
 const authService = new AuthService();
 
@@ -41,15 +42,18 @@ export const refresh = async (req: Request, res: Response) => {
   res.success({ data: result });
 };
 
-export const logout = async (req: Request, res: Response) => {
-  // Assuming session ID is available on req.user after authentication middleware
-  const sessionId = (req as any).user?.sessionId;
+export const logout = async (req: AuthRequest, res: Response) => {
+  const sessionId = req.actor?.sessionId;
+  // We need to ensure sessionId is not undefined.
+  // The auth middleware should guarantee this, but it's good practice to check.
+  if (!sessionId) {
+    return res.status(401).json({ success: false, error: { message: 'Invalid session' } });
+  }
   const result = await authService.logout(sessionId);
   res.success({ data: result });
 };
 
-export const me = async (req: Request, res: Response) => {
-  // The user/customer object should be attached to the request by the auth middleware
-  const user = (req as any).user;
-  res.success({ data: user });
+export const me = async (req: AuthRequest, res: Response) => {
+  // The actor object is attached to the request by the auth middleware
+  res.success({ data: req.actor });
 };
