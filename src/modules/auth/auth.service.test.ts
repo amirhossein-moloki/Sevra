@@ -3,7 +3,19 @@ import { AuthRepository } from './auth.repository';
 import { SmsService } from '../notifications/sms.service';
 import { mocked } from 'jest-mock';
 
-jest.mock('./auth.repository');
+// Mock the entire module with a factory function
+jest.mock('./auth.repository', () => {
+  return {
+    AuthRepository: jest.fn().mockImplementation(() => {
+      return {
+        // Mock methods needed for tests here, e.g.:
+        findUserByPhone: jest.fn(),
+        createSession: jest.fn(),
+      };
+    }),
+  };
+});
+
 jest.mock('../notifications/sms.service');
 
 describe('AuthService', () => {
@@ -12,8 +24,10 @@ describe('AuthService', () => {
   let smsService: jest.Mocked<SmsService>;
 
   beforeEach(() => {
-    authRepository = mocked(new AuthRepository());
-    smsService = mocked(new SmsService());
+    // Now, AuthRepository is the mocked constructor
+    authRepository = new (mocked(AuthRepository))() as jest.Mocked<AuthRepository>;
+    smsService = new (mocked(SmsService))() as jest.Mocked<SmsService>;
+    // Pass the mocked instances to the service constructor if needed
     authService = new AuthService();
   });
 

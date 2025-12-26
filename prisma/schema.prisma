@@ -176,6 +176,7 @@ enum OtpChannel {
 model Salon {
   id        String   @id @default(cuid())
   name      String
+  isActive  Boolean  @default(true)
 
   // Public identity (site)
   slug      String   @unique
