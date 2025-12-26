@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { logger } from "./logger";
+import logger from "./logger";
 
 declare global {
   // جلوگیری از ساخت چندباره PrismaClient در dev (hot reload)

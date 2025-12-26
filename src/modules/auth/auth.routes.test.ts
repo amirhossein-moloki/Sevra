@@ -1,8 +1,8 @@
 import request from 'supertest';
-import { app } from '../../app';
+import app from '../../app';
 import { prisma } from '../../config/prisma';
 import argon2 from 'argon2';
-import { AuthService } from './auth.service';
+import { Role } from '@prisma/client';
 
 describe('Auth Routes', () => {
   afterEach(async () => {
@@ -14,17 +14,19 @@ describe('Auth Routes', () => {
 
   describe('POST /auth/login', () => {
     it('should login a user with valid credentials', async () => {
-        const salon = await prisma.salon.create({ data: { name: 'Test Salon' } });
+        const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
         await prisma.user.create({
           data: {
             phone: '1234567890',
             passwordHash: await argon2.hash('password'),
-            salonId: salon.id,
+            fullName: 'Test User',
+            role: Role.OWNER,
+            salon: { connect: { id: salon.id } },
           },
         });
 
         const res = await request(app)
-          .post('/auth/login')
+          .post('/api/v1/auth/login')
           .send({
             phone: '1234567890',
             password: 'password',
@@ -33,12 +35,12 @@ describe('Auth Routes', () => {
           });
 
         expect(res.status).toBe(200);
-        expect(res.body.data.tokens).toHaveProperty('accessToken');
+        expect(res.body.data.data.tokens).toHaveProperty('accessToken');
       });
 
     it('should not login a user with invalid credentials', async () => {
       const res = await request(app)
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({
           phone: '1234567890',
           password: 'wrong-password',
@@ -52,22 +54,27 @@ describe('Auth Routes', () => {
 
   describe('POST /auth/user/otp/request', () => {
     it('should request an OTP for an existing user', async () => {
-        const salon = await prisma.salon.create({ data: { name: 'Test Salon' } });
+        const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
         await prisma.user.create({
-          data: { phone: '1234567890', salonId: salon.id },
+          data: {
+            phone: '1234567890',
+            fullName: 'Test User',
+            role: Role.OWNER,
+            salon: { connect: { id: salon.id } }
+          },
         });
 
         const res = await request(app)
-          .post('/auth/user/otp/request')
+          .post('/api/v1/auth/user/otp/request')
           .send({ phone: '1234567890' });
 
         expect(res.status).toBe(200);
-        expect(res.body.data.message).toContain('OTP sent');
+        expect(res.body.data.data.message).toContain('OTP sent');
       });
 
     it('should return an error for a non-existing user', async () => {
       const res = await request(app)
-        .post('/auth/user/otp/request')
+        .post('/api/v1/auth/user/otp/request')
         .send({ phone: '1234567890' });
 
       expect(res.status).toBe(404);
@@ -88,7 +95,7 @@ describe('Auth Routes', () => {
         });
 
         const res = await request(app)
-          .post('/auth/user/otp/verify')
+          .post('/api/v1/auth/user/otp/verify')
           .send({ phone, code });
 
         expect(res.status).toBe(200);
@@ -96,7 +103,7 @@ describe('Auth Routes', () => {
 
     it('should return an error for an invalid OTP', async () => {
       const res = await request(app)
-        .post('/auth/user/otp/verify')
+        .post('/api/v1/auth/user/otp/verify')
         .send({ phone: '1234567890', code: '123456' });
 
       expect(res.status).toBe(401);
@@ -106,8 +113,15 @@ describe('Auth Routes', () => {
   describe('POST /auth/user/login/otp', () => {
     it('should login a user with a valid OTP', async () => {
         const phone = '1234567890';
-        const salon = await prisma.salon.create({ data: { name: 'Test Salon' } });
-        await prisma.user.create({ data: { phone, salonId: salon.id } });
+        const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
+        await prisma.user.create({
+          data: {
+            phone,
+            fullName: 'Test User',
+            role: Role.OWNER,
+            salon: { connect: { id: salon.id } }
+          }
+        });
         await prisma.phoneOtp.create({
           data: {
             phone,
@@ -119,20 +133,27 @@ describe('Auth Routes', () => {
         });
 
         const res = await request(app)
-          .post('/auth/user/login/otp')
+          .post('/api/v1/auth/user/login/otp')
           .send({ phone, salonId: salon.id });
 
         expect(res.status).toBe(200);
-        expect(res.body.data.tokens).toHaveProperty('accessToken');
+        expect(res.body.data.data.tokens).toHaveProperty('accessToken');
       });
 
     it('should not login a user with an unverified OTP', async () => {
       const phone = '1234567890';
-      const salon = await prisma.salon.create({ data: { name: 'Test Salon' } });
-      await prisma.user.create({ data: { phone, salonId: salon.id } });
+      const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
+      await prisma.user.create({
+        data: {
+          phone,
+          fullName: 'Test User',
+          role: Role.OWNER,
+          salon: { connect: { id: salon.id } }
+        }
+      });
 
       const res = await request(app)
-        .post('/auth/user/login/otp')
+        .post('/api/v1/auth/user/login/otp')
         .send({ phone, salonId: salon.id });
 
       expect(res.status).toBe(401);
@@ -143,17 +164,17 @@ describe('Auth Routes', () => {
     it('should refresh the access token', async () => {
       await prisma.customerAccount.create({ data: { phone: '1234567890' } });
       const loginRes = await request(app)
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ phone: '1234567890', actorType: 'CUSTOMER' });
 
-      const { refreshToken } = loginRes.body.data.tokens;
+      const { refreshToken } = loginRes.body.data.data.tokens;
 
       const res = await request(app)
-        .post('/auth/refresh')
+        .post('/api/v1/auth/refresh')
         .send({ refreshToken });
 
       expect(res.status).toBe(200);
-      expect(res.body.data).toHaveProperty('accessToken');
+      expect(res.body.data.data).toHaveProperty('accessToken');
     });
   });
 
@@ -161,17 +182,34 @@ describe('Auth Routes', () => {
     it('should return the current user', async () => {
       await prisma.customerAccount.create({ data: { phone: '1234567890' } });
       const loginRes = await request(app)
-        .post('/auth/login')
+        .post('/api/v1/auth/login')
         .send({ phone: '1234567890', actorType: 'CUSTOMER' });
 
-      const { accessToken } = loginRes.body.data.tokens;
+      const { accessToken } = loginRes.body.data.data.tokens;
 
       const res = await request(app)
-        .get('/auth/me')
+        .get('/api/v1/auth/me')
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.phone).toBe('1234567890');
+      expect(res.body.data.data.phone).toBe('1234567890');
+    });
+  });
+
+  describe('POST /auth/logout', () => {
+    it('should logout the user', async () => {
+      await prisma.customerAccount.create({ data: { phone: '1234567890' } });
+      const loginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ phone: '1234567890', actorType: 'CUSTOMER' });
+
+      const { accessToken } = loginRes.body.data.data.tokens;
+
+      const res = await request(app)
+        .post('/api/v1/auth/logout')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(res.status).toBe(200);
     });
   });
 });
