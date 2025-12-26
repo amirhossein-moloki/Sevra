@@ -1,5 +1,3 @@
-require('dotenv/config');
-
 jest.mock('pino', () => ({
   __esModule: true,
   default: jest.fn(() => ({

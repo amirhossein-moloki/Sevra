@@ -2,7 +2,7 @@ import request from 'supertest';
 import app from '../../app';
 import { prisma } from '../../config/prisma';
 import argon2 from 'argon2';
-import { Role } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
 describe('Auth Routes', () => {
   afterEach(async () => {
@@ -20,7 +20,7 @@ describe('Auth Routes', () => {
             phone: '1234567890',
             passwordHash: await argon2.hash('password'),
             fullName: 'Test User',
-            role: Role.OWNER,
+            role: UserRole.MANAGER,
             salon: { connect: { id: salon.id } },
           },
         });
@@ -59,7 +59,7 @@ describe('Auth Routes', () => {
           data: {
             phone: '1234567890',
             fullName: 'Test User',
-            role: Role.OWNER,
+            role: UserRole.MANAGER,
             salon: { connect: { id: salon.id } }
           },
         });
@@ -118,7 +118,7 @@ describe('Auth Routes', () => {
           data: {
             phone,
             fullName: 'Test User',
-            role: Role.OWNER,
+            role: UserRole.MANAGER,
             salon: { connect: { id: salon.id } }
           }
         });
@@ -147,7 +147,7 @@ describe('Auth Routes', () => {
         data: {
           phone,
           fullName: 'Test User',
-          role: Role.OWNER,
+          role: UserRole.MANAGER,
           salon: { connect: { id: salon.id } }
         }
       });
