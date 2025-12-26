@@ -17,8 +17,11 @@ import {
     loginWithOtpSchema
 } from './auth.validators';
 import { authMiddleware } from '../../common/middleware/auth';
+import rateLimiter from '../../common/middleware/rateLimit';
 
 const router = Router();
+
+router.use(rateLimiter);
 
 // --- User OTP Flow ---
 router.post('/user/otp/request', validate(requestOtpSchema), requestUserOtp);

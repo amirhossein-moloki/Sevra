@@ -27,6 +27,6 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     return next(createHttpError(401, 'User not found'));
   }
 
-  (req as any).user = { ...user, ...payload };
+  (req as any).actor = { ...user, ...payload };
   next();
 };

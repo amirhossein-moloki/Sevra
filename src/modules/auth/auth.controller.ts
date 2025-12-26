@@ -14,42 +14,42 @@ export const login = async (req: Request, res: Response) => {
     result = await authService.loginCustomer(phone);
   }
 
-  res.success({ data: result });
+  res.ok({ data: result });
 };
 
 export const requestUserOtp = async (req: Request, res: Response) => {
     const { phone } = req.body;
     const result = await authService.requestUserOtp(phone);
-    res.success({ data: result });
+    res.ok({ data: result });
 };
 
 export const verifyUserOtp = async (req: Request, res: Response) => {
     const { phone, code } = req.body;
     const result = await authService.verifyUserOtp(phone, code);
-    res.success({ data: result });
+    res.ok({ data: result });
 };
 
 export const loginUserWithOtp = async (req: Request, res: Response) => {
     const { phone, salonId } = req.body;
     const result = await authService.loginUserWithOtp(phone, salonId);
-    res.success({ data: result });
+    res.ok({ data: result });
 };
 
 export const refresh = async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
   const result = await authService.refreshAuthToken(refreshToken);
-  res.success({ data: result });
+  res.ok({ data: result });
 };
 
 export const logout = async (req: Request, res: Response) => {
-  // Assuming session ID is available on req.user after authentication middleware
-  const sessionId = (req as any).user?.sessionId;
+  // Assuming session ID is available on req.actor after authentication middleware
+  const sessionId = (req as any).actor?.sessionId;
   const result = await authService.logout(sessionId);
-  res.success({ data: result });
+  res.ok({ data: result });
 };
 
 export const me = async (req: Request, res: Response) => {
   // The user/customer object should be attached to the request by the auth middleware
-  const user = (req as any).user;
-  res.success({ data: user });
+  const actor = (req as any).actor;
+  res.ok({ data: actor });
 };
