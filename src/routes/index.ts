@@ -8,6 +8,7 @@ import {
   privateServiceRouter,
   publicServiceRouter,
 } from '../modules/services/services.routes';
+import staffRouter from '../modules/users/users.routes';
 
 const router = Router();
 
@@ -22,5 +23,9 @@ router.use('/salons/:salonId/services', privateServiceRouter);
 
 // Mount the public router under the public salon path
 router.use('/public/salons/:salonSlug/services', publicServiceRouter);
+
+// --- Staff Module Routes ---
+router.use('/salons/:salonId/staff', staffRouter);
+
 
 export default router;
