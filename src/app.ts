@@ -15,7 +15,10 @@ app.use(helmet());
 import loggerMiddleware from './common/middleware/logger';
 import rateLimiter from './common/middleware/rateLimit';
 
-app.use(loggerMiddleware);
+// Disable pino-http logger in test environment to avoid Jest compatibility issues
+if (process.env.NODE_ENV !== 'test') {
+  app.use(loggerMiddleware);
+}
 app.use(rateLimiter);
 
 app.use((req, res, next) => {
