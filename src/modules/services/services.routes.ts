@@ -10,15 +10,21 @@ import { authMiddleware } from '../../common/middleware/auth';
 import { requireRole } from '../../common/middleware/requireRole';
 import { prisma } from '../../config/prisma';
 import createHttpError from 'http-errors';
+import { Salon } from '@prisma/client';
+
+// Local type extension for Request
+interface RequestWithSalon extends Request {
+  salon?: Salon;
+}
 
 // Middleware to resolve salon from a public slug and attach it to the request
-const resolveSalonBySlug = async (req: Request, res: Response, next: NextFunction) => {
+const resolveSalonBySlug = async (req: RequestWithSalon, res: Response, next: NextFunction) => {
   const { salonSlug } = req.params;
   const salon = await prisma.salon.findUnique({ where: { slug: salonSlug } });
   if (!salon) {
     return next(createHttpError(404, 'Salon not found'));
   }
-  (req as any).salon = salon; // Attach salon to the request
+  req.salon = salon; // Attach salon to the request
   next();
 };
 
@@ -30,14 +36,14 @@ privateServiceRouter.post(
   authMiddleware,
   requireRole(['MANAGER']),
   validate(createServiceSchema),
-  ServiceController.createServiceHandler
+  ServiceController.createService
 );
 
 privateServiceRouter.get(
   '/',
   authMiddleware,
   requireRole(['MANAGER', 'RECEPTIONIST', 'STAFF']),
-  ServiceController.getServicesForSalonHandler
+  ServiceController.getServices
 );
 
 privateServiceRouter.get(
@@ -45,7 +51,7 @@ privateServiceRouter.get(
   authMiddleware,
   requireRole(['MANAGER', 'RECEPTIONIST', 'STAFF']),
   validate(serviceIdParamSchema),
-  ServiceController.getServiceByIdHandler
+  ServiceController.getServiceById
 );
 
 privateServiceRouter.patch(
@@ -53,7 +59,7 @@ privateServiceRouter.patch(
   authMiddleware,
   requireRole(['MANAGER']),
   validate(updateServiceSchema),
-  ServiceController.updateServiceHandler
+  ServiceController.updateService
 );
 
 privateServiceRouter.delete(
@@ -61,7 +67,7 @@ privateServiceRouter.delete(
   authMiddleware,
   requireRole(['MANAGER']),
   validate(serviceIdParamSchema),
-  ServiceController.deactivateServiceHandler
+  ServiceController.deleteService
 );
 
 // --- Public Router (to be mounted under /api/v1/public/salons/:salonSlug/services) ---
@@ -75,5 +81,5 @@ publicServiceRouter.get(
     req.query.isActive = 'true';
     next();
   },
-  ServiceController.getServicesForSalonHandler
+  ServiceController.getServices
 );

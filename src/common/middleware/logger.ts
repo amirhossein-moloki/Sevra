@@ -1,5 +1,6 @@
 import pinoHttp from 'pino-http';
 import logger from '../../config/logger';
+import { Request } from 'express';
 
 const loggerMiddleware = pinoHttp({
   logger,
@@ -20,7 +21,7 @@ const loggerMiddleware = pinoHttp({
   // Use customProps to log the request body
   customProps: function (req, res) {
     return {
-      body: req.body,
+      body: (req as Request).body,
     };
   },
 });

@@ -1,55 +1,70 @@
 import { Request, Response } from 'express';
-import * as ServiceService from './services.service';
+import * as serviceLogic from './services.service';
+import { CreateServiceInput, UpdateServiceInput } from './services.types';
+import { Salon } from '@prisma/client';
 
-/**
- * Handler to create a new service.
- */
-export async function createServiceHandler(req: Request, res: Response) {
-  const { salonId } = req.params; // Assuming salonId is in params from a higher-level router
-  const service = await ServiceService.createService(salonId, req.body);
-  res.status(201).json({ success: true, data: service });
+// Local type extension for Request
+interface RequestWithSalon extends Request {
+  salon?: Salon;
 }
 
 /**
- * Handler to get a single service by its ID.
+ * Handle request to create a new service.
  */
-export async function getServiceByIdHandler(req: Request, res: Response) {
+export async function createService(
+  req: Request<{ salonId: string }, unknown, CreateServiceInput>,
+  res: Response
+) {
+  const { salonId } = req.params;
+  const newService = await serviceLogic.createService(salonId, req.body);
+  res.status(201).json({ message: 'Service created successfully', data: newService });
+}
+
+/**
+ * Handle request to get all services for a salon.
+ */
+export async function getServices(
+  req: RequestWithSalon,
+  res: Response
+) {
+  const { salonId } = req.params;
+  const { isActive } = req.query;
+
+  const targetSalonId = salonId || (req.salon?.id);
+  if (!targetSalonId) {
+    return res.status(400).json({ message: 'Salon ID or slug is required.' });
+  }
+
+  const services = await serviceLogic.getServicesForSalon(targetSalonId, isActive === 'true');
+  res.status(200).json({ data: services });
+}
+
+/**
+ * Handle request to get a single service by its ID.
+ */
+export async function getServiceById(req: Request<{ serviceId: string }>, res: Response) {
   const { serviceId } = req.params;
-  const service = await ServiceService.getServiceById(serviceId);
-  res.status(200).json({ success: true, data: service });
+  const service = await serviceLogic.getServiceById(serviceId);
+  res.status(200).json({ data: service });
 }
 
 /**
- * Handler to get a list of services for a salon.
+ * Handle request to update a service.
  */
-export async function getServicesForSalonHandler(req: Request, res: Response) {
-  const { salonId, salonSlug } = req.params;
-  const targetSalonId = salonId || (req.salon?.id); // salonId for private, req.salon.id for public from a slug middleware
-
-  // Handle isActive filter from query string
-  const isActiveQuery = req.query.isActive;
-  let isActive: boolean | undefined = undefined;
-  if (isActiveQuery === 'true') isActive = true;
-  if (isActiveQuery === 'false') isActive = false;
-
-  const services = await ServiceService.getServicesForSalon(targetSalonId, isActive);
-  res.status(200).json({ success: true, data: services });
-}
-
-/**
- * Handler to update a service.
- */
-export async function updateServiceHandler(req: Request, res: Response) {
+export async function updateService(
+  req: Request<{ serviceId: string }, unknown, UpdateServiceInput>,
+  res: Response
+) {
   const { serviceId } = req.params;
-  const service = await ServiceService.updateService(serviceId, req.body);
-  res.status(200).json({ success: true, data: service });
+  const updatedService = await serviceLogic.updateService(serviceId, req.body);
+  res.status(200).json({ message: 'Service updated successfully', data: updatedService });
 }
 
 /**
- * Handler to deactivate a service.
+ * Handle request to delete (deactivate) a service.
  */
-export async function deactivateServiceHandler(req: Request, res: Response) {
+export async function deleteService(req: Request<{ serviceId: string }>, res: Response) {
   const { serviceId } = req.params;
-  await ServiceService.deactivateService(serviceId);
-  res.status(204).send(); // No content
+  await serviceLogic.deactivateService(serviceId);
+  res.status(204).send();
 }
