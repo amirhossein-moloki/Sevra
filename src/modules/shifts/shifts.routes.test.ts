@@ -1,0 +1,128 @@
+import request from 'supertest';
+import app from '../../app';
+import { prisma } from '../../config/prisma';
+import { UserRole } from '@prisma/client';
+
+jest.mock('../../common/middleware/auth', () => ({
+  authMiddleware: (req, res, next) => {
+    if (req.headers.authorization) {
+      const token = req.headers.authorization.split(' ')[1];
+      if (token === 'mock-manager-token') {
+        req.user = { id: 'mock-manager-id', role: UserRole.MANAGER };
+      } else if (token === 'mock-staff-token') {
+        req.user = { id: 'mock-staff-id', role: UserRole.STAFF };
+      }
+    }
+    next();
+  },
+}));
+
+jest.mock('../../common/middleware/requireRole', () => ({
+  requireRole: (roles) => (req, res, next) => {
+    if (req.user && roles.includes(req.user.role)) {
+      next();
+    } else {
+      res.status(403).json({ message: 'Forbidden' });
+    }
+  },
+}));
+
+describe('Shifts API Endpoints', () => {
+  let salonId: string;
+  let managerToken: string;
+  let staffToken: string;
+  let managerId: string;
+  let staffId: string;
+
+  beforeAll(async () => {
+    const salon = await prisma.salon.create({
+      data: {
+        name: 'Test Salon for Shifts',
+        slug: `test-salon-shifts-${Date.now()}`,
+      },
+    });
+    salonId = salon.id;
+
+    const manager = await prisma.user.create({
+      data: {
+        salonId,
+        fullName: 'Shift Manager',
+        phone: `+10000000004`,
+        role: UserRole.MANAGER,
+      },
+    });
+    managerId = manager.id;
+
+    const staff = await prisma.user.create({
+      data: {
+        salonId,
+        fullName: 'Shift Staff',
+        phone: `+10000000005`,
+        role: UserRole.STAFF,
+      },
+    });
+    staffId = staff.id;
+
+    managerToken = 'mock-manager-token';
+    staffToken = 'mock-staff-token';
+  });
+
+  afterAll(async () => {
+    await prisma.shift.deleteMany({ where: { salonId } });
+    await prisma.user.deleteMany({ where: { salonId } });
+    await prisma.salon.delete({ where: { id: salonId } });
+    await prisma.$disconnect();
+  });
+
+  describe('PUT /salons/:salonId/staff/:userId/shifts', () => {
+    const validShiftsPayload = [
+      { dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isActive: true },
+      { dayOfWeek: 2, startTime: '09:00', endTime: '17:00', isActive: true },
+      { dayOfWeek: 3, startTime: '00:00', endTime: '00:00', isActive: false },
+    ];
+
+    it('should allow a MANAGER to upsert shifts for a staff member', async () => {
+      const response = await request(app)
+        .put(`/api/v1/salons/${salonId}/staff/${staffId}/shifts`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send(validShiftsPayload);
+
+      expect(response.status).toBe(200);
+      expect(response.body.length).toBe(validShiftsPayload.length);
+
+      const shifts = await prisma.shift.findMany({ where: { userId: staffId }, orderBy: { dayOfWeek: 'asc' } });
+      expect(shifts.length).toBe(validShiftsPayload.length);
+      expect(shifts[0].startTime).toBe('09:00');
+      expect(shifts[2].isActive).toBe(false);
+    });
+
+    it('should NOT allow a non-MANAGER to upsert shifts', async () => {
+      const response = await request(app)
+        .put(`/api/v1/salons/${salonId}/staff/${staffId}/shifts`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send(validShiftsPayload);
+
+      expect(response.status).toBe(403);
+    });
+
+    it('should return a 400 validation error for invalid data', async () => {
+      const invalidPayload = [{ dayOfWeek: 8, startTime: '99:99', endTime: '17:00', isActive: true }];
+      const response = await request(app)
+        .put(`/api/v1/salons/${salonId}/staff/${staffId}/shifts`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send(invalidPayload);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 404 if the user is not found', async () => {
+      const nonExistentId = 'clxxxxxxxxxxxxxx';
+      const response = await request(app)
+        .put(`/api/v1/salons/${salonId}/staff/${nonExistentId}/shifts`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send(validShiftsPayload);
+
+      expect(response.status).toBe(404);
+    });
+  });
+});

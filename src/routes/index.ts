@@ -9,6 +9,7 @@ import {
   publicServiceRouter,
 } from '../modules/services/services.routes';
 import staffRouter from '../modules/users/users.routes';
+import shiftsRouter from '../modules/shifts/shifts.routes';
 
 const router = Router();
 
@@ -26,6 +27,10 @@ router.use('/public/salons/:salonSlug/services', publicServiceRouter);
 
 // --- Staff Module Routes ---
 router.use('/salons/:salonId/staff', staffRouter);
+
+// --- Shifts Module Routes ---
+// Nested under staff for clarity
+router.use('/salons/:salonId/staff/:userId/shifts', shiftsRouter);
 
 
 export default router;
