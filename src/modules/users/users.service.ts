@@ -18,6 +18,11 @@ export const getStaffList = async (salonId: string) => {
   return staff;
 };
 
+export const getStaffMember = async (salonId: string, userId: string) => {
+  const user = await userRepo.findUserById(salonId, userId);
+  return user;
+};
+
 export const updateStaffMember = async (
   salonId: string,
   userId: string,
@@ -33,4 +38,13 @@ export const updateStaffMember = async (
   // Return the updated user data
   const updatedUser = await userRepo.findUserById(salonId, userId);
   return updatedUser;
+};
+
+export const deleteStaffMember = async (salonId: string, userId: string) => {
+  const existingUser = await userRepo.findUserById(salonId, userId);
+  if (!existingUser) {
+    throw new AppError('Staff member not found', 404);
+  }
+
+  await userRepo.softDeleteUser(salonId, userId);
 };

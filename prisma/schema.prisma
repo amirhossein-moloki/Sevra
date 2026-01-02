@@ -429,7 +429,7 @@ model Shift {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([salonId, userId, dayOfWeek])
+  @@unique([salonId, userId, dayOfWeek])
   @@index([salonId, dayOfWeek])
 }
 

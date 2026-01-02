@@ -24,6 +24,20 @@ export const createUserController = async (
   }
 };
 
+export const deleteUserController = async (
+  req: Request<{ salonId: string; userId: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { salonId, userId } = req.params;
+    await userService.deleteStaffMember(salonId, userId);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getUsersController = async (
   req: Request<{ salonId: string }>,
   res: Response,
@@ -33,6 +47,23 @@ export const getUsersController = async (
     const { salonId } = req.params;
     const staff = await userService.getStaffList(salonId);
     res.status(200).json(staff);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUserController = async (
+  req: Request<{ salonId: string, userId: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { salonId, userId } = req.params;
+    const user = await userService.getStaffMember(salonId, userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json(user);
   } catch (error) {
     next(error);
   }

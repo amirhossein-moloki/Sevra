@@ -10,6 +10,18 @@ export const createUser = async (salonId: string, data: CreateUserInput) => {
   });
 };
 
+export const softDeleteUser = async (salonId: string, userId: string) => {
+  return prisma.user.updateMany({
+    where: {
+      id: userId,
+      salonId,
+    },
+    data: {
+      isActive: false,
+    },
+  });
+};
+
 export const listUsersBySalon = async (salonId: string) => {
   return prisma.user.findMany({
     where: {

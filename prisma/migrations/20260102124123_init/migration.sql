@@ -71,6 +71,7 @@ CREATE TYPE "OtpChannel" AS ENUM ('SMS', 'WHATSAPP');
 CREATE TABLE "Salon" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "slug" TEXT NOT NULL,
     "description" TEXT,
     "seoTitle" TEXT,
@@ -528,10 +529,10 @@ CREATE INDEX "UserService_serviceId_idx" ON "UserService"("serviceId");
 CREATE INDEX "UserService_userId_idx" ON "UserService"("userId");
 
 -- CreateIndex
-CREATE INDEX "Shift_salonId_userId_dayOfWeek_idx" ON "Shift"("salonId", "userId", "dayOfWeek");
+CREATE INDEX "Shift_salonId_dayOfWeek_idx" ON "Shift"("salonId", "dayOfWeek");
 
 -- CreateIndex
-CREATE INDEX "Shift_salonId_dayOfWeek_idx" ON "Shift"("salonId", "dayOfWeek");
+CREATE UNIQUE INDEX "Shift_salonId_userId_dayOfWeek_key" ON "Shift"("salonId", "userId", "dayOfWeek");
 
 -- CreateIndex
 CREATE INDEX "Booking_salonId_startAt_idx" ON "Booking"("salonId", "startAt");
