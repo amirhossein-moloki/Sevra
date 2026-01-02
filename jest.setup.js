@@ -7,3 +7,5 @@ jest.mock('pino', () => ({
     debug: jest.fn(),
   })),
 }));
+
+jest.mock('./src/modules/notifications/sms.service');
