@@ -11,6 +11,7 @@ import {
 import staffRouter from '../modules/users/users.routes';
 import shiftsRouter from '../modules/shifts/shifts.routes';
 import availabilityRouter from '../modules/availability/availability.routes';
+import bookingsRoutes from '../modules/bookings/bookings.routes';
 
 const router = Router();
 
@@ -35,6 +36,9 @@ router.use('/salons/:salonId/staff/:userId/shifts', shiftsRouter);
 
 // --- Availability Module Routes ---
 router.use('/public/salons/:salonSlug/availability', availabilityRouter);
+
+// --- Bookings Module Routes ---
+router.use('/salons/:salonId/bookings', bookingsRoutes);
 
 
 export default router;
