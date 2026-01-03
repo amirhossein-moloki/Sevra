@@ -6,6 +6,7 @@ module.exports = {
   clearMocks: true,
   transformIgnorePatterns: ['/node_modules/(?!uuid)'],
   moduleNameMapper: {
+    '^cuid$': '<rootDir>/test-utils/cuid.ts',
     '^uuid$': require.resolve('uuid'),
   },
   setupFilesAfterEnv: ['./jest.setup.js'],
