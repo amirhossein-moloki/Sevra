@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "tsx src/server.ts",
-    "test": "npx dotenv -- jest --runInBand --detectOpenHandles"
+    "test": "npx dotenv-cli -e .env.test -- jest --runInBand --detectOpenHandles"
   },
   "repository": {
     "type": "git",
