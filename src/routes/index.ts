@@ -40,5 +40,9 @@ router.use('/public/salons/:salonSlug/availability', availabilityRouter);
 // --- Bookings Module Routes ---
 router.use('/salons/:salonId/bookings', bookingsRoutes);
 
+// --- Central Blog (Admin) ---
+import centralBlogRoutes from '../modules/central-blog/central-blog.routes';
+router.use('/admin/central-articles', centralBlogRoutes);
+
 
 export default router;
