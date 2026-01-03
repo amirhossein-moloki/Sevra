@@ -28,6 +28,7 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+!.env.test.example
 
 # ---------------------------
 # Runtime / temp
