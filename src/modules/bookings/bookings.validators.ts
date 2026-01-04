@@ -62,15 +62,22 @@ export const listBookingsQuerySchema = z.object({
 // =================================
 
 export const createPublicBookingSchema = z.object({
+  headers: z.object({
+    'idempotency-key': z.string().min(16).max(128),
+  }),
+  params: z.object({
+    salonSlug: z.string(),
+  }),
   body: z.object({
-    customer: z.object({
-      fullName: z.string().min(2, 'Full name is required'),
-      phone: z.string().min(10, 'A valid phone number is required'), // Basic validation
-    }),
     serviceId: z.string().cuid(CUID_MESSAGE),
     staffId: z.string().cuid(CUID_MESSAGE),
     startAt: z.string().datetime(),
-    note: z.string().optional(),
+    customer: z.object({
+      fullName: z.string().min(2),
+      phone: z.string().min(10), // E.164 normalization will be handled in the service
+      email: z.string().email().optional(),
+    }),
+    note: z.string().max(500).optional(),
   }),
 });
 

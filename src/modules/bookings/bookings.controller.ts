@@ -27,14 +27,18 @@ export const createPublicBooking = async (
   res: Response,
   next: NextFunction
 ) => {
-  const data = {
-    ...req.body,
-    salonSlug: req.params.salonSlug,
-  };
-  const booking = await bookingsService.createPublicBooking(data);
-  res.status(httpStatus.CREATED).json({
+  const idempotencyKey = req.headers['idempotency-key'] as string;
+  const { salonSlug } = req.params;
+
+  const result = await bookingsService.createPublicBooking(
+    salonSlug,
+    req.body,
+    idempotencyKey
+  );
+
+  res.status(result.statusCode).json({
     success: true,
-    data: booking,
+    data: result.body,
     meta: null,
   });
 };
@@ -44,10 +48,11 @@ export const getBookings = async (
   res: Response,
   next: NextFunction
 ) => {
-  const result = await bookingsService.getBookings(req.salonId, req.query);
+  const result = await bookingsService.getBookings(req.salonId as string, req.query);
   res.status(httpStatus.OK).json({
     success: true,
-    ...result,
+    data: result.data,
+    meta: result.meta,
   });
 };
 

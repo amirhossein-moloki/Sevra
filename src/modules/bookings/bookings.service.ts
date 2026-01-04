@@ -1,5 +1,5 @@
 
-import { addMinutes, isBefore } from 'date-fns';
+import { addMinutes, isBefore, parseISO } from 'date-fns';
 import { Booking, BookingStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
@@ -12,139 +12,68 @@ import {
   UpdateBookingInput,
 } from './bookings.validators';
 import { findSetting } from '../settings/settings.repo';
+import { getDay, parse, set } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
+import { createHash } from 'crypto';
 
-// =================================
-// HELPERS
-// =================================
-
-/**
- * Checks for overlapping bookings for a given staff member within a time range.
- * Throws an AppError if an overlap is found.
- * @param {object} data - The check data.
- * @param {string} data.salonId - The ID of the salon.
- * @param {string} data.staffId - The ID of the staff member.
- * @param {Date} data.startAt - The start time of the new booking.
- * @param {Date} data.endAt - The end time of the new booking.
- * @param {string} [data.excludeBookingId] - Optional booking ID to exclude from the check (for updates).
- */
-const checkForOverlap = async (data: {
-  salonId: string;
-  staffId: string;
-  startAt: Date;
-  endAt: Date;
-  excludeBookingId?: string;
-}) => {
+const checkForOverlap = async (
+  tx: Prisma.TransactionClient,
+  data: {
+    salonId: string;
+    staffId: string;
+    startAt: Date;
+    endAt: Date;
+    excludeBookingId?: string;
+  }
+) => {
   const { salonId, staffId, startAt, endAt, excludeBookingId } = data;
-
-  const overlappingBookings = await prisma.booking.count({
+  const overlappingBookings = await tx.booking.count({
     where: {
       salonId,
       staffId,
-      status: {
-        in: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
-      },
-      id: {
-        not: excludeBookingId,
-      },
-      // Logic: A booking overlaps if it starts before the new one ends
-      // AND ends after the new one starts.
-      startAt: {
-        lt: endAt,
-      },
-      endAt: {
-        gt: startAt,
-      },
+      status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+      id: { not: excludeBookingId },
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
     },
   });
-
   if (overlappingBookings > 0) {
-    throw new AppError(
-      'An appointment for this staff member already exists in the selected time slot.',
-      httpStatus.CONFLICT,
-      'OVERLAP_CONFLICT'
-    );
+    throw new AppError('Overlap conflict.', httpStatus.CONFLICT);
   }
 };
 
-/**
- * Validates that a booking belongs to the correct salon.
- * Throws a NOT_FOUND error if the booking does not exist or does not belong to the salon.
- * @param {string} bookingId - The ID of the booking.
- * @param {string} salonId - The ID of the salon.
- * @returns {Promise<Booking>} The validated booking object.
- */
 const findAndValidateBooking = async (
   bookingId: string,
   salonId: string
 ): Promise<Booking> => {
   const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
   if (!booking || booking.salonId !== salonId) {
-    throw new AppError(
-      'Booking not found.',
-      httpStatus.NOT_FOUND,
-      'NOT_FOUND'
-    );
+    throw new AppError('Booking not found.', httpStatus.NOT_FOUND);
   }
   return booking;
 };
 
-// =================================
-// PUBLIC METHODS
-// =================================
-
 export const bookingsService = {
-  /**
-   * Creates a new booking from the panel.
-   * @param {CreateBookingInput & { salonId: string; createdByUserId: string }} data - Booking creation data.
-   * @returns {Promise<Booking>} The created booking.
-   */
   async createBooking(
     data: CreateBookingInput & { salonId: string; createdByUserId: string }
   ) {
-    const {
-      salonId,
-      customerProfileId,
-      serviceId,
-      staffId,
-      startAt,
-      note,
-      createdByUserId,
-    } = data;
-
-    // 1. Fetch service and settings in parallel
+    const { salonId, customerProfileId, serviceId, staffId, startAt, note, createdByUserId } = data;
     const [service, settings] = await Promise.all([
       prisma.service.findUnique({ where: { id: serviceId } }),
       findSetting(salonId),
     ]);
-
     if (!service) {
-      throw new AppError(
-        'Service not found',
-        httpStatus.NOT_FOUND,
-        'NOT_FOUND'
-      );
+      throw new AppError('Service not found', httpStatus.NOT_FOUND);
     }
     const endAt = addMinutes(new Date(startAt), service.durationMinutes);
-
-    // 2. Check for overlaps if enabled
     if (settings?.preventOverlaps) {
-      await checkForOverlap({ salonId, staffId, startAt, endAt });
+      await checkForOverlap(prisma, { salonId, staffId, startAt: new Date(startAt), endAt });
     }
-
-    // 3. Find customer account
-    const customerProfile = await prisma.salonCustomerProfile.findUnique({
-      where: { id: customerProfileId },
-    });
+    const customerProfile = await prisma.salonCustomerProfile.findUnique({ where: { id: customerProfileId } });
     if (!customerProfile) {
-      throw new AppError(
-        'Customer profile not found',
-        httpStatus.NOT_FOUND,
-        'NOT_FOUND'
-      );
+      throw new AppError('Customer profile not found', httpStatus.NOT_FOUND);
     }
-
-    // 4. Create booking
-    const newBooking = await prisma.booking.create({
+    return prisma.booking.create({
       data: {
         salonId,
         customerProfileId,
@@ -155,105 +84,8 @@ export const bookingsService = {
         startAt,
         endAt,
         note,
-        status: BookingStatus.CONFIRMED, // Panel bookings are confirmed by default
+        status: BookingStatus.CONFIRMED,
         source: 'IN_PERSON',
-        // --- Data snapshots ---
-        serviceNameSnapshot: service.name,
-        serviceDurationSnapshot: service.durationMinutes,
-        servicePriceSnapshot: service.price,
-        currencySnapshot: service.currency,
-        amountDueSnapshot: service.price, // MVP: amount due is the service price
-        paymentState: 'UNPAID',
-      },
-    });
-
-    return newBooking;
-  },
-  /**
-   * Creates a public booking.
-   */
-  async createPublicBooking(
-    data: CreatePublicBookingInput & { salonSlug: string }
-  ) {
-    const { salonSlug, customer, serviceId, staffId, startAt, note } = data;
-
-    const salon = await prisma.salon.findUnique({
-      where: { slug: salonSlug },
-      include: { settings: true },
-    });
-
-    if (!salon) {
-      throw new AppError('Salon not found', httpStatus.NOT_FOUND, 'NOT_FOUND');
-    }
-    if (!salon.settings?.allowOnlineBooking) {
-      throw new AppError(
-        'Online booking is disabled for this salon.',
-        httpStatus.FORBIDDEN,
-        'ONLINE_BOOKING_DISABLED'
-      );
-    }
-
-    const service = await prisma.service.findUnique({ where: { id: serviceId } });
-    if (!service || service.salonId !== salon.id) {
-      throw new AppError(
-        'Service not found',
-        httpStatus.NOT_FOUND,
-        'NOT_FOUND'
-      );
-    }
-    const endAt = addMinutes(new Date(startAt), service.durationMinutes);
-
-    if (salon.settings.preventOverlaps) {
-      await checkForOverlap({ salonId: salon.id, staffId, startAt, endAt });
-    }
-
-    // Create/update customer
-    let customerAccount = await prisma.customerAccount.findUnique({
-      where: { phone: customer.phone },
-    });
-    if (!customerAccount) {
-      customerAccount = await prisma.customerAccount.create({
-        data: {
-          phone: customer.phone,
-          fullName: customer.fullName,
-        },
-      });
-    }
-
-    let customerProfile = await prisma.salonCustomerProfile.findUnique({
-      where: {
-        salonId_customerAccountId: {
-          salonId: salon.id,
-          customerAccountId: customerAccount.id,
-        },
-      },
-    });
-    if (!customerProfile) {
-      customerProfile = await prisma.salonCustomerProfile.create({
-        data: {
-          salonId: salon.id,
-          customerAccountId: customerAccount.id,
-          displayName: customer.fullName,
-        },
-      });
-    }
-
-    // 5. Create booking
-    const newBooking = await prisma.booking.create({
-      data: {
-        salonId: salon.id,
-        customerProfileId: customerProfile.id,
-        customerAccountId: customerAccount.id,
-        serviceId,
-        staffId,
-        createdByUserId: staffId, // Public bookings are created by staff
-        startAt,
-        endAt,
-        note,
-        status: salon.settings.onlineBookingAutoConfirm
-          ? BookingStatus.CONFIRMED
-          : BookingStatus.PENDING,
-        source: 'ONLINE',
         serviceNameSnapshot: service.name,
         serviceDurationSnapshot: service.durationMinutes,
         servicePriceSnapshot: service.price,
@@ -262,26 +94,123 @@ export const bookingsService = {
         paymentState: 'UNPAID',
       },
     });
-
-    return newBooking;
   },
 
-  /**
-   * Retrieves a list of bookings for a salon with filtering and pagination.
-   */
-  async getBookings(salonId: string, query: ListBookingsQuery) {
-    const {
-      page = 1,
-      pageSize = 20,
-      sortBy = 'startAt',
-      sortOrder = 'asc',
-      status,
-      staffId,
-      customerProfileId,
-      dateFrom,
-      dateTo,
-    } = query;
+  async createPublicBooking(
+    salonSlug: string,
+    body: CreatePublicBookingInput,
+    idempotencyKey: string
+  ) {
+    const requestHash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
+    const salon = await prisma.salon.findUnique({
+      where: { slug: salonSlug },
+      include: { settings: true },
+    });
+    if (!salon) {
+      throw new AppError('Salon not found', httpStatus.NOT_FOUND);
+    }
+    let idempotentRecord = await prisma.idempotencyKey.findUnique({ where: { key: idempotencyKey } });
+    if (idempotentRecord) {
+      if (idempotentRecord.requestHash !== requestHash) {
+        throw new AppError('Idempotency key reused.', httpStatus.CONFLICT);
+      }
+      return {
+        statusCode: idempotentRecord.responseStatusCode,
+        body: JSON.parse(idempotentRecord.responseBody as string),
+      };
+    }
+    const newBooking = await prisma.$transaction(async (tx) => {
+      try {
+        await tx.idempotencyKey.create({
+          data: {
+            key: idempotencyKey,
+            salonId: salon.id,
+            requestHash,
+            expiresAt: addMinutes(new Date(), 24 * 60),
+          },
+        });
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new AppError('Idempotency key conflict.', httpStatus.CONFLICT);
+        }
+        throw error;
+      }
+      if (!salon.settings?.allowOnlineBooking) {
+        throw new AppError('Online booking is disabled.', httpStatus.FORBIDDEN);
+      }
+      const { serviceId, staffId, startAt: startAtISO, customer, note } = body;
+      const startAt = new Date(startAtISO);
+      const service = await tx.service.findFirst({ where: { id: serviceId, salonId: salon.id, isActive: true } });
+      if (!service) {
+        throw new AppError('Service not found.', httpStatus.NOT_FOUND);
+      }
+      const staff = await tx.user.findFirst({ where: { id: staffId, salonId: salon.id, isActive: true } });
+      if (!staff) {
+        throw new AppError('Staff not found.', httpStatus.NOT_FOUND);
+      }
+      const endAt = addMinutes(startAt, service.durationMinutes);
+      const salonTimezone = salon.settings?.timeZone || 'UTC';
+      const nowInSalonTz = toZonedTime(new Date(), salonTimezone);
+      const startAtInSalonTz = toZonedTime(startAt, salonTimezone);
+      if (isBefore(startAtInSalonTz, addMinutes(nowInSalonTz, 2))) {
+        throw new AppError('Booking must be in the future.', httpStatus.BAD_REQUEST);
+      }
+      const dayOfWeek = getDay(startAtInSalonTz);
+      const shift = await tx.shift.findFirst({ where: { userId: staffId, dayOfWeek, isActive: true } });
+      if (!shift) {
+        throw new AppError('Staff is not working on this day.', httpStatus.CONFLICT);
+      }
+      const shiftStart = parse(shift.startTime, 'HH:mm:ss', new Date());
+      const shiftEnd = parse(shift.endTime, 'HH:mm:ss', new Date());
+      const bookingTimeStart = set(new Date(0), { hours: startAtInSalonTz.getHours(), minutes: startAtInSalonTz.getMinutes() });
+      if (isBefore(bookingTimeStart, shiftStart) || isBefore(shiftEnd, bookingTimeStart)) {
+        throw new AppError('Time is outside of working hours.', httpStatus.CONFLICT);
+      }
+      if (salon.settings?.preventOverlaps) {
+        await checkForOverlap(tx, { salonId: salon.id, staffId, startAt, endAt });
+      }
+      const customerAccount = await tx.customerAccount.upsert({
+        where: { phone: customer.phone },
+        update: {},
+        create: { phone: customer.phone, fullName: customer.fullName },
+      });
+      const customerProfile = await tx.salonCustomerProfile.upsert({
+        where: { salonId_customerAccountId: { salonId: salon.id, customerAccountId: customerAccount.id } },
+        update: {},
+        create: { salonId: salon.id, customerAccountId: customerAccount.id, displayName: customer.fullName },
+      });
+      return tx.booking.create({
+        data: {
+          salonId: salon.id,
+          customerProfileId: customerProfile.id,
+          customerAccountId: customerAccount.id,
+          serviceId,
+          staffId,
+          createdByUserId: staffId,
+          startAt,
+          endAt,
+          note,
+          status: salon.settings.onlineBookingAutoConfirm ? BookingStatus.CONFIRMED : BookingStatus.PENDING,
+          source: 'ONLINE',
+          serviceNameSnapshot: service.name,
+          serviceDurationSnapshot: service.durationMinutes,
+          servicePriceSnapshot: service.price,
+          currencySnapshot: service.currency,
+          amountDueSnapshot: service.price,
+          paymentState: 'UNPAID',
+        },
+      });
+    });
+    const responseBody = JSON.stringify(newBooking);
+    await prisma.idempotencyKey.update({
+      where: { key: idempotencyKey },
+      data: { responseBody, responseStatusCode: httpStatus.CREATED },
+    });
+    return { statusCode: httpStatus.CREATED, body: newBooking };
+  },
 
+  async getBookings(salonId: string, query: ListBookingsQuery) {
+    const { page = 1, pageSize = 20, sortBy = 'startAt', sortOrder = 'asc', status, staffId, customerProfileId, dateFrom, dateTo } = query;
     const where: Prisma.BookingWhereInput = {
       salonId,
       status,
@@ -292,86 +221,44 @@ export const bookingsService = {
         lt: dateTo ? new Date(dateTo) : undefined,
       },
     };
-
     const [bookings, totalItems] = await prisma.$transaction([
       prisma.booking.findMany({
         where,
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
+        orderBy: { [sortBy]: sortOrder },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
       prisma.booking.count({ where }),
     ]);
-
     return {
       data: bookings,
-      meta: {
-        page,
-        pageSize,
-        totalItems,
-        totalPages: Math.ceil(totalItems / pageSize),
-      },
+      meta: { page, pageSize, totalItems, totalPages: Math.ceil(totalItems / pageSize) },
     };
   },
 
-  /**
-   * Retrieves a single booking by its ID.
-   */
   async getBookingById(bookingId: string, salonId: string) {
     return findAndValidateBooking(bookingId, salonId);
   },
 
-  /**
-   * Updates the details of an existing booking.
-   */
-  async updateBooking(
-    bookingId: string,
-    salonId: string,
-    data: UpdateBookingInput
-  ) {
+  async updateBooking(bookingId: string, salonId: string, data: UpdateBookingInput) {
     const booking = await findAndValidateBooking(bookingId, salonId);
-
-    // 1. Prevent updates to terminal state bookings
-    if (
-      [
-        BookingStatus.DONE,
-        BookingStatus.CANCELED,
-        BookingStatus.NO_SHOW,
-      ].includes(booking.status)
-    ) {
-      throw new AppError(
-        'Cannot update a booking that is already completed, canceled, or marked as no-show.',
-        httpStatus.CONFLICT,
-        'INVALID_TRANSITION'
-      );
+    if (booking.status === BookingStatus.DONE || booking.status === BookingStatus.CANCELED || booking.status === BookingStatus.NO_SHOW) {
+      throw new AppError('Cannot update a terminal booking.', httpStatus.CONFLICT);
     }
-
     let { serviceId, startAt, staffId } = data;
     let endAt = booking.endAt;
-
-    // 2. If time, service or staff changes, need to re-validate overlap
     if (serviceId || startAt || staffId) {
       const newServiceId = serviceId || booking.serviceId;
       const newStartAt = startAt ? new Date(startAt) : booking.startAt;
       const newStaffId = staffId || booking.staffId;
-
-      const service = await prisma.service.findUnique({
-        where: { id: newServiceId },
-      });
+      const service = await prisma.service.findUnique({ where: { id: newServiceId } });
       if (!service) {
-        throw new AppError(
-          'Service not found',
-          httpStatus.NOT_FOUND,
-          'NOT_FOUND'
-        );
+        throw new AppError('Service not found', httpStatus.NOT_FOUND);
       }
       endAt = addMinutes(newStartAt, service.durationMinutes);
-
       const settings = await findSetting(salonId);
       if (settings?.preventOverlaps) {
-        await checkForOverlap({
+        await checkForOverlap(prisma, {
           salonId,
           staffId: newStaffId,
           startAt: newStartAt,
@@ -380,64 +267,22 @@ export const bookingsService = {
         });
       }
     }
-
-    // 3. Perform the update
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        ...data,
-        endAt,
-      },
-    });
-
-    return updatedBooking;
+    return prisma.booking.update({ where: { id: bookingId }, data: { ...data, endAt } });
   },
 
-  /**
-   * Confirms a PENDING booking.
-   */
   async confirmBooking(bookingId: string, salonId: string) {
     const booking = await findAndValidateBooking(bookingId, salonId);
-
     if (booking.status !== BookingStatus.PENDING) {
-      throw new AppError(
-        'Only pending bookings can be confirmed.',
-        httpStatus.CONFLICT,
-        'INVALID_TRANSITION'
-      );
+      throw new AppError('Only pending bookings can be confirmed.', httpStatus.CONFLICT);
     }
-
-    return prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: BookingStatus.CONFIRMED },
-    });
+    return prisma.booking.update({ where: { id: bookingId }, data: { status: BookingStatus.CONFIRMED } });
   },
 
-  /**
-   * Cancels a booking.
-   */
-  async cancelBooking(
-    bookingId: string,
-    salonId: string,
-    userId: string,
-    data: CancelBookingInput
-  ) {
+  async cancelBooking(bookingId: string, salonId: string, userId: string, data: CancelBookingInput) {
     const booking = await findAndValidateBooking(bookingId, salonId);
-
-    if (
-      [
-        BookingStatus.DONE,
-        BookingStatus.CANCELED,
-        BookingStatus.NO_SHOW,
-      ].includes(booking.status)
-    ) {
-      throw new AppError(
-        'Booking is already in a terminal state.',
-        httpStatus.CONFLICT,
-        'INVALID_TRANSITION'
-      );
+    if (booking.status === BookingStatus.DONE || booking.status === BookingStatus.CANCELED || booking.status === BookingStatus.NO_SHOW) {
+      throw new AppError('Booking is already in a terminal state.', httpStatus.CONFLICT);
     }
-
     return prisma.booking.update({
       where: { id: bookingId },
       data: {
@@ -449,63 +294,25 @@ export const bookingsService = {
     });
   },
 
-  /**
-   * Marks a CONFIRMED booking as DONE.
-   */
   async completeBooking(bookingId: string, salonId: string) {
     const booking = await findAndValidateBooking(bookingId, salonId);
-
     if (booking.status !== BookingStatus.CONFIRMED) {
-      throw new AppError(
-        'Only confirmed bookings can be marked as completed.',
-        httpStatus.CONFLICT,
-        'INVALID_TRANSITION'
-      );
+      throw new AppError('Only confirmed bookings can be completed.', httpStatus.CONFLICT);
     }
-     if (isBefore(new Date(), booking.startAt)) {
-      throw new AppError(
-        'Cannot complete a booking that is in the future.',
-        httpStatus.CONFLICT,
-        'INVALID_TRANSITION'
-      );
+    if (isBefore(new Date(), booking.startAt)) {
+      throw new AppError('Cannot complete a future booking.', httpStatus.CONFLICT);
     }
-
-    return prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        status: BookingStatus.DONE,
-        completedAt: new Date(),
-      },
-    });
+    return prisma.booking.update({ where: { id: bookingId }, data: { status: BookingStatus.DONE, completedAt: new Date() } });
   },
 
-  /**
-   * Marks a CONFIRMED booking as NO_SHOW.
-   */
   async markAsNoShow(bookingId: string, salonId: string) {
     const booking = await findAndValidateBooking(bookingId, salonId);
-
     if (booking.status !== BookingStatus.CONFIRMED) {
-      throw new AppError(
-        'Only confirmed bookings can be marked as no-show.',
-        httpStatus.CONFLICT,
-        'INVALID_TRANSITION'
-      );
+      throw new AppError('Only confirmed bookings can be marked as no-show.', httpStatus.CONFLICT);
     }
     if (isBefore(new Date(), booking.endAt)) {
-      throw new AppError(
-        'Cannot mark a booking as no-show before it has ended.',
-        httpStatus.CONFLICT,
-        'INVALID_TRANSITION'
-      );
+      throw new AppError('Cannot mark as no-show before booking has ended.', httpStatus.CONFLICT);
     }
-
-    return prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        status: BookingStatus.NO_SHOW,
-        noShowAt: new Date(),
-      },
-    });
+    return prisma.booking.update({ where: { id: bookingId }, data: { status: BookingStatus.NO_SHOW, noShowAt: new Date() } });
   },
 };

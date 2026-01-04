@@ -838,3 +838,28 @@ model SalonPageSlugHistory {
   @@index([pageId, createdAt])
   @@index([oldSlug])
 }
+
+// =====================================================
+// Idempotency
+// =====================================================
+model IdempotencyKey {
+  id                 String   @id @default(cuid())
+  key                String   @unique
+  salonId            String
+
+  // To detect if the same key is used with a different payload
+  requestHash        String
+
+  // Cached response
+  responseBody       String?
+  responseStatusCode Int?
+
+  // TTL
+  expiresAt          DateTime
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([salonId, key])
+  @@index([expiresAt])
+}
