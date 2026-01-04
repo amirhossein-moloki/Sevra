@@ -13,6 +13,7 @@ export const createBooking = async (
     ...req.body,
     salonId: req.salonId,
     createdByUserId: req.user.id,
+    requestId: req.id,
   };
   const booking = await bookingsService.createBooking(data);
   res.status(httpStatus.CREATED).json({
@@ -33,7 +34,8 @@ export const createPublicBooking = async (
   const result = await bookingsService.createPublicBooking(
     salonSlug,
     req.body,
-    idempotencyKey
+    idempotencyKey,
+    req.id
   );
 
   res.status(result.statusCode).json({

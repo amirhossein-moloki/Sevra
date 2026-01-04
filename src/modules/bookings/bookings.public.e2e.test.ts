@@ -134,6 +134,56 @@ describe('POST /api/v1/public/salons/:salonSlug/bookings', () => {
     expect(response.status).toBe(409);
   });
 
+  it('should allow only one booking when concurrent requests target the same slot', async () => {
+    const startAt = add(getFutureTime(), { hours: 2 });
+    const endAt = add(startAt, { minutes: service.durationMinutes });
+    const payloads = Array.from({ length: 10 }, (_, index) => ({
+      serviceId: service.id,
+      staffId: staff.id,
+      startAt: formatISO(startAt),
+      customer: { fullName: `Concurrent Booker ${index}`, phone: `+15556666${index.toString().padStart(2, '0')}` },
+    }));
+
+    const responses = await Promise.all(
+      payloads.map((payload) =>
+        request(app)
+          .post(`/api/v1/public/salons/${salon.slug}/bookings`)
+          .set('Idempotency-Key', uuidv4())
+          .send(payload)
+      )
+    );
+
+    const successResponses = responses.filter((response) => response.status === 201);
+    const conflictResponses = responses.filter((response) => response.status === 409);
+
+    expect(successResponses).toHaveLength(1);
+    expect(conflictResponses).toHaveLength(9);
+    conflictResponses.forEach((response) => {
+      expect(response.body.error.code).toBe('SLOT_NOT_AVAILABLE');
+    });
+
+    const activeCount = await prisma.booking.count({
+      where: {
+        salonId: salon.id,
+        staffId: staff.id,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        startAt,
+        endAt,
+      },
+    });
+    expect(activeCount).toBe(1);
+
+    const booking = await prisma.booking.findFirst({
+      where: {
+        salonId: salon.id,
+        staffId: staff.id,
+        startAt,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+      },
+    });
+    expect(booking?.status).toBe('PENDING');
+  });
+
   it('should return the same response when replaying a request with the same idempotency key', async () => {
     const startAt = getFutureTime();
     const idempotencyKey = uuidv4();
