@@ -1,4 +1,4 @@
-import { Booking, Payment, Salon, Service, Shift, User, UserRole } from '@prisma/client';
+import { Booking, Payment, PaymentStatus, Salon, Service, Shift, User, UserRole, PaymentProvider } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
@@ -100,13 +100,23 @@ export const createTestPayment = (options: {
   salonId: string;
   bookingId: string;
   amount?: number;
+  status?: PaymentStatus;
+  provider?: PaymentProvider;
 }): Promise<Payment> => {
-  const { salonId, bookingId, amount = 50000 } = options;
+  const {
+    salonId,
+    bookingId,
+    amount = 50000,
+    status = PaymentStatus.INITIATED,
+    provider = PaymentProvider.MANUAL,
+  } = options;
   return prisma.payment.create({
     data: {
       salonId,
       bookingId,
       amount,
+      status,
+      provider,
       currency: 'IRR',
     },
   });
