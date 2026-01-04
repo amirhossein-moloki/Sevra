@@ -28,19 +28,17 @@ export const createPublicBooking = async (
   res: Response,
   next: NextFunction
 ) => {
-  const idempotencyKey = req.headers['idempotency-key'] as string;
   const { salonSlug } = req.params;
 
-  const result = await bookingsService.createPublicBooking(
+  const booking = await bookingsService.createPublicBooking(
     salonSlug,
     req.body,
-    idempotencyKey,
     req.id
   );
 
-  res.status(result.statusCode).json({
+  res.status(httpStatus.CREATED).json({
     success: true,
-    data: result.body,
+    data: booking,
     meta: null,
   });
 };

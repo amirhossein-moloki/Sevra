@@ -164,10 +164,8 @@ export const bookingsService = {
   async createPublicBooking(
     salonSlug: string,
     body: CreatePublicBookingInput,
-    idempotencyKey: string,
     requestId?: string
   ) {
-    const requestHash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     const salon = await prisma.salon.findUnique({
       where: { slug: salonSlug },
       include: { settings: true },
@@ -175,76 +173,51 @@ export const bookingsService = {
     if (!salon) {
       throw new AppError('Salon not found', httpStatus.NOT_FOUND);
     }
-    let idempotentRecord = await prisma.idempotencyKey.findUnique({ where: { key: idempotencyKey } });
-    if (idempotentRecord) {
-      if (idempotentRecord.requestHash !== requestHash) {
-        throw new AppError('Idempotency key reused.', httpStatus.CONFLICT);
-      }
-      return {
-        statusCode: idempotentRecord.responseStatusCode,
-        body: JSON.parse(idempotentRecord.responseBody as string),
-      };
-    }
     const newBooking = await prisma.$transaction(async (tx) => {
-      try {
-        await tx.idempotencyKey.create({
-          data: {
-            key: idempotencyKey,
-            salonId: salon.id,
-            requestHash,
-            expiresAt: addMinutes(new Date(), 24 * 60),
-          },
-        });
-      } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-          throw new AppError('Idempotency key conflict.', httpStatus.CONFLICT);
-        }
-        throw error;
-      }
       if (!salon.settings?.allowOnlineBooking) {
         throw new AppError('Online booking is disabled.', httpStatus.FORBIDDEN);
       }
-      const { serviceId, staffId, startAt: startAtISO, customer, note } = body;
-      const startAt = new Date(startAtISO);
-      const service = await tx.service.findFirst({ where: { id: serviceId, salonId: salon.id, isActive: true } });
+      const { serviceId, staffId, startAt: startAtISO, customer, note } = body
+      const startAt = new Date(startAtISO)
+      const service = await tx.service.findFirst({ where: { id: serviceId, salonId: salon.id, isActive: true } })
       if (!service) {
-        throw new AppError('Service not found.', httpStatus.NOT_FOUND);
+        throw new AppError('Service not found.', httpStatus.NOT_FOUND)
       }
-      const staff = await tx.user.findFirst({ where: { id: staffId, salonId: salon.id, isActive: true } });
+      const staff = await tx.user.findFirst({ where: { id: staffId, salonId: salon.id, isActive: true } })
       if (!staff) {
-        throw new AppError('Staff not found.', httpStatus.NOT_FOUND);
+        throw new AppError('Staff not found.', httpStatus.NOT_FOUND)
       }
-      const endAt = addMinutes(startAt, service.durationMinutes);
-      const salonTimezone = salon.settings?.timeZone || 'UTC';
-      const nowInSalonTz = toZonedTime(new Date(), salonTimezone);
-      const startAtInSalonTz = toZonedTime(startAt, salonTimezone);
+      const endAt = addMinutes(startAt, service.durationMinutes)
+      const salonTimezone = salon.settings?.timeZone || 'UTC'
+      const nowInSalonTz = toZonedTime(new Date(), salonTimezone)
+      const startAtInSalonTz = toZonedTime(startAt, salonTimezone)
       if (isBefore(startAtInSalonTz, addMinutes(nowInSalonTz, 2))) {
-        throw new AppError('Booking must be in the future.', httpStatus.BAD_REQUEST);
+        throw new AppError('Booking must be in the future.', httpStatus.BAD_REQUEST)
       }
-      const dayOfWeek = getDay(startAtInSalonTz);
-      const shift = await tx.shift.findFirst({ where: { userId: staffId, dayOfWeek, isActive: true } });
+      const dayOfWeek = getDay(startAtInSalonTz)
+      const shift = await tx.shift.findFirst({ where: { userId: staffId, dayOfWeek, isActive: true } })
       if (!shift) {
-        throw new AppError('Staff is not working on this day.', httpStatus.CONFLICT);
+        throw new AppError('Staff is not working on this day.', httpStatus.CONFLICT)
       }
-      const shiftStart = parse(shift.startTime, 'HH:mm:ss', new Date());
-      const shiftEnd = parse(shift.endTime, 'HH:mm:ss', new Date());
-      const bookingTimeStart = set(new Date(0), { hours: startAtInSalonTz.getHours(), minutes: startAtInSalonTz.getMinutes() });
+      const shiftStart = parse(shift.startTime, 'HH:mm:ss', new Date())
+      const shiftEnd = parse(shift.endTime, 'HH:mm:ss', new Date())
+      const bookingTimeStart = set(new Date(0), { hours: startAtInSalonTz.getHours(), minutes: startAtInSalonTz.getMinutes() })
       if (isBefore(bookingTimeStart, shiftStart) || isBefore(shiftEnd, bookingTimeStart)) {
-        throw new AppError('Time is outside of working hours.', httpStatus.CONFLICT);
+        throw new AppError('Time is outside of working hours.', httpStatus.CONFLICT)
       }
       if (salon.settings?.preventOverlaps) {
-        await checkForOverlap(tx, { salonId: salon.id, staffId, startAt, endAt, requestId });
+        await checkForOverlap(tx, { salonId: salon.id, staffId, startAt, endAt, requestId })
       }
       const customerAccount = await tx.customerAccount.upsert({
         where: { phone: customer.phone },
         update: {},
         create: { phone: customer.phone, fullName: customer.fullName },
-      });
+      })
       const customerProfile = await tx.salonCustomerProfile.upsert({
         where: { salonId_customerAccountId: { salonId: salon.id, customerAccountId: customerAccount.id } },
         update: {},
         create: { salonId: salon.id, customerAccountId: customerAccount.id, displayName: customer.fullName },
-      });
+      })
       try {
         const booking = await tx.booking.create({
           data: {
@@ -253,7 +226,7 @@ export const bookingsService = {
             customerAccountId: customerAccount.id,
             serviceId,
             staffId,
-            createdByUserId: staffId,
+            createdByUserId: staffId, // Public bookings are "created" by the staff member performing them
             startAt,
             endAt,
             note,
@@ -266,7 +239,7 @@ export const bookingsService = {
             amountDueSnapshot: service.price,
             paymentState: 'UNPAID',
           },
-        });
+        })
         logger.info({
           event: 'booking.create.success',
           bookingId: booking.id,
@@ -275,21 +248,16 @@ export const bookingsService = {
           startAt,
           endAt,
           requestId,
-        });
-        return booking;
+        })
+        return booking
       } catch (error) {
         if (isOverlapConstraintError(error)) {
-          throw buildOverlapError({ salonId: salon.id, staffId, startAt, endAt, requestId });
+          throw buildOverlapError({ salonId: salon.id, staffId, startAt, endAt, requestId })
         }
-        throw error;
+        throw error
       }
-    });
-    const responseBody = JSON.stringify(newBooking);
-    await prisma.idempotencyKey.update({
-      where: { key: idempotencyKey },
-      data: { responseBody, responseStatusCode: httpStatus.CREATED },
-    });
-    return { statusCode: httpStatus.CREATED, body: newBooking };
+    })
+    return newBooking
   },
 
   async getBookings(salonId: string, query: ListBookingsQuery) {
