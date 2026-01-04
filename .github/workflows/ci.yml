@@ -1,0 +1,59 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          - -health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Linter
+        run: npm run lint
+
+      - name: Run E2E Tests
+        env:
+          DATABASE_URL: "postgresql://testuser:testpassword@localhost:5432/testdb?schema=public"
+          JWT_ACCESS_SECRET: "test-secret-for-ci"
+          JWT_REFRESH_SECRET: "test-refresh-secret-for-ci"
+          COOKIE_SECRET: "test-cookie-secret-for-ci"
+          PAYMENT_PROVIDER_WEBHOOK_SECRET: "test-webhook-secret-for-ci"
+          SMSIR_API_KEY: "test-sms-key"
+          SMSIR_SECRET_KEY: "test-sms-secret"
+          SMSIR_LINE_NUMBER: "12345"
+          NODE_ENV: "test"
+        run: |
+          npx prisma migrate reset --force
+          npm test

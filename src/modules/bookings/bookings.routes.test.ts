@@ -175,4 +175,41 @@ describe('Bookings API E2E Tests', () => {
         expect(response.status).toBe(409);
     });
   });
+
+  describe('POST /api/v1/salons/:salonId/bookings/:bookingId/cancel', () => {
+    it('should successfully cancel a confirmed booking', async () => {
+      const booking = await prisma.booking.create({
+        data: {
+          salonId: salon.id,
+          serviceId: service.id,
+          staffId: staff.id,
+          customerAccountId: customerAccount.id,
+          customerProfileId: customerProfile.id,
+          createdByUserId: manager.id,
+          startAt: set(add(new Date(), { days: 21 }), { hours: 10, minutes: 0, seconds: 0, milliseconds: 0 }),
+          endAt: set(add(new Date(), { days: 21 }), { hours: 11, minutes: 0, seconds: 0, milliseconds: 0 }),
+          status: 'CONFIRMED',
+          paymentState: 'PENDING',
+          serviceNameSnapshot: service.name,
+          serviceDurationSnapshot: service.durationMinutes,
+          servicePriceSnapshot: service.price,
+          currencySnapshot: service.currency,
+          amountDueSnapshot: service.price,
+        }
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/salons/${salon.id}/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ cancellationReason: 'Customer request' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.status).toBe('CANCELLED');
+
+      const dbBooking = await prisma.booking.findUnique({
+        where: { id: booking.id },
+      });
+      expect(dbBooking?.status).toBe('CANCELLED');
+    });
+  });
 });
