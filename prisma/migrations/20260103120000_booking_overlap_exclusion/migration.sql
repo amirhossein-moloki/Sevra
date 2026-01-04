@@ -1,13 +1,11 @@
+-- Enable the btree_gist extension to allow GiST indexing on standard data types
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
-CREATE INDEX "Booking_salonId_staffId_status_startAt_endAt_idx"
-ON "Booking"("salonId", "staffId", "status", "startAt", "endAt");
-
-ALTER TABLE "Booking"
-ADD CONSTRAINT "Booking_no_overlap_active"
-EXCLUDE USING gist (
+-- Add a partial exclusion constraint to prevent overlapping bookings for the same staff and salon
+-- The constraint only applies to active booking statuses to allow re-booking over canceled slots
+ALTER TABLE "Booking" ADD CONSTRAINT "Booking_no_overlap_active" EXCLUDE USING gist (
   "salonId" WITH =,
   "staffId" WITH =,
-  tstzrange("startAt", "endAt", '[)') WITH &&
+  tstzrange("startAt", "endAt") WITH &&
 )
-WHERE ("status" IN ('PENDING', 'CONFIRMED'));
+WHERE ("status" IN ('PENDING', 'CONFIRMED', 'DONE'));

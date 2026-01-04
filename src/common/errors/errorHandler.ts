@@ -1,13 +1,9 @@
-import type { Request, Response, NextFunction } from "express";
 
-// اگر AppError دارید ازش استفاده می‌کنیم، اگر نبود هم مشکلی نیست.
-let AppErrorClass: any;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  AppErrorClass = require("./AppError").default ?? require("./AppError").AppError ?? require("./AppError");
-} catch {
-  AppErrorClass = null;
-}
+import type { Request, Response, NextFunction } from "express";
+import { Prisma } from '@prisma/client';
+
+// We can now safely import AppError
+import AppError from "./AppError";
 
 type NormalizedError = {
   status: number;
@@ -22,61 +18,73 @@ function getRequestId(req: Request): string | undefined {
 }
 
 function normalizeError(err: any): NormalizedError {
-  // AppError path (اگر وجود داشته باشه)
-  if (AppErrorClass && err instanceof AppErrorClass) {
+  // 1. AppError (our custom, preferred error type)
+  if (err instanceof AppError) {
     return {
-      status: err.statusCode ?? err.status ?? 400,
-      code: err.code ?? "APP_ERROR",
-      message: err.message ?? "Request failed",
+      status: err.statusCode,
+      code: err.code || "APP_ERROR",
+      message: err.message,
       details: err.details,
     };
   }
 
-  // Zod / Yup / Validator style errors (اختیاری)
+  // 2. Prisma Known Request Error
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    switch (err.code) {
+      case "P2002":
+        const target = err.meta?.target;
+        const message = Array.isArray(target)
+          ? `Duplicate value for field(s): ${target.join(', ')}`
+          : "Duplicate value for field";
+        return {
+          status: 409,
+          code: "CONFLICT",
+          message,
+          details: err.meta,
+        };
+      case "P2025":
+        return {
+          status: 404,
+          code: "NOT_FOUND",
+          message: "The requested record was not found.",
+          details: err.meta,
+        };
+      default:
+        return {
+          status: 400,
+          code: "DB_REQUEST_FAILED",
+          message: "Database request failed.",
+          details: { prismaCode: err.code, meta: err.meta },
+        };
+    }
+  }
+
+  // 3. PostgreSQL Exclusion Constraint Violation (via Prisma Raw Query Error)
+  // This is a specific case for our booking overlap constraint.
+  // Prisma doesn't have a specific code for this, so we check the native DB error code.
+  if (err.code === '23P01' && err.message?.includes('Booking_no_overlap_active')) {
+    return {
+      status: 409,
+      code: "BOOKING_OVERLAP",
+      message: "This time slot is already booked for the selected staff member.",
+    };
+  }
+
+  // 4. Zod Validation Error
   if (err?.name === "ZodError") {
     return {
       status: 400,
       code: "VALIDATION_ERROR",
-      message: "Invalid request payload",
+      message: "Invalid request payload.",
       details: err.errors ?? err.issues ?? err,
     };
   }
 
-  // Prisma known request error (اختیاری)
-  // بدون import مستقیم تا dependency سخت ایجاد نشه
-  if (err?.code && typeof err.code === "string" && err?.clientVersion) {
-    // نمونه‌های رایج:
-    // P2002 Unique constraint failed
-    // P2025 Record not found
-    if (err.code === "P2002") {
-      return {
-        status: 409,
-        code: "CONFLICT",
-        message: "Duplicate value violates unique constraint",
-        details: err.meta,
-      };
-    }
-    if (err.code === "P2025") {
-      return {
-        status: 404,
-        code: "NOT_FOUND",
-        message: "Record not found",
-        details: err.meta,
-      };
-    }
-    return {
-      status: 400,
-      code: "DB_ERROR",
-      message: "Database request failed",
-      details: { prismaCode: err.code, meta: err.meta },
-    };
-  }
-
-  // default / unknown
+  // 5. Default/Unknown Error
   return {
     status: 500,
     code: "INTERNAL_ERROR",
-    message: "Internal server error",
+    message: "An unexpected internal server error occurred.",
   };
 }
 
@@ -88,22 +96,21 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
   const requestId = getRequestId(req);
   const normalized = normalizeError(err);
 
-  // اگر header ها قبلاً ارسال شده، بسپریم به express
+  // If headers are already sent, delegate to the default Express handler
   if (res.headersSent) return;
 
-  // در prod بهتره details برای 500 ارسال نشه (امنیتی)
+  // For 5xx errors in production, we don't want to leak implementation details
   const isServerError = normalized.status >= 500;
-  const includeDetails =
-    !isServerError || (process.env.NODE_ENV && process.env.NODE_ENV !== "production");
+  const includeDetails = !isServerError || process.env.NODE_ENV !== "production";
 
   const body = {
     success: false as const,
     error: {
       code: normalized.code,
       message: normalized.message,
-      ...(includeDetails && normalized.details !== undefined ? { details: normalized.details } : {}),
+      ...(includeDetails && normalized.details ? { details: normalized.details } : {}),
     },
-    meta: requestId ? { requestId } : undefined,
+    meta: { requestId },
   };
 
   res.status(normalized.status).json(body);
