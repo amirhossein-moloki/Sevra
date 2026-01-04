@@ -1,9 +1,10 @@
 
-import { addMinutes, isBefore, parseISO } from 'date-fns';
+import { addMinutes, isBefore } from 'date-fns';
 import { Booking, BookingStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
+import logger from '../../config/logger';
 import {
   CancelBookingInput,
   CreateBookingInput,
@@ -16,6 +17,52 @@ import { getDay, parse, set } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { createHash } from 'crypto';
 
+const OVERLAP_CONSTRAINT_NAME = 'Booking_no_overlap_active';
+
+const isOverlapConstraintError = (error: unknown): boolean => {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+      const target = (error.meta as { target?: string | string[] | null } | undefined)?.target;
+      if (Array.isArray(target)) {
+        return target.includes(OVERLAP_CONSTRAINT_NAME);
+      }
+      if (typeof target === 'string') {
+        return target.includes(OVERLAP_CONSTRAINT_NAME);
+      }
+    }
+  }
+  if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+    return typeof error.message === 'string' && error.message.includes(OVERLAP_CONSTRAINT_NAME);
+  }
+  return false;
+};
+
+const buildOverlapError = (context: {
+  salonId: string;
+  staffId: string;
+  startAt: Date;
+  endAt: Date;
+  requestId?: string;
+}) => {
+  logger.warn({
+    event: 'booking.conflict.overlap',
+    salonId: context.salonId,
+    staffId: context.staffId,
+    startAt: context.startAt,
+    endAt: context.endAt,
+    requestId: context.requestId,
+  });
+  return new AppError('Slot not available.', httpStatus.CONFLICT, {
+    code: 'SLOT_NOT_AVAILABLE',
+    details: {
+      salonId: context.salonId,
+      staffId: context.staffId,
+      startAt: context.startAt,
+      endAt: context.endAt,
+    },
+  });
+};
+
 const checkForOverlap = async (
   tx: Prisma.TransactionClient,
   data: {
@@ -24,9 +71,10 @@ const checkForOverlap = async (
     startAt: Date;
     endAt: Date;
     excludeBookingId?: string;
+    requestId?: string;
   }
 ) => {
-  const { salonId, staffId, startAt, endAt, excludeBookingId } = data;
+  const { salonId, staffId, startAt, endAt, excludeBookingId, requestId } = data;
   const overlappingBookings = await tx.booking.count({
     where: {
       salonId,
@@ -38,7 +86,7 @@ const checkForOverlap = async (
     },
   });
   if (overlappingBookings > 0) {
-    throw new AppError('Overlap conflict.', httpStatus.CONFLICT);
+    throw buildOverlapError({ salonId, staffId, startAt, endAt, requestId });
   }
 };
 
@@ -55,9 +103,9 @@ const findAndValidateBooking = async (
 
 export const bookingsService = {
   async createBooking(
-    data: CreateBookingInput & { salonId: string; createdByUserId: string }
+    data: CreateBookingInput & { salonId: string; createdByUserId: string; requestId?: string }
   ) {
-    const { salonId, customerProfileId, serviceId, staffId, startAt, note, createdByUserId } = data;
+    const { salonId, customerProfileId, serviceId, staffId, startAt, note, createdByUserId, requestId } = data;
     const [service, settings] = await Promise.all([
       prisma.service.findUnique({ where: { id: serviceId } }),
       findSetting(salonId),
@@ -67,39 +115,57 @@ export const bookingsService = {
     }
     const endAt = addMinutes(new Date(startAt), service.durationMinutes);
     if (settings?.preventOverlaps) {
-      await checkForOverlap(prisma, { salonId, staffId, startAt: new Date(startAt), endAt });
+      await checkForOverlap(prisma, { salonId, staffId, startAt: new Date(startAt), endAt, requestId });
     }
     const customerProfile = await prisma.salonCustomerProfile.findUnique({ where: { id: customerProfileId } });
     if (!customerProfile) {
       throw new AppError('Customer profile not found', httpStatus.NOT_FOUND);
     }
-    return prisma.booking.create({
-      data: {
+    try {
+      const booking = await prisma.booking.create({
+        data: {
+          salonId,
+          customerProfileId,
+          customerAccountId: customerProfile.customerAccountId,
+          serviceId,
+          staffId,
+          createdByUserId,
+          startAt,
+          endAt,
+          note,
+          status: BookingStatus.CONFIRMED,
+          source: 'IN_PERSON',
+          serviceNameSnapshot: service.name,
+          serviceDurationSnapshot: service.durationMinutes,
+          servicePriceSnapshot: service.price,
+          currencySnapshot: service.currency,
+          amountDueSnapshot: service.price,
+          paymentState: 'UNPAID',
+        },
+      });
+      logger.info({
+        event: 'booking.create.success',
+        bookingId: booking.id,
         salonId,
-        customerProfileId,
-        customerAccountId: customerProfile.customerAccountId,
-        serviceId,
         staffId,
-        createdByUserId,
         startAt,
         endAt,
-        note,
-        status: BookingStatus.CONFIRMED,
-        source: 'IN_PERSON',
-        serviceNameSnapshot: service.name,
-        serviceDurationSnapshot: service.durationMinutes,
-        servicePriceSnapshot: service.price,
-        currencySnapshot: service.currency,
-        amountDueSnapshot: service.price,
-        paymentState: 'UNPAID',
-      },
-    });
+        requestId,
+      });
+      return booking;
+    } catch (error) {
+      if (isOverlapConstraintError(error)) {
+        throw buildOverlapError({ salonId, staffId, startAt: new Date(startAt), endAt, requestId });
+      }
+      throw error;
+    }
   },
 
   async createPublicBooking(
     salonSlug: string,
     body: CreatePublicBookingInput,
-    idempotencyKey: string
+    idempotencyKey: string,
+    requestId?: string
   ) {
     const requestHash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     const salon = await prisma.salon.findUnique({
@@ -167,7 +233,7 @@ export const bookingsService = {
         throw new AppError('Time is outside of working hours.', httpStatus.CONFLICT);
       }
       if (salon.settings?.preventOverlaps) {
-        await checkForOverlap(tx, { salonId: salon.id, staffId, startAt, endAt });
+        await checkForOverlap(tx, { salonId: salon.id, staffId, startAt, endAt, requestId });
       }
       const customerAccount = await tx.customerAccount.upsert({
         where: { phone: customer.phone },
@@ -179,27 +245,44 @@ export const bookingsService = {
         update: {},
         create: { salonId: salon.id, customerAccountId: customerAccount.id, displayName: customer.fullName },
       });
-      return tx.booking.create({
-        data: {
+      try {
+        const booking = await tx.booking.create({
+          data: {
+            salonId: salon.id,
+            customerProfileId: customerProfile.id,
+            customerAccountId: customerAccount.id,
+            serviceId,
+            staffId,
+            createdByUserId: staffId,
+            startAt,
+            endAt,
+            note,
+            status: salon.settings.onlineBookingAutoConfirm ? BookingStatus.CONFIRMED : BookingStatus.PENDING,
+            source: 'ONLINE',
+            serviceNameSnapshot: service.name,
+            serviceDurationSnapshot: service.durationMinutes,
+            servicePriceSnapshot: service.price,
+            currencySnapshot: service.currency,
+            amountDueSnapshot: service.price,
+            paymentState: 'UNPAID',
+          },
+        });
+        logger.info({
+          event: 'booking.create.success',
+          bookingId: booking.id,
           salonId: salon.id,
-          customerProfileId: customerProfile.id,
-          customerAccountId: customerAccount.id,
-          serviceId,
           staffId,
-          createdByUserId: staffId,
           startAt,
           endAt,
-          note,
-          status: salon.settings.onlineBookingAutoConfirm ? BookingStatus.CONFIRMED : BookingStatus.PENDING,
-          source: 'ONLINE',
-          serviceNameSnapshot: service.name,
-          serviceDurationSnapshot: service.durationMinutes,
-          servicePriceSnapshot: service.price,
-          currencySnapshot: service.currency,
-          amountDueSnapshot: service.price,
-          paymentState: 'UNPAID',
-        },
-      });
+          requestId,
+        });
+        return booking;
+      } catch (error) {
+        if (isOverlapConstraintError(error)) {
+          throw buildOverlapError({ salonId: salon.id, staffId, startAt, endAt, requestId });
+        }
+        throw error;
+      }
     });
     const responseBody = JSON.stringify(newBooking);
     await prisma.idempotencyKey.update({

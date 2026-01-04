@@ -9,6 +9,8 @@ declare global {
     export interface Request {
       user?: User; // User property is added by authMiddleware
       salonId?: string; // salonId is added by various middlewares for panel routes
+      id?: string;
+      requestId?: string;
     }
   }
 }

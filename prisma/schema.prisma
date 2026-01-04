@@ -491,6 +491,7 @@ model Booking {
   @@index([salonId, startAt])
   @@index([salonId, staffId, startAt])
   @@index([salonId, status, startAt])
+  @@index([salonId, staffId, status, startAt, endAt])
   @@index([customerAccountId, startAt])
   @@index([customerProfileId, startAt])
   @@index([salonId, paymentState, startAt])
