@@ -15,13 +15,14 @@ export async function createService(salonId: string, data: CreateServiceInput) {
 }
 
 /**
- * Business logic to get a single service by its ID.
+ * Business logic to get a single service by its ID for a specific salon.
  * @param serviceId - The ID of the service.
+ * @param salonId - The ID of the salon.
  * @returns The service object.
- * @throws {HttpError} 404 if the service is not found.
+ * @throws {HttpError} 404 if the service is not found in this salon.
  */
-export async function getServiceById(serviceId: string) {
-  const service = await ServiceRepo.findServiceById(serviceId);
+export async function getServiceById(serviceId: string, salonId: string) {
+  const service = await ServiceRepo.findServiceById(serviceId, salonId);
   if (!service) {
     throw createHttpError(404, 'Service not found');
   }
@@ -39,26 +40,28 @@ export async function getServicesForSalon(salonId: string, isActive?: boolean) {
 }
 
 /**
- * Business logic to update a service.
+ * Business logic to update a service for a specific salon.
  * @param serviceId - The ID of the service to update.
+ * @param salonId - The ID of the salon.
  * @param data - The data to update.
  * @returns The updated service.
- * @throws {HttpError} 404 if the service is not found.
+ * @throws {HttpError} 404 if the service is not found in this salon.
  */
-export async function updateService(serviceId: string, data: UpdateServiceInput) {
-  // First, ensure the service exists
-  await getServiceById(serviceId);
-  return ServiceRepo.updateService(serviceId, data);
+export async function updateService(serviceId: string, salonId: string, data: UpdateServiceInput) {
+  // First, ensure the service exists within this salon before updating.
+  await getServiceById(serviceId, salonId);
+  return ServiceRepo.updateService(serviceId, salonId, data);
 }
 
 /**
- * Business logic to deactivate a service.
+ * Business logic to deactivate a service for a specific salon.
  * @param serviceId - The ID of the service to deactivate.
+ *param salonId - The ID of the salon.
  * @returns The deactivated service.
- * @throws {HttpError} 404 if the service is not found.
+ * @throws {HttpError} 404 if the service is not found in this salon.
  */
-export async function deactivateService(serviceId: string) {
-  // First, ensure the service exists
-  await getServiceById(serviceId);
-  return ServiceRepo.deactivateService(serviceId);
+export async function deactivateService(serviceId: string, salonId: string) {
+  // First, ensure the service exists within this salon before deactivating.
+  await getServiceById(serviceId, salonId);
+  return ServiceRepo.deactivateService(serviceId, salonId);
 }

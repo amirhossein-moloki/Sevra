@@ -9,9 +9,24 @@ if (process.env.NODE_ENV === 'test') {
   // In other environments, use the actual pino-http logger
   const pinoHttp = require('pino-http');
   const logger = require('../../config/logger').default;
+  const { sanitizeLog } = require('../utils/sanitizer');
 
   loggerMiddleware = pinoHttp({
     logger,
+    // Use serializers to sanitize sensitive fields from the log output.
+    serializers: {
+      req(req) {
+        // Sanitize headers and body before they are logged.
+        req.headers = sanitizeLog(req.headers);
+        req.body = sanitizeLog(req.body);
+        return req;
+      },
+      res(res) {
+        // Sanitize headers from the response.
+        res.headers = sanitizeLog(res.headers);
+        return res;
+      },
+    },
     customLogLevel: function (req: Request, res: Response, err?: Error) {
       if (res.statusCode >= 400 && res.statusCode < 500) {
         return 'warn';
@@ -25,11 +40,6 @@ if (process.env.NODE_ENV === 'test') {
         return 'resource not found';
       }
       return `${req.method} ${req.url} completed`;
-    },
-    customProps: function (req: Request, res: Response) {
-      return {
-        body: req.body,
-      };
     },
   });
 }

@@ -11,8 +11,8 @@ export const createBooking = async (
 ) => {
   const data = {
     ...req.body,
-    salonId: req.salonId,
-    createdByUserId: req.user.id,
+    salonId: req.tenant.salonId,
+    createdByUserId: req.actor.id,
     requestId: req.id,
   };
   const booking = await bookingsService.createBooking(data);
@@ -48,7 +48,7 @@ export const getBookings = async (
   res: Response,
   next: NextFunction
 ) => {
-  const result = await bookingsService.getBookings(req.salonId as string, req.query);
+  const result = await bookingsService.getBookings(req.tenant.salonId, req.query, req.actor);
   res.status(httpStatus.OK).json({
     success: true,
     data: result.data,
@@ -63,7 +63,8 @@ export const getBookingById = async (
 ) => {
   const booking = await bookingsService.getBookingById(
     req.params.bookingId,
-    req.salonId
+    req.tenant.salonId,
+    req.actor
   );
   res.status(httpStatus.OK).json({
     success: true,
@@ -79,7 +80,7 @@ export const updateBooking = async (
 ) => {
   const booking = await bookingsService.updateBooking(
     req.params.bookingId,
-    req.salonId,
+    req.tenant.salonId,
     req.body
   );
   res.status(httpStatus.OK).json({
@@ -96,7 +97,7 @@ export const confirmBooking = async (
 ) => {
   const booking = await bookingsService.confirmBooking(
     req.params.bookingId,
-    req.salonId
+    req.tenant.salonId
   );
   res.status(httpStatus.OK).json({
     success: true,
@@ -112,8 +113,8 @@ export const cancelBooking = async (
 ) => {
   const booking = await bookingsService.cancelBooking(
     req.params.bookingId,
-    req.salonId,
-    req.user.id,
+    req.tenant.salonId,
+    req.actor.id,
     req.body
   );
   res.status(httpStatus.OK).json({
@@ -130,7 +131,7 @@ export const completeBooking = async (
 ) => {
   const booking = await bookingsService.completeBooking(
     req.params.bookingId,
-    req.salonId
+    req.tenant.salonId
   );
   res.status(httpStatus.OK).json({
     success: true,
@@ -146,7 +147,7 @@ export const markAsNoShow = async (
 ) => {
   const booking = await bookingsService.markAsNoShow(
     req.params.bookingId,
-    req.salonId
+    req.tenant.salonId
   );
   res.status(httpStatus.OK).json({
     success: true,

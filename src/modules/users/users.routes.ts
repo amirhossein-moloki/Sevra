@@ -5,11 +5,13 @@ import { createUserSchema, updateUserSchema } from './users.validators';
 import { authMiddleware } from '../../common/middleware/auth';
 import { requireRole } from '../../common/middleware/requireRole';
 import { UserRole } from '@prisma/client';
+import { tenantGuard } from '../../common/middleware/tenantGuard';
+import { privateApiRateLimiter } from '../../common/middleware/rateLimit';
 
 const router = Router({ mergeParams: true }); // mergeParams is important for nested routes
 
 // All routes in this file are for authenticated users
-router.use(authMiddleware);
+router.use(privateApiRateLimiter, authMiddleware, tenantGuard);
 
 // Define staff routes
 router.post(

@@ -8,64 +8,49 @@ import {
 } from './services.validators';
 import { authMiddleware } from '../../common/middleware/auth';
 import { requireRole } from '../../common/middleware/requireRole';
-import { prisma } from '../../config/prisma';
-import createHttpError from 'http-errors';
-import { Salon } from '@prisma/client';
-
-// Local type extension for Request
-interface RequestWithSalon extends Request {
-  salon?: Salon;
-}
-
-// Middleware to resolve salon from a public slug and attach it to the request
-const resolveSalonBySlug = async (req: RequestWithSalon, res: Response, next: NextFunction) => {
-  const { salonSlug } = req.params;
-  const salon = await prisma.salon.findUnique({ where: { slug: salonSlug } });
-  if (!salon) {
-    return next(createHttpError(404, 'Salon not found'));
-  }
-  req.salon = salon; // Attach salon to the request
-  next();
-};
+import { tenantGuard } from '../../common/middleware/tenantGuard';
+import { resolveSalonBySlug } from '../../common/middleware/resolveSalonBySlug';
+import { UserRole } from '@prisma/client';
+import {
+  privateApiRateLimiter,
+  publicApiRateLimiter,
+} from '../../common/middleware/rateLimit';
 
 // --- Private Router (to be mounted under /api/v1/salons/:salonId/services) ---
 export const privateServiceRouter = Router({ mergeParams: true });
 
+privateServiceRouter.use(privateApiRateLimiter, authMiddleware, tenantGuard);
+
 privateServiceRouter.post(
   '/',
-  authMiddleware,
-  requireRole(['MANAGER']),
+  requireRole([UserRole.MANAGER]),
   validate(createServiceSchema),
   ServiceController.createService
 );
 
 privateServiceRouter.get(
   '/',
-  authMiddleware,
-  requireRole(['MANAGER', 'RECEPTIONIST', 'STAFF']),
+  requireRole([UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.STAFF]),
   ServiceController.getServices
 );
 
 privateServiceRouter.get(
   '/:serviceId',
-  authMiddleware,
-  requireRole(['MANAGER', 'RECEPTIONIST', 'STAFF']),
+  requireRole([UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.STAFF]),
   validate(serviceIdParamSchema),
   ServiceController.getServiceById
 );
 
 privateServiceRouter.patch(
   '/:serviceId',
-  authMiddleware,
-  requireRole(['MANAGER']),
+  requireRole([UserRole.MANAGER]),
   validate(updateServiceSchema),
   ServiceController.updateService
 );
 
 privateServiceRouter.delete(
   '/:serviceId',
-  authMiddleware,
-  requireRole(['MANAGER']),
+  requireRole([UserRole.MANAGER]),
   validate(serviceIdParamSchema),
   ServiceController.deleteService
 );
@@ -75,6 +60,7 @@ export const publicServiceRouter = Router({ mergeParams: true });
 
 publicServiceRouter.get(
   '/',
+  publicApiRateLimiter,
   resolveSalonBySlug,
   (req: Request, res: Response, next: NextFunction) => {
     // For public-facing routes, we should only show active services.
