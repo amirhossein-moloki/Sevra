@@ -38,15 +38,18 @@ enum PaymentMethod {
 
 // ✅ updated: needed for online flows
 enum PaymentStatus {
+  INITIATED
   PENDING
-  PAID
+  PAID // Represents SUCCEEDED
   FAILED
   REFUNDED
-  VOID
+  VOID // Can be used for CANCELED
+  CANCELED
 }
 
 enum BookingPaymentState {
   UNPAID
+  PENDING
   PARTIALLY_PAID
   PAID
   REFUNDED
@@ -181,24 +184,24 @@ enum IdempotencyStatus {
 // =======================
 
 model Salon {
-  id        String   @id @default(cuid())
-  name      String
-  isActive  Boolean  @default(true)
+  id       String  @id @default(cuid())
+  name     String
+  isActive Boolean @default(true)
 
   // Public identity (site)
-  slug      String   @unique
+  slug           String  @unique
   description    String?
   seoTitle       String?
   seoDescription String?
 
-  users      User[]
-  services   Service[]
-  bookings   Booking[]
-  shifts     Shift[]
-  settings   Settings?
+  users    User[]
+  services Service[]
+  bookings Booking[]
+  shifts   Shift[]
+  settings Settings?
 
   // CRM
-  customers  SalonCustomerProfile[]
+  customers SalonCustomerProfile[]
 
   // Site builder / SEO
   siteSettings SalonSiteSettings?
@@ -215,17 +218,18 @@ model Salon {
   commissionPolicy   SalonCommissionPolicy?
   bookingCommissions BookingCommission[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Payment   Payment[]
 
   @@index([slug])
 }
 
 model Settings {
-  id        String @id @default(cuid())
+  id String @id @default(cuid())
 
-  salonId   String @unique
-  salon     Salon  @relation(fields: [salonId], references: [id])
+  salonId String @unique
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
   preventOverlaps Boolean @default(true)
 
@@ -244,20 +248,20 @@ model Settings {
 // Staff / Panel Users
 // -----------------------
 model User {
-  id           String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  salonId      String
-  salon        Salon    @relation(fields: [salonId], references: [id])
+  salonId String
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
-  fullName     String
-  phone        String
+  fullName String
+  phone    String
 
   // ✅ OTP is primary now
-  passwordHash String?
+  passwordHash    String?
   phoneVerifiedAt DateTime?
 
-  role         UserRole
-  isActive     Boolean  @default(true)
+  role     UserRole
+  isActive Boolean  @default(true)
 
   // Public profile (Team page)
   isPublic   Boolean @default(false)
@@ -286,13 +290,13 @@ model User {
 }
 
 model Session {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // ✅ UPDATED: actor-based session (USER + CUSTOMER)
   actorType SessionActorType
   actorId   String
 
-  tokenHash String   @unique
+  tokenHash String    @unique
   revokedAt DateTime?
   expiresAt DateTime
 
@@ -315,7 +319,7 @@ model PhoneOtp {
   codeHash   String
   expiresAt  DateTime
   consumedAt DateTime?
-  attempts   Int      @default(0)
+  attempts   Int       @default(0)
 
   ip        String?
   userAgent String?
@@ -336,8 +340,8 @@ model PhoneOtp {
 // Global Customer Identity (cross-salon)
 // -----------------------
 model CustomerAccount {
-  id       String   @id @default(cuid())
-  phone    String   @unique
+  id       String  @id @default(cuid())
+  phone    String  @unique
   fullName String?
 
   // ✅ optional but recommended
@@ -357,10 +361,10 @@ model CustomerAccount {
 // Per-salon CRM Profile
 // -----------------------
 model SalonCustomerProfile {
-  id                String @id @default(cuid())
+  id String @id @default(cuid())
 
-  salonId           String
-  salon             Salon  @relation(fields: [salonId], references: [id])
+  salonId String
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
   customerAccountId String
   customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
@@ -382,10 +386,10 @@ model SalonCustomerProfile {
 // Services / Shifts
 // -----------------------
 model Service {
-  id              String @id @default(cuid())
+  id String @id @default(cuid())
 
-  salonId         String
-  salon           Salon  @relation(fields: [salonId], references: [id])
+  salonId String
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
   name            String
   durationMinutes Int
@@ -393,8 +397,8 @@ model Service {
   currency        String
   isActive        Boolean @default(true)
 
-  bookings        Booking[]
-  reviews         Review[]
+  bookings Booking[]
+  reviews  Review[]
 
   // join table (explicit)
   userServices UserService[]
@@ -410,8 +414,8 @@ model UserService {
   userId    String
   serviceId String
 
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@id([userId, serviceId])
   @@index([serviceId])
@@ -419,13 +423,13 @@ model UserService {
 }
 
 model Shift {
-  id        String @id @default(cuid())
+  id String @id @default(cuid())
 
-  salonId   String
-  salon     Salon  @relation(fields: [salonId], references: [id])
+  salonId String
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
-  userId    String
-  user      User   @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   dayOfWeek Int
   startTime String
@@ -443,10 +447,10 @@ model Shift {
 // Booking
 // -----------------------
 model Booking {
-  id        String @id @default(cuid())
+  id String @id @default(cuid())
 
-  salonId   String
-  salon     Salon  @relation(fields: [salonId], references: [id])
+  salonId String
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
   customerProfileId String
   customerProfile   SalonCustomerProfile @relation(fields: [customerProfileId], references: [id])
@@ -457,14 +461,14 @@ model Booking {
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id])
 
-  staffId   String
-  staff     User @relation("BookingStaff", fields: [staffId], references: [id])
+  staffId String
+  staff   User   @relation("BookingStaff", fields: [staffId], references: [id])
 
   createdByUserId String
-  createdBy       User @relation("BookingCreator", fields: [createdByUserId], references: [id])
+  createdBy       User   @relation("BookingCreator", fields: [createdByUserId], references: [id])
 
-  startAt   DateTime @db.Timestamptz(6)
-  endAt     DateTime @db.Timestamptz(6)
+  startAt DateTime @db.Timestamptz(6)
+  endAt   DateTime @db.Timestamptz(6)
 
   // Snapshot (NON-NULL)
   serviceNameSnapshot     String
@@ -482,7 +486,7 @@ model Booking {
   canceledAt       DateTime? @db.Timestamptz(6)
   cancelReason     String?
   canceledByUserId String?
-  canceledBy       User? @relation("BookingCanceler", fields: [canceledByUserId], references: [id])
+  canceledBy       User?     @relation("BookingCanceler", fields: [canceledByUserId], references: [id])
 
   completedAt DateTime? @db.Timestamptz(6)
   noShowAt    DateTime? @db.Timestamptz(6)
@@ -506,8 +510,18 @@ model Booking {
 // -----------------------
 // Payments
 // -----------------------
+
+enum PaymentProvider {
+  MANUAL
+  STRIPE
+  ZARINPAL
+}
+
 model Payment {
   id String @id @default(cuid())
+
+  salonId String
+  salon   Salon  @relation(fields: [salonId], references: [id], onDelete: Cascade)
 
   bookingId String
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
@@ -515,15 +529,26 @@ model Payment {
   amount   Int
   currency String
 
-  status PaymentStatus @default(PAID)
-  method PaymentMethod
-  paidAt  DateTime? @db.Timestamptz(6)
+  provider           PaymentProvider @default(MANUAL)
+  providerPaymentId  String?
+  providerCheckoutId String?
+  status             PaymentStatus   @default(INITIATED)
+  failureReason      String?
+  rawProviderPayload Json?
+  idempotencyKey     String?
 
+  paidAt DateTime? @db.Timestamptz(6)
+
+  // Legacy fields for manual payments - can be deprecated later.
+  // For online payments, method is always ONLINE.
+  method        PaymentMethod @default(ONLINE)
   referenceCode String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique(fields: [provider, providerPaymentId], name: "provider_payment_id")
+  @@unique(fields: [salonId, idempotencyKey], name: "idempotency_key")
   @@index([bookingId, paidAt])
   @@index([status, paidAt])
 }
@@ -535,7 +560,7 @@ model Review {
   id String @id @default(cuid())
 
   salonId String
-  salon   Salon @relation(fields: [salonId], references: [id])
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
   customerAccountId String
   customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id])
@@ -543,9 +568,9 @@ model Review {
   bookingId String
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  target  ReviewTarget
+  target    ReviewTarget
   serviceId String?
-  service  Service? @relation(fields: [serviceId], references: [id])
+  service   Service?     @relation(fields: [serviceId], references: [id])
 
   rating  Int
   comment String?
@@ -568,7 +593,7 @@ model Review {
 // =====================================================
 
 model SalonCommissionPolicy {
-  id      String @id @default(cuid())
+  id String @id @default(cuid())
 
   salonId String @unique
   salon   Salon  @relation(fields: [salonId], references: [id])
@@ -597,13 +622,13 @@ model SalonCommissionPolicy {
 }
 
 model BookingCommission {
-  id        String @id @default(cuid())
+  id String @id @default(cuid())
 
-  bookingId String @unique
+  bookingId String  @unique
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   salonId String
-  salon   Salon @relation(fields: [salonId], references: [id])
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
   status CommissionStatus @default(PENDING)
 
@@ -612,8 +637,8 @@ model BookingCommission {
   currency   String
 
   // snapshot of applied policy
-  type CommissionType
-  percentBps Int?
+  type        CommissionType
+  percentBps  Int?
   fixedAmount Int?
 
   // final commission amount
@@ -634,7 +659,7 @@ model BookingCommission {
 }
 
 model CommissionPayment {
-  id           String @id @default(cuid())
+  id String @id @default(cuid())
 
   commissionId String
   commission   BookingCommission @relation(fields: [commissionId], references: [id], onDelete: Cascade)
@@ -642,9 +667,9 @@ model CommissionPayment {
   amount   Int
   currency String
 
-  status CommissionPaymentStatus @default(PENDING)
+  status CommissionPaymentStatus  @default(PENDING)
   method CommissionPaymentMethod?
-  paidAt  DateTime? @db.Timestamptz(6)
+  paidAt DateTime?                @db.Timestamptz(6)
 
   referenceCode String?
 
@@ -660,7 +685,7 @@ model CommissionPayment {
 // =====================================================
 
 model SalonSiteSettings {
-  id      String @id @default(cuid())
+  id String @id @default(cuid())
 
   salonId String @unique
   salon   Salon  @relation(fields: [salonId], references: [id])
@@ -683,7 +708,7 @@ model SalonSiteSettings {
 }
 
 model SalonPage {
-  id      String @id @default(cuid())
+  id String @id @default(cuid())
 
   salonId String
   salon   Salon  @relation(fields: [salonId], references: [id])
@@ -693,7 +718,7 @@ model SalonPage {
   type  PageType @default(CUSTOM)
 
   status      PageStatus @default(DRAFT)
-  publishedAt DateTime? @db.Timestamptz(6)
+  publishedAt DateTime?  @db.Timestamptz(6)
 
   // SEO per-page
   seoTitle       String?
@@ -726,10 +751,10 @@ model SalonPageSection {
   pageId String
   page   SalonPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
-  type PageSectionType
+  type     PageSectionType
   dataJson String // block config JSON (NO HTML)
 
-  sortOrder Int @default(0)
+  sortOrder Int     @default(0)
   isEnabled Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -744,7 +769,7 @@ model SalonMedia {
   id String @id @default(cuid())
 
   salonId String
-  salon   Salon @relation(fields: [salonId], references: [id])
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
   type    MediaType    @default(IMAGE)
   purpose MediaPurpose @default(GALLERY)
@@ -753,12 +778,12 @@ model SalonMedia {
   thumbUrl String?
 
   // SEO for images
-  altText  String?
+  altText String?
 
   category String?
   caption  String?
 
-  sortOrder Int @default(0)
+  sortOrder Int     @default(0)
   isActive  Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -772,11 +797,11 @@ model SalonLink {
   id String @id @default(cuid())
 
   salonId String
-  salon   Salon @relation(fields: [salonId], references: [id])
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
-  type   LinkType
-  label  String?
-  value  String
+  type  LinkType
+  label String?
+  value String
 
   isPrimary Boolean @default(false)
   isActive  Boolean @default(true)
@@ -794,7 +819,7 @@ model SalonAddress {
   id String @id @default(cuid())
 
   salonId String
-  salon   Salon @relation(fields: [salonId], references: [id])
+  salon   Salon  @relation(fields: [salonId], references: [id])
 
   title String?
 
@@ -824,9 +849,9 @@ model SalonSlugHistory {
   id String @id @default(cuid())
 
   salonId String
-  salon   Salon @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  salon   Salon  @relation(fields: [salonId], references: [id], onDelete: Cascade)
 
-  oldSlug String
+  oldSlug   String
   createdAt DateTime @default(now())
 
   @@unique([oldSlug])
@@ -839,7 +864,7 @@ model SalonPageSlugHistory {
   pageId String
   page   SalonPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
-  oldSlug String
+  oldSlug   String
   createdAt DateTime @default(now())
 
   @@index([pageId, createdAt])
@@ -850,28 +875,28 @@ model SalonPageSlugHistory {
 // Idempotency
 // =====================================================
 model IdempotencyKey {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // The business key
-  key       String
+  key   String
   // The scope of the key (e.g., endpoint + salonId)
-  scope     String
+  scope String
 
   // To detect if the same key is used with a different payload
   requestHash String
 
   // State machine
-  status      IdempotencyStatus @default(IN_PROGRESS)
+  status IdempotencyStatus @default(IN_PROGRESS)
 
   // Cached response
   responseBody       Json?
   responseStatusCode Int?
 
   // TTL
-  expiresAt          DateTime
+  expiresAt DateTime
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // An idempotency key is unique for a given scope
   @@unique([scope, key])

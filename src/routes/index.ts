@@ -13,6 +13,8 @@ import shiftsRouter from '../modules/shifts/shifts.routes';
 import availabilityRouter from '../modules/availability/availability.routes';
 import bookingsRoutes from '../modules/bookings/bookings.routes';
 import publicBookingsRoutes from '../modules/bookings/bookings.public.routes';
+import { paymentsRoutes } from '../modules/payments/payments.routes';
+import { webhooksRoutes } from '../modules/webhooks/webhooks.routes';
 
 const router = Router();
 
@@ -41,6 +43,12 @@ router.use('/public/salons/:salonSlug/availability', availabilityRouter);
 // --- Bookings Module Routes ---
 router.use('/salons/:salonId/bookings', bookingsRoutes);
 router.use('/public/salons/:salonSlug/bookings', publicBookingsRoutes);
+
+// --- Payments Module Routes ---
+router.use('/salons/:salonId/bookings', paymentsRoutes); // This will be scoped within the booking
+
+// --- Webhooks Module ---
+router.use(webhooksRoutes);
 
 
 export default router;
