@@ -18,9 +18,9 @@ describe('Customer Routes', () => {
   beforeAll(async () => {
     await prisma.$connect();
     salon = await createTestSalon();
-    manager = await createTestUser(salon.id, UserRole.MANAGER);
-    receptionist = await createTestUser(salon.id, UserRole.RECEPTIONIST, '09120000001');
-    staff = await createTestUser(salon.id, UserRole.STAFF, '09120000002');
+    manager = await createTestUser({ salonId: salon.id, role: UserRole.MANAGER });
+    receptionist = await createTestUser({ salonId: salon.id, role: UserRole.RECEPTIONIST, phone: '09120000001' });
+    staff = await createTestUser({ salonId: salon.id, role: UserRole.STAFF, phone: '09120000002' });
 
     managerToken = generateToken({ actorId: manager.id, actorType: 'USER' });
     receptionistToken = generateToken({ actorId: receptionist.id, actorType: 'USER' });
