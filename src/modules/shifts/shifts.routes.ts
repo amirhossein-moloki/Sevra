@@ -5,11 +5,13 @@ import { upsertShiftsSchema } from './shifts.validators';
 import { authMiddleware } from '../../common/middleware/auth';
 import { requireRole } from '../../common/middleware/requireRole';
 import { UserRole } from '@prisma/client';
+import { tenantGuard } from '../../common/middleware/tenantGuard';
+import { privateApiRateLimiter } from '../../common/middleware/rateLimit';
 
 const router = Router({ mergeParams: true });
 
 // All routes in this file are for authenticated users
-router.use(authMiddleware);
+router.use(privateApiRateLimiter, authMiddleware, tenantGuard);
 
 // Define shifts routes
 router.put(

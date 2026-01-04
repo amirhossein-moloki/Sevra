@@ -17,13 +17,14 @@ export async function createService(salonId: string, data: CreateServiceInput) {
 }
 
 /**
- * Finds a service by its ID.
+ * Finds a service by its ID for a specific salon.
  * @param serviceId - The ID of the service to find.
+ * @param salonId - The ID of the salon.
  * @returns The service if found, otherwise null.
  */
-export async function findServiceById(serviceId: string) {
-  return prisma.service.findUnique({
-    where: { id: serviceId },
+export async function findServiceById(serviceId: string, salonId: string) {
+  return prisma.service.findFirst({
+    where: { id: serviceId, salonId },
   });
 }
 
@@ -46,26 +47,33 @@ export async function findServicesBySalonId(salonId: string, options: { isActive
 }
 
 /**
- * Updates an existing service.
+ * Updates an existing service for a specific salon.
  * @param serviceId - The ID of the service to update.
+ * @param salonId - The ID of the salon.
  * @param data - The data to update the service with.
  * @returns The updated service.
  */
-export async function updateService(serviceId: string, data: UpdateServiceInput) {
-  return prisma.service.update({
-    where: { id: serviceId },
+export async function updateService(serviceId: string, salonId: string, data: UpdateServiceInput) {
+  // Use updateMany to ensure we are only updating a service belonging to the correct salon.
+  await prisma.service.updateMany({
+    where: { id: serviceId, salonId },
     data,
   });
+
+  // Return the updated service record.
+  return findServiceById(serviceId, salonId);
 }
 
 /**
- * Deactivates a service (soft delete).
+ * Deactivates a service (soft delete) for a specific salon.
  * @param serviceId - The ID of the service to deactivate.
+ * @param salonId - The ID of the salon.
  * @returns The deactivated service.
  */
-export async function deactivateService(serviceId: string) {
-  return prisma.service.update({
-    where: { id: serviceId },
+export async function deactivateService(serviceId: string, salonId: string) {
+  await prisma.service.updateMany({
+    where: { id: serviceId, salonId },
     data: { isActive: false },
   });
+  return findServiceById(serviceId, salonId);
 }

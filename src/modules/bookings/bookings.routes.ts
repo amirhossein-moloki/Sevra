@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { validate } from '../../common/middleware/validate';
 import * as bookingsController from './bookings.controller';
@@ -12,15 +11,20 @@ import { authMiddleware } from '../../common/middleware/auth';
 import { requireRole } from '../../common/middleware/requireRole';
 import { UserRole } from '@prisma/client';
 import { idParamSchema } from '../../common/validators/common.validators';
+import { tenantGuard } from '../../common/middleware/tenantGuard';
+import { privateApiRateLimiter } from '../../common/middleware/rateLimit';
 
-const router = Router();
-const M_S = [UserRole.MANAGER, UserRole.STAFF]; // MANAGER or STAFF
+const router = Router({ mergeParams: true });
+
+router.use(privateApiRateLimiter, authMiddleware, tenantGuard);
+
+const M_R = [UserRole.MANAGER, UserRole.RECEPTIONIST]; // Manager or Receptionist for write actions
+const M_R_S = [UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.STAFF]; // All roles for read actions
 
 // 1. Create Booking
 router.post(
   '/',
-  authMiddleware,
-  requireRole(M_S),
+  requireRole(M_R),
   validate(createBookingSchema),
   bookingsController.createBooking
 );
@@ -28,8 +32,7 @@ router.post(
 // 2. List Bookings
 router.get(
   '/',
-  authMiddleware,
-  requireRole(M_S),
+  requireRole(M_R_S),
   validate(listBookingsQuerySchema),
   bookingsController.getBookings
 );
@@ -37,8 +40,7 @@ router.get(
 // 3. Get Booking by ID
 router.get(
   '/:bookingId',
-  authMiddleware,
-  requireRole(M_S),
+  requireRole(M_R_S),
   validate(idParamSchema('bookingId')),
   bookingsController.getBookingById
 );
@@ -46,8 +48,7 @@ router.get(
 // 4. Update Booking Details
 router.patch(
   '/:bookingId',
-  authMiddleware,
-  requireRole(M_S),
+  requireRole(M_R),
   validate(updateBookingSchema),
   bookingsController.updateBooking
 );
@@ -55,8 +56,7 @@ router.patch(
 // 5. Confirm Booking
 router.post(
   '/:bookingId/confirm',
-  authMiddleware,
-  requireRole(M_S),
+  requireRole(M_R),
   validate(idParamSchema('bookingId')),
   bookingsController.confirmBooking
 );
@@ -64,8 +64,7 @@ router.post(
 // 6. Cancel Booking
 router.post(
   '/:bookingId/cancel',
-  authMiddleware,
-  requireRole(M_S),
+  requireRole(M_R),
   validate(cancelBookingSchema),
   bookingsController.cancelBooking
 );
@@ -73,8 +72,7 @@ router.post(
 // 7. Complete Booking
 router.post(
   '/:bookingId/complete',
-  authMiddleware,
-  requireRole(M_S),
+  requireRole(M_R),
   validate(idParamSchema('bookingId')),
   bookingsController.completeBooking
 );
@@ -82,8 +80,7 @@ router.post(
 // 8. Mark as No-Show
 router.post(
   '/:bookingId/no-show',
-  authMiddleware,
-  requireRole(M_S),
+  requireRole(M_R),
   validate(idParamSchema('bookingId')),
   bookingsController.markAsNoShow
 );
