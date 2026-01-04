@@ -1,5 +1,11 @@
-import { Prisma, Payment, BookingPaymentState } from '@prisma/client';
+import { Prisma, Payment, BookingPaymentState, PaymentStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
+import { PrismaClient } from '@prisma/client/extension';
+import { validateBookingTransition, validatePaymentTransition } from './payments.state';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
+
+type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 const findBookingForUpdate = (bookingId: string, salonId: string) => {
   return prisma.booking.findFirst({
@@ -25,7 +31,75 @@ const createPaymentAndUpdateBooking = ({
   });
 };
 
+const handleSuccessfulPayment = async (tx: Tx, paymentId: string) => {
+  const payment = await tx.payment.findUnique({
+    where: { id: paymentId },
+    include: { booking: true },
+  });
+
+  if (!payment) {
+    throw new AppError('Payment not found.', httpStatus.NOT_FOUND);
+  }
+
+  // Idempotency check: If already paid, do nothing.
+  if (payment.status === PaymentStatus.PAID && payment.booking.paymentState === BookingPaymentState.PAID) {
+    return;
+  }
+
+  // Validate state transitions
+  validatePaymentTransition(payment.status, PaymentStatus.PAID);
+  validateBookingTransition(payment.booking.paymentState, BookingPaymentState.PAID);
+
+  // Update records
+  await tx.payment.update({
+    where: { id: paymentId },
+    data: { status: PaymentStatus.PAID, paidAt: new Date() },
+  });
+
+  await tx.booking.update({
+    where: { id: payment.bookingId },
+    data: { paymentState: BookingPaymentState.PAID },
+  });
+};
+
+const handleFailedPayment = async (
+  tx: Tx,
+  paymentId: string,
+  newStatus: PaymentStatus = PaymentStatus.FAILED
+) => {
+  const payment = await tx.payment.findUnique({
+    where: { id: paymentId },
+    include: { booking: true },
+  });
+
+  if (!payment) {
+    throw new AppError('Payment not found.', httpStatus.NOT_FOUND);
+  }
+
+  // Idempotency check: If already in a final failed/canceled state, do nothing.
+  if (payment.status === newStatus) {
+    return;
+  }
+
+  // Validate state transitions
+  validatePaymentTransition(payment.status, newStatus);
+  validateBookingTransition(payment.booking.paymentState, BookingPaymentState.UNPAID);
+
+  // Update records
+  await tx.payment.update({
+    where: { id: paymentId },
+    data: { status: newStatus },
+  });
+
+  await tx.booking.update({
+    where: { id: payment.bookingId },
+    data: { paymentState: BookingPaymentState.UNPAID },
+  });
+};
+
 export const PaymentsRepo = {
   findBookingForUpdate,
   createPaymentAndUpdateBooking,
+  handleSuccessfulPayment,
+  handleFailedPayment,
 };

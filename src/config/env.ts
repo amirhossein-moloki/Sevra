@@ -59,6 +59,9 @@ const EnvSchema = z.object({
 
   // Proxy
   TRUST_PROXY: z.coerce.number().int().nonnegative().default(0),
+
+  // Webhooks
+  PAYMENT_PROVIDER_WEBHOOK_SECRET: z.string().min(1),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
