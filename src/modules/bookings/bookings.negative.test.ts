@@ -4,7 +4,7 @@ import app from '../../app';
 import { prisma } from '../../config/prisma';
 import { User, Salon, Service, Booking, Payment } from '@prisma/client';
 import { createTestSalon, createTestUser, createTestService, createTestCustomer, createTestBooking, createToken } from '../../../test-utils/helpers';
-import { BookingStatus, PaymentState } from '@prisma/client';
+import { BookingStatus, BookingPaymentState, PaymentProvider, PaymentStatus } from '@prisma/client';
 import crypto from 'crypto';
 import { env } from '../../config/env';
 
@@ -28,7 +28,7 @@ describe('Bookings Negative Paths E2E', () => {
     // Create a confirmed booking to be used in tests
     booking = await createTestBooking(salon.id, staff.id, service.id, customer.customerProfile.id, customer.account.id, manager.id, {
       status: BookingStatus.CONFIRMED,
-      paymentState: PaymentState.PENDING,
+      paymentState: BookingPaymentState.PENDING,
     });
 
     payment = await prisma.payment.create({
@@ -37,8 +37,8 @@ describe('Bookings Negative Paths E2E', () => {
             bookingId: booking.id,
             amount: service.price,
             currency: service.currency,
-            state: PaymentState.PENDING,
-            provider: 'TEST_PROVIDER',
+            status: PaymentStatus.PENDING,
+            provider: PaymentProvider.ZARINPAL,
         }
     });
   });
@@ -64,7 +64,7 @@ describe('Bookings Negative Paths E2E', () => {
       // First, cancel the booking
       await prisma.booking.update({
         where: { id: booking.id },
-        data: { status: BookingStatus.CANCELLED },
+        data: { status: BookingStatus.CANCELED },
       });
 
       // Then, try to cancel it again
@@ -99,6 +99,7 @@ describe('Bookings Negative Paths E2E', () => {
     it('should update booking paymentState to FAILED on a failed payment webhook', async () => {
       const provider = 'test_provider';
       const payload = {
+        eventId: `evt_${Date.now()}`,
         paymentId: payment.id,
         status: 'FAILED',
       };
@@ -120,7 +121,7 @@ describe('Bookings Negative Paths E2E', () => {
       const dbBooking = await prisma.booking.findUnique({
         where: { id: booking.id },
       });
-      expect(dbBooking?.paymentState).toBe(PaymentState.FAILED);
+      expect(dbBooking?.paymentState).toBe(BookingPaymentState.FAILED);
     });
   });
 
