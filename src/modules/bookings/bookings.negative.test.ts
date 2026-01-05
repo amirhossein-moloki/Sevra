@@ -77,6 +77,24 @@ describe('Bookings Negative Paths E2E', () => {
     });
   });
 
+  describe('POST /api/v1/salons/:salonId/bookings/:bookingId/payments/init', () => {
+    it('should return 409 Conflict when trying to initiate payment for a cancelled booking', async () => {
+      // First, cancel the booking
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: BookingStatus.CANCELED },
+      });
+
+      // Then, try to initiate payment
+      const response = await request(app)
+        .post(`/api/v1/salons/${salon.id}/bookings/${booking.id}/payments/init`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({});
+
+      expect(response.status).toBe(409);
+    });
+  });
+
   describe('POST /webhooks/payments/:provider', () => {
     it('should update booking paymentState to FAILED on a failed payment webhook', async () => {
       const provider = 'test_provider';

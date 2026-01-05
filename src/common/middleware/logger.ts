@@ -11,8 +11,30 @@ if (process.env.NODE_ENV === 'test') {
   const logger = require('../../config/logger').default;
   const { sanitizeLog } = require('../utils/sanitizer');
 
+  const cuid = require('cuid');
+
   loggerMiddleware = pinoHttp({
     logger,
+    genReqId: function (req, res) {
+      const existingId = req.id ?? req.headers["x-request-id"];
+      if (existingId) return existingId;
+      const id = cuid();
+      res.setHeader('X-Request-Id', id);
+      return id;
+    },
+    customAttributeKeys: {
+      req: 'request',
+      res: 'response',
+      err: 'error',
+      responseTime: 'duration',
+      reqId: 'requestId',
+    },
+    customProps: function (req, res) {
+      return {
+        actorId: req.actor?.id || null,
+        salonId: req.params?.salonId || null,
+      };
+    },
     // Use serializers to sanitize sensitive fields from the log output.
     serializers: {
       req(req) {

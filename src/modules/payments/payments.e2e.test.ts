@@ -44,5 +44,37 @@ describe('Payments E2E', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(409);
     });
+
+    it('should return 404 if a user from another salon tries to initiate a payment', async () => {
+      // Create a second salon and a booking within it
+      const salonB = await createTestSalon({ name: 'Salon B', slug: 'salon-b' });
+      const userB = await createTestUser({ salonId: salonB.id, phone: '9876543210' });
+      const serviceB = await createTestService({ salonId: salonB.id });
+      const bookingB = await createTestBooking({ salonId: salonB.id, serviceId: serviceB.id, staffId: userB.id });
+
+      // The token belongs to a user from the first salon (salonId)
+      await request(app)
+        .post(`/api/v1/salons/${salonB.id}/bookings/${bookingB.id}/payments/init`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
+    });
+
+    it('should allow a user with the STAFF role to initiate a payment', async () => {
+      // Create a user with the STAFF role
+      const staffUser = await createTestUser({
+        salonId,
+        role: UserRole.STAFF,
+        phone: '1112223333', // a different phone number
+      });
+      const staffToken = signToken({ userId: staffUser.id, salonId, role: staffUser.role });
+
+      const res = await request(app)
+        .post(`/api/v1/salons/${salonId}/bookings/${bookingId}/payments/init`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .expect(201);
+
+      expect(res.body.data).toHaveProperty('paymentId');
+      expect(res.body.data).toHaveProperty('checkoutUrl');
+    });
   });
 });

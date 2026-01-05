@@ -9,6 +9,13 @@ const SENSITIVE_KEYS = [
   'idempotency-key',
   'phone',
   'email',
+  // Card-related fields
+  'card',
+  'cardNumber',
+  'cvc',
+  'cvv',
+  'exp_month',
+  'exp_year',
 ];
 
 // A more complex list for partial redaction can be added later.

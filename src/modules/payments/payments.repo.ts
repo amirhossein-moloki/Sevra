@@ -82,8 +82,9 @@ const handleFailedPayment = async (
   }
 
   // Validate state transitions
+  const newBookingState = newStatus === PaymentStatus.CANCELED ? BookingPaymentState.CANCELED : BookingPaymentState.FAILED;
   validatePaymentTransition(payment.status, newStatus);
-  validateBookingTransition(payment.booking.paymentState, BookingPaymentState.UNPAID);
+  validateBookingTransition(payment.booking.paymentState, newBookingState);
 
   // Update records
   await tx.payment.update({
@@ -93,7 +94,7 @@ const handleFailedPayment = async (
 
   await tx.booking.update({
     where: { id: payment.bookingId },
-    data: { paymentState: BookingPaymentState.UNPAID },
+    data: { paymentState: newBookingState },
   });
 };
 

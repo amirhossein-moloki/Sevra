@@ -21,11 +21,13 @@ const paymentTransitions: Record<PaymentStatus, PaymentStatus[]> = {
  */
 const bookingTransitions: Record<BookingPaymentState, BookingPaymentState[]> = {
   [BookingPaymentState.UNPAID]: [BookingPaymentState.PENDING, BookingPaymentState.PAID],
-  [BookingPaymentState.PENDING]: [BookingPaymentState.PAID, BookingPaymentState.UNPAID],
+  [BookingPaymentState.PENDING]: [BookingPaymentState.PAID, BookingPaymentState.FAILED, BookingPaymentState.CANCELED],
   [BookingPaymentState.PARTIALLY_PAID]: [BookingPaymentState.PAID, BookingPaymentState.REFUNDED, BookingPaymentState.OVERPAID],
   [BookingPaymentState.PAID]: [BookingPaymentState.REFUNDED],
   [BookingPaymentState.REFUNDED]: [],
   [BookingPaymentState.OVERPAID]: [BookingPaymentState.REFUNDED],
+  [BookingPaymentState.FAILED]: [],
+  [BookingPaymentState.CANCELED]: [],
 };
 
 /**
