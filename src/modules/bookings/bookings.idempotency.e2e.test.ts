@@ -64,6 +64,11 @@ describe('Bookings API - Idempotency', () => {
     await prisma.idempotencyKey.deleteMany();
   });
 
+  beforeEach(async () => {
+    await prisma.booking.deleteMany();
+    await prisma.idempotencyKey.deleteMany();
+  });
+
   // Test Case A: Same key + same payload -> same booking
   test('(A) Replaying with the same key and payload should return the same booking and create only one record', async () => {
     const idempotencyKey = uuidv4();

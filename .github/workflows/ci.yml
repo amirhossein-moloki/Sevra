@@ -44,13 +44,19 @@ jobs:
     - name: Type Check
       run: tsc --noEmit
 
-    - name: Run Prisma Migrate
+    - name: Lint
+      run: npm run lint
+
+    - name: Run Unit Tests
+      run: npm run test:unit
+
+    - name: Run Prisma Migrate for E2E
       run: npx prisma migrate reset --force
       env:
         DATABASE_URL: "postgresql://sevra-dev:sevra-dev-password@localhost:5432/sevra-db"
 
-    - name: Run Tests
-      run: jest --runInBand --forceExit
+    - name: Run E2E Tests
+      run: npm run test:e2e
       env:
         NODE_ENV: test
         DATABASE_URL: "postgresql://sevra-dev:sevra-dev-password@localhost:5432/sevra-db"

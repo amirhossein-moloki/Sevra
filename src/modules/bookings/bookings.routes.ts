@@ -16,7 +16,10 @@ import { privateApiRateLimiter } from '../../common/middleware/rateLimit';
 
 const router = Router({ mergeParams: true });
 
-router.use(privateApiRateLimiter, authMiddleware, tenantGuard);
+if (process.env.NODE_ENV !== 'test') {
+  router.use(privateApiRateLimiter);
+}
+router.use(authMiddleware, tenantGuard);
 
 const M_R = [UserRole.MANAGER, UserRole.RECEPTIONIST]; // Manager or Receptionist for write actions
 const M_R_S = [UserRole.MANAGER, UserRole.RECEPTIONIST, UserRole.STAFF]; // All roles for read actions

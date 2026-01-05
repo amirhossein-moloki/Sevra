@@ -21,7 +21,9 @@ import { publicApiRateLimiter } from '../../common/middleware/rateLimit';
 
 const router = Router();
 
-router.use(publicApiRateLimiter);
+if (process.env.NODE_ENV !== 'test') {
+  router.use(publicApiRateLimiter);
+}
 
 // --- User OTP Flow ---
 router.post('/user/otp/request', validate(requestOtpSchema), requestUserOtp);

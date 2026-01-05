@@ -17,8 +17,8 @@ const findAndValidateBooking = async (
   bookingId: string,
   salonId: string
 ): Promise<Booking> => {
-  const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
-  if (!booking || booking.salonId !== salonId) {
+  const booking = await prisma.booking.findFirst({ where: { id: bookingId, salonId: salonId } });
+  if (!booking) {
     throw new AppError('Booking not found.', httpStatus.NOT_FOUND);
   }
   return booking;
@@ -131,27 +131,82 @@ export const bookingsService = {
     return booking;
   },
 
-  async confirmBooking(bookingId: string, salonId: string) {
+  async confirmBooking(bookingId: string, salonId: string, actor: { id: string, role: UserRole }) {
+    if (actor.role === UserRole.STAFF) {
+      throw new AppError('Forbidden.', httpStatus.FORBIDDEN);
+    }
+
     const booking = await findAndValidateBooking(bookingId, salonId);
-    // Add logic to confirm booking
-    return booking;
+
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new AppError('Invalid state transition: Booking cannot be confirmed.', httpStatus.CONFLICT);
+    }
+
+    return prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: BookingStatus.CONFIRMED },
+    });
   },
 
-  async cancelBooking(bookingId: string, salonId: string, userId: string, data: CancelBookingInput) {
+  async cancelBooking(bookingId: string, salonId: string, actor: { id: string, role: UserRole }, data: CancelBookingInput) {
+    if (actor.role === UserRole.STAFF) {
+      throw new AppError('Forbidden.', httpStatus.FORBIDDEN);
+    }
+
     const booking = await findAndValidateBooking(bookingId, salonId);
-    // Add logic to cancel booking
-    return booking;
+
+    if (![BookingStatus.PENDING, BookingStatus.CONFIRMED].includes(booking.status)) {
+      throw new AppError('Invalid state transition: Booking cannot be canceled.', httpStatus.CONFLICT);
+    }
+
+    return prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: BookingStatus.CANCELED,
+        canceledAt: new Date(),
+        canceledByUserId: actor.id,
+        cancelReason: data.reason,
+      },
+    });
   },
 
-  async completeBooking(bookingId: string, salonId: string) {
+  async completeBooking(bookingId: string, salonId: string, actor: { id: string, role: UserRole }) {
+    if (actor.role === UserRole.STAFF) {
+      throw new AppError('Forbidden.', httpStatus.FORBIDDEN);
+    }
+
     const booking = await findAndValidateBooking(bookingId, salonId);
-    // Add logic to complete booking
-    return booking;
+
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      throw new AppError('Invalid state transition: Booking cannot be completed.', httpStatus.CONFLICT);
+    }
+
+    return prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: BookingStatus.DONE,
+        completedAt: new Date(),
+      },
+    });
   },
 
-  async markAsNoShow(bookingId: string, salonId: string) {
+  async markAsNoShow(bookingId: string, salonId: string, actor: { id: string, role: UserRole }) {
+    if (actor.role === UserRole.STAFF) {
+      throw new AppError('Forbidden.', httpStatus.FORBIDDEN);
+    }
+
     const booking = await findAndValidateBooking(bookingId, salonId);
-    // Add logic to mark as no-show
-    return booking;
+
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      throw new AppError('Invalid state transition: Booking cannot be marked as no-show.', httpStatus.CONFLICT);
+    }
+
+    return prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: BookingStatus.NO_SHOW,
+        noShowAt: new Date(),
+      },
+    });
   },
 };

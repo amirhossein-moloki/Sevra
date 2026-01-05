@@ -14,15 +14,16 @@ app.use(helmet());
 
 import loggerMiddleware from './common/middleware/logger';
 
-// Disable pino-http logger in test environment to avoid Jest compatibility issues
-if (process.env.NODE_ENV !== 'test') {
-  app.use(loggerMiddleware);
-}
-
+// Assign request ID
 app.use((req, res, next) => {
   req.id = uuidv4();
   next();
 });
+
+// Disable pino-http logger in test environment to avoid Jest compatibility issues
+if (process.env.NODE_ENV !== 'test') {
+  app.use(loggerMiddleware);
+}
 
 app.use(responseMiddleware);
 

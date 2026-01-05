@@ -1,6 +1,14 @@
 import rateLimit, { KeyGenerator } from 'express-rate-limit';
-import { Request } from 'express';
+import { Request, Response, NextFunction } from 'express';
 
+if (process.env.NODE_ENV === 'test') {
+    const mockMiddleware = (req: Request, res: Response, next: NextFunction) => next();
+    module.exports = {
+        privateApiRateLimiter: mockMiddleware,
+        publicApiRateLimiter: mockMiddleware,
+        publicBookingRateLimiter: mockMiddleware,
+    };
+} else {
 // Custom key generator for public routes to limit requests per IP and per salon slug.
 // This helps prevent a single IP from affecting all salons if they attack one.
 const publicApiKeyGenerator: KeyGenerator = (req: Request): string => {
@@ -49,3 +57,4 @@ export const publicBookingRateLimiter = rateLimit({
   keyGenerator: publicApiKeyGenerator,
   message: 'Too many booking attempts from this IP for this salon, please try again after 15 minutes',
 });
+}

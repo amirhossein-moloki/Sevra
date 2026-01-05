@@ -1,7 +1,6 @@
 import request from 'supertest';
 import app from '../../app';
-import { createTestSalon, createTestService, createTestBooking, createTestUser } from '../../common/utils/test-utils';
-import { signToken } from '../auth/auth.utils';
+import { createTestSalon, createTestService, createTestBooking, createTestUser, signToken } from '../../../../test-utils/helpers';
 import { BookingPaymentState, UserRole } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 

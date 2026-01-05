@@ -28,6 +28,7 @@ describe('Customer Routes', () => {
   });
 
   afterAll(async () => {
+    await prisma.shift.deleteMany({});
     await prisma.user.deleteMany({});
     await prisma.salon.deleteMany({});
     await prisma.$disconnect();
