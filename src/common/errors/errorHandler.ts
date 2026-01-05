@@ -19,7 +19,7 @@ function getRequestId(req: Request): string | undefined {
 
 function normalizeError(err: any): NormalizedError {
   // 1. AppError (our custom, preferred error type)
-  if (err instanceof AppError) {
+  if (err.isOperational) {
     return {
       status: err.statusCode,
       code: err.code || "APP_ERROR",
