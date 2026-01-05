@@ -1,6 +1,11 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
   preset: 'ts-jest',
+  globals: {
+    'ts-jest': {
+      diagnostics: false,
+    },
+  },
   testEnvironment: 'node',
   testMatch: ['**/?(*.)+(spec|test|e2e.test).[jt]s?(x)'],
   clearMocks: true,

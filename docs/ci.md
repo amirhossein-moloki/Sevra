@@ -1,21 +1,26 @@
-# CI and Branch Protection
+# Branch Protection Strategy
 
-This document provides guidance on setting up branch protection rules in the GitHub repository to ensure code quality and stability.
+To maintain code quality and ensure the stability of the `main` branch, it is highly recommended to enable branch protection rules in the GitHub repository settings.
 
-## Branch Protection Rules
+## Recommended Rules for the `main` Branch
 
-To protect the `main` branch, it is recommended to configure the following branch protection rules in the repository settings:
+1.  **Require a pull request before merging:** This ensures that all changes to the main branch are reviewed and approved by at least one other team member. It prevents direct pushes to the main branch and encourages a collaborative development process.
 
-1.  **Require pull request before merging**: This ensures that all changes to the `main` branch are reviewed and approved through a pull request.
-2.  **Require status checks to pass before merging**: This ensures that all required CI checks, including the `test-and-lint` job defined in `.github/workflows/ci.yml`, must pass before a pull request can be merged.
-    -   Enable this setting and select the `test-and-lint` job from the list of available status checks.
-3.  **Require branches to be up to date before merging**: This setting prevents pull requests from being merged if they are not up-to-date with the `main` branch, which helps to avoid merge conflicts.
+2.  **Require status checks to pass before merging:** This rule enforces that the CI pipeline must complete successfully before a pull request can be merged. This prevents broken code from being merged into the main branch.
+    *   Enable the `test` job from the `ci.yml` workflow as a required status check.
 
-### How to Configure Branch Protection
+3.  **Require conversation resolution before merging:** This ensures that all comments and feedback on a pull request are addressed before it is merged.
+
+## How to Enable Branch Protection
 
 1.  Navigate to the repository's **Settings** tab.
 2.  In the left sidebar, click **Branches**.
-3.  Under **Branch protection rules**, click **Add rule**.
+3.  Click **Add rule**.
 4.  In the **Branch name pattern** field, type `main`.
-5.  Enable the recommended protection rules listed above.
-6.  Click **Create** to save the rule.
+5.  Enable the following options:
+    *   **Require a pull request before merging**
+        *   **Require approvals:** Set to at least `1`.
+    *   **Require status checks to pass before merging**
+        *   Search for and select the `test` status check.
+    *   **Require conversation resolution before merging**
+6.  Click **Create**.

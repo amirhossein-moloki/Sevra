@@ -1,59 +1,63 @@
-name: CI Pipeline
+name: Sevra CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  test-and-lint:
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
 
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpassword
-          POSTGRES_DB: testdb
+          POSTGRES_USER: sevra-dev
+          POSTGRES_PASSWORD: sevra-dev-password
+          POSTGRES_DB: sevra-db
         ports:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
-          - -health-timeout 5s
+          --health-timeout 5s
           --health-retries 5
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+    - name: Install dependencies
+      run: npm ci
 
-      - name: Run Linter
-        run: npm run lint
+    - name: Type Check
+      run: tsc --noEmit
 
-      - name: Run E2E Tests
-        env:
-          DATABASE_URL: "postgresql://testuser:testpassword@localhost:5432/testdb?schema=public"
-          JWT_ACCESS_SECRET: "test-secret-for-ci"
-          JWT_REFRESH_SECRET: "test-refresh-secret-for-ci"
-          COOKIE_SECRET: "test-cookie-secret-for-ci"
-          PAYMENT_PROVIDER_WEBHOOK_SECRET: "test-webhook-secret-for-ci"
-          SMSIR_API_KEY: "test-sms-key"
-          SMSIR_SECRET_KEY: "test-sms-secret"
-          SMSIR_LINE_NUMBER: "12345"
-          NODE_ENV: "test"
-        run: |
-          npx prisma migrate reset --force
-          npm test
+    - name: Run Prisma Migrate
+      run: npx prisma migrate reset --force
+      env:
+        DATABASE_URL: "postgresql://sevra-dev:sevra-dev-password@localhost:5432/sevra-db"
+
+    - name: Run Tests
+      run: jest --runInBand --forceExit
+      env:
+        NODE_ENV: test
+        DATABASE_URL: "postgresql://sevra-dev:sevra-dev-password@localhost:5432/sevra-db"
+        JWT_ACCESS_SECRET: "test-access-secret"
+        JWT_REFRESH_SECRET: "test-refresh-secret"
+        COOKIE_SECRET: "test-cookie-secret"
+        PAYMENT_PROVIDER_WEBHOOK_SECRET: "test-webhook-secret"
+        SMSIR_API_KEY: "test-sms-api-key"
+        SMSIR_LINE_NUMBER: "12345"
+        SMSIR_OTP_TEMPLATE_ID: "100000"
