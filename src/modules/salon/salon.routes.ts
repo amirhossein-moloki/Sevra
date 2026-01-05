@@ -2,6 +2,7 @@ import { Router } from "express";
 import { salonController } from "./salon.controller";
 import { authMiddleware } from "../../common/middleware/auth";
 import { requireRole } from "../../common/middleware/requireRole";
+import { tenantGuard } from "../../common/middleware/tenantGuard";
 import { UserRole } from "@prisma/client";
 
 const router = Router();
@@ -19,12 +20,14 @@ router.post(
 router.patch(
   "/:id",
   authMiddleware,
+  tenantGuard,
   requireRole([UserRole.MANAGER]),
   salonController.updateSalon,
 );
 router.delete(
   "/:id",
   authMiddleware,
+  tenantGuard,
   requireRole([UserRole.MANAGER]),
   salonController.deleteSalon,
 );

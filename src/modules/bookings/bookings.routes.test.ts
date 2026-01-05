@@ -204,12 +204,12 @@ describe('Bookings API E2E Tests', () => {
         .send({ cancellationReason: 'Customer request' });
 
       expect(response.status).toBe(200);
-      expect(response.body.data.status).toBe('CANCELLED');
+      expect(response.body.data.status).toBe('CANCELED');
 
       const dbBooking = await prisma.booking.findUnique({
         where: { id: booking.id },
       });
-      expect(dbBooking?.status).toBe('CANCELLED');
+      expect(dbBooking?.status).toBe('CANCELED');
     });
   });
 });

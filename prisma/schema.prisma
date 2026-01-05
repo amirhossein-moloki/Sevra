@@ -54,6 +54,8 @@ enum BookingPaymentState {
   PAID
   REFUNDED
   OVERPAID
+  FAILED
+  CANCELED
 }
 
 // ---- Site/CMS + SEO ----

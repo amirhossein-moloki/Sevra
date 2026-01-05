@@ -121,7 +121,7 @@ describe('Webhooks E2E', () => {
         expect(updatedPayment?.paidAt).not.toBeNull();
       });
 
-      it('should update booking to UNPAID on a valid FAILED webhook', async () => {
+      it('should update booking to FAILED on a valid FAILED webhook', async () => {
         const payload = { eventId: `evt_${crypto.randomBytes(8).toString('hex')}`, paymentId, status: 'FAILED' };
         const payloadBuffer = Buffer.from(JSON.stringify(payload));
         const signature = generateSignature(payloadBuffer);
@@ -137,8 +137,28 @@ describe('Webhooks E2E', () => {
         const updatedBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
         const updatedPayment = await prisma.payment.findUnique({ where: { id: paymentId } });
 
-        expect(updatedBooking?.paymentState).toBe(BookingPaymentState.UNPAID);
+        expect(updatedBooking?.paymentState).toBe(BookingPaymentState.FAILED);
         expect(updatedPayment?.status).toBe(PaymentStatus.FAILED);
+      });
+
+      it('should update booking to CANCELED on a valid EXPIRED webhook', async () => {
+        const payload = { eventId: `evt_${crypto.randomBytes(8).toString('hex')}`, paymentId, status: 'EXPIRED' };
+        const payloadBuffer = Buffer.from(JSON.stringify(payload));
+        const signature = generateSignature(payloadBuffer);
+
+        await request(app)
+          .post(webhookUrl)
+          .set('X-Signature', signature)
+          .set('Content-Type', 'application/json')
+          .send(payload)
+          .expect(200);
+
+        // Assert final DB state
+        const updatedBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
+        const updatedPayment = await prisma.payment.findUnique({ where: { id: paymentId } });
+
+        expect(updatedBooking?.paymentState).toBe(BookingPaymentState.CANCELED);
+        expect(updatedPayment?.status).toBe(PaymentStatus.CANCELED);
       });
     });
   });
