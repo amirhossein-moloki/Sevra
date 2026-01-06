@@ -49,14 +49,17 @@ const pageSectionSchema = z.object({
   isEnabled: z.boolean().optional(),
 });
 
-const resolveSectionError = (error: unknown) => {
+const resolveSectionError = (
+  error: unknown,
+): { message: string; dataPath?: Array<string | number> } => {
   if (error instanceof ZodError && error.issues.length > 0) {
-    return error.issues[0].message;
+    const issue = error.issues[0];
+    return { message: issue.message, dataPath: issue.path };
   }
   if (error instanceof Error) {
-    return error.message;
+    return { message: error.message };
   }
-  return 'Invalid section data.';
+  return { message: 'Invalid section data.' };
 };
 
 const applySectionValidation = (schema: z.ZodArray<typeof pageSectionSchema>) =>
@@ -65,11 +68,12 @@ const applySectionValidation = (schema: z.ZodArray<typeof pageSectionSchema>) =>
       try {
         validateSectionData(section.type, section.dataJson);
       } catch (error) {
+        const { message, dataPath } = resolveSectionError(error);
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: resolveSectionError(error),
-          path: [index, 'dataJson'],
-          params: { index, type: section.type },
+          message,
+          path: [index, 'dataJson', ...(dataPath ?? [])],
+          params: { index, type: section.type, dataPath },
         });
       }
     });
