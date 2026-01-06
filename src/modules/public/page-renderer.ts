@@ -1,18 +1,156 @@
+import { RobotsFollow, RobotsIndex } from '@prisma/client';
+import type { SalonPage, SalonSiteSettings } from '@prisma/client';
 import { PageRenderer } from '../../components/cms/PageRenderer';
 import { PageSectionInput, escapeHtml } from '../../components/cms/sections/sectionRenderers';
 
 type PageRenderInput = {
   title?: string;
+  page?: SeoPageInput;
+  siteSettings?: SeoSiteSettingsInput | null;
   sections?: PageSectionInput[];
   pageId?: string;
 };
 
-export const renderPageDocument = ({ title, sections, pageId }: PageRenderInput) => `<!doctype html>
+type SeoPageInput = Pick<
+  SalonPage,
+  | 'title'
+  | 'seoTitle'
+  | 'seoDescription'
+  | 'canonicalPath'
+  | 'ogTitle'
+  | 'ogDescription'
+  | 'ogImageUrl'
+  | 'robotsIndex'
+  | 'robotsFollow'
+  | 'structuredDataJson'
+>;
+
+type SeoSiteSettingsInput = Pick<
+  SalonSiteSettings,
+  | 'defaultSeoTitle'
+  | 'defaultSeoDescription'
+  | 'defaultOgImageUrl'
+  | 'robotsIndex'
+  | 'robotsFollow'
+>;
+
+type SeoMeta = {
+  title?: string;
+  description?: string;
+  canonicalPath?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImageUrl?: string;
+  robots?: string;
+  structuredDataJson?: string | null;
+};
+
+const buildRobotsMeta = ({
+  robotsIndex,
+  robotsFollow,
+}: {
+  robotsIndex?: RobotsIndex | null;
+  robotsFollow?: RobotsFollow | null;
+}) => {
+  const tokens: string[] = [];
+  if (robotsIndex) {
+    tokens.push(robotsIndex === RobotsIndex.INDEX ? 'index' : 'noindex');
+  }
+  if (robotsFollow) {
+    tokens.push(robotsFollow === RobotsFollow.FOLLOW ? 'follow' : 'nofollow');
+  }
+  return tokens.length ? tokens.join(', ') : undefined;
+};
+
+export const buildSeoMeta = ({
+  page,
+  siteSettings,
+}: {
+  page: SeoPageInput;
+  siteSettings?: SeoSiteSettingsInput | null;
+}): SeoMeta => {
+  const baseTitle = page.seoTitle ?? siteSettings?.defaultSeoTitle ?? page.title ?? 'Preview';
+  const description = page.seoDescription ?? siteSettings?.defaultSeoDescription ?? undefined;
+  const ogTitle =
+    page.ogTitle ?? page.seoTitle ?? siteSettings?.defaultSeoTitle ?? page.title ?? 'Preview';
+  const ogDescription =
+    page.ogDescription ?? page.seoDescription ?? siteSettings?.defaultSeoDescription ?? undefined;
+  const ogImageUrl = page.ogImageUrl ?? siteSettings?.defaultOgImageUrl ?? undefined;
+  const robots = buildRobotsMeta({
+    robotsIndex: page.robotsIndex ?? siteSettings?.robotsIndex,
+    robotsFollow: page.robotsFollow ?? siteSettings?.robotsFollow,
+  });
+
+  return {
+    title: baseTitle,
+    description,
+    canonicalPath: page.canonicalPath ?? undefined,
+    ogTitle,
+    ogDescription,
+    ogImageUrl,
+    robots,
+    structuredDataJson: page.structuredDataJson,
+  };
+};
+
+const renderSeoMeta = (meta: SeoMeta) => {
+  const tags = [];
+
+  if (meta.title) {
+    tags.push(`<title>${escapeHtml(meta.title)}</title>`);
+  }
+  if (meta.description) {
+    tags.push(`<meta name="description" content="${escapeHtml(meta.description)}" />`);
+  }
+  if (meta.robots) {
+    tags.push(`<meta name="robots" content="${escapeHtml(meta.robots)}" />`);
+  }
+  if (meta.canonicalPath) {
+    tags.push(`<link rel="canonical" href="${escapeHtml(meta.canonicalPath)}" />`);
+  }
+  if (meta.ogTitle) {
+    tags.push(`<meta property="og:title" content="${escapeHtml(meta.ogTitle)}" />`);
+  }
+  if (meta.ogDescription) {
+    tags.push(`<meta property="og:description" content="${escapeHtml(meta.ogDescription)}" />`);
+  }
+  if (meta.ogImageUrl) {
+    tags.push(`<meta property="og:image" content="${escapeHtml(meta.ogImageUrl)}" />`);
+  }
+  if (meta.structuredDataJson) {
+    tags.push(`<script type="application/ld+json">${meta.structuredDataJson}</script>`);
+  }
+
+  return tags.join('\n    ');
+};
+
+export const renderPageDocument = ({
+  title,
+  page,
+  siteSettings,
+  sections,
+  pageId,
+}: PageRenderInput) => {
+  const resolvedPage = page ?? {
+    title: title ?? 'Preview',
+    seoTitle: null,
+    seoDescription: null,
+    canonicalPath: null,
+    ogTitle: null,
+    ogDescription: null,
+    ogImageUrl: null,
+    robotsIndex: null,
+    robotsFollow: null,
+    structuredDataJson: null,
+  };
+  const seoMeta = buildSeoMeta({ page: resolvedPage, siteSettings });
+
+  return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${escapeHtml(title ?? 'Preview')}</title>
+    ${renderSeoMeta(seoMeta)}
     <style>
       body {
         margin: 0;
@@ -146,3 +284,4 @@ export const renderPageDocument = ({ title, sections, pageId }: PageRenderInput)
     </div>
   </body>
 </html>`;
+};

@@ -24,13 +24,16 @@ export async function getPublicPage(req: PublicPageRequest, res: Response) {
     },
     include: {
       sections: { orderBy: { sortOrder: 'asc' } },
+      salon: { select: { siteSettings: true } },
     },
   });
 
   if (page) {
+    const { sections, salon, ...pageData } = page;
     const html = renderPageDocument({
-      title: page.title,
-      sections: page.sections,
+      page: pageData,
+      siteSettings: salon?.siteSettings ?? null,
+      sections,
       pageId: page.id,
     });
     res.status(200).type('html').send(html);
