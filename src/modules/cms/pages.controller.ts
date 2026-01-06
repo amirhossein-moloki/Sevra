@@ -1,2 +1,45 @@
-export const cmsPagesControllerPlaceholder =
-  'CMS pages controller placeholder.';
+import { Request, Response } from 'express';
+import * as PagesService from './pages.service';
+import { CreatePageInput, UpdatePageInput } from './pages.types';
+import { listPagesSchema } from './pages.validators';
+
+export async function createPage(
+  req: Request<{ salonId: string }, unknown, CreatePageInput>,
+  res: Response
+) {
+  const { salonId } = req.params;
+  const page = await PagesService.createPage(salonId, req.body);
+  res.status(201).json({ message: 'Page created successfully', data: page });
+}
+
+export async function listPages(req: Request<{ salonId: string }>, res: Response) {
+  const { salonId } = req.params;
+  const { query } = listPagesSchema.parse({ query: req.query });
+  const limit = query.limit ?? 20;
+  const offset = query.offset ?? 0;
+
+  const { pages, total } = await PagesService.listPages(salonId, {
+    status: query.status,
+    type: query.type,
+    limit,
+    offset,
+  });
+
+  res.status(200).json({
+    data: pages,
+    meta: {
+      total,
+      limit,
+      offset,
+    },
+  });
+}
+
+export async function updatePage(
+  req: Request<{ salonId: string; pageId: string }, unknown, UpdatePageInput>,
+  res: Response
+) {
+  const { salonId, pageId } = req.params;
+  const page = await PagesService.updatePage(salonId, pageId, req.body);
+  res.status(200).json({ message: 'Page updated successfully', data: page });
+}

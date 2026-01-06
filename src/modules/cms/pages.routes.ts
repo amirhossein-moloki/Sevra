@@ -1,19 +1,22 @@
 import { Router } from 'express';
 import { validate } from '../../common/middleware/validate';
-import { createPageSchema, updatePageSchema } from './pages.validators';
+import {
+  createPageSchema,
+  listPagesSchema,
+  updatePageSchema,
+} from './pages.validators';
+import * as PagesController from './pages.controller';
+import { authMiddleware } from '../../common/middleware/auth';
+import { tenantGuard } from '../../common/middleware/tenantGuard';
+import { requireRole } from '../../common/middleware/requireRole';
+import { UserRole } from '@prisma/client';
 
 export const cmsPagesRouter = Router({ mergeParams: true });
 
-cmsPagesRouter.post('/', validate(createPageSchema), (_req, res) => {
-  res.status(501).json({ message: 'CMS pages routes placeholder.' });
-});
+cmsPagesRouter.use(authMiddleware, tenantGuard, requireRole([UserRole.MANAGER]));
 
-cmsPagesRouter.patch('/:pageId', validate(updatePageSchema), (_req, res) => {
-  res.status(501).json({ message: 'CMS pages routes placeholder.' });
-});
+cmsPagesRouter.get('/', validate(listPagesSchema), PagesController.listPages);
 
-cmsPagesRouter.all('*', (_req, res) => {
-  res
-    .status(501)
-    .json({ message: 'CMS pages routes placeholder.' });
-});
+cmsPagesRouter.post('/', validate(createPageSchema), PagesController.createPage);
+
+cmsPagesRouter.patch('/:pageId', validate(updatePageSchema), PagesController.updatePage);
