@@ -97,7 +97,8 @@ export const confirmBooking = async (
 ) => {
   const booking = await bookingsService.confirmBooking(
     req.params.bookingId,
-    req.tenant.salonId
+    req.tenant.salonId,
+    req.actor
   );
   res.status(httpStatus.OK).json({
     success: true,
@@ -114,7 +115,7 @@ export const cancelBooking = async (
   const booking = await bookingsService.cancelBooking(
     req.params.bookingId,
     req.tenant.salonId,
-    req.actor.id,
+    req.actor,
     req.body
   );
   res.status(httpStatus.OK).json({
@@ -131,7 +132,8 @@ export const completeBooking = async (
 ) => {
   const booking = await bookingsService.completeBooking(
     req.params.bookingId,
-    req.tenant.salonId
+    req.tenant.salonId,
+    req.actor
   );
   res.status(httpStatus.OK).json({
     success: true,
@@ -147,7 +149,8 @@ export const markAsNoShow = async (
 ) => {
   const booking = await bookingsService.markAsNoShow(
     req.params.bookingId,
-    req.tenant.salonId
+    req.tenant.salonId,
+    req.actor
   );
   res.status(httpStatus.OK).json({
     success: true,

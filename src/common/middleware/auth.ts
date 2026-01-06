@@ -20,6 +20,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
   if (payload.actorType === 'USER') {
       user = await prisma.user.findUnique({ where: { id: payload.actorId } });
   } else {
+        if (!payload.actorId) {
+            return next(createHttpError(401, 'Invalid token: actorId is missing.'));
+        }
       user = await prisma.customerAccount.findUnique({ where: { id: payload.actorId } });
   }
 

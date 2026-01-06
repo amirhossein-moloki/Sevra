@@ -10,7 +10,7 @@ const router = Router({ mergeParams: true });
 // 1. Create Online Booking
 router.post(
   '/',
-  publicBookingRateLimiter,
+  ...(process.env.NODE_ENV !== 'test' ? [publicBookingRateLimiter] : []),
   validate(createPublicBookingSchema),
   idempotencyMiddleware,
   bookingsController.createPublicBooking

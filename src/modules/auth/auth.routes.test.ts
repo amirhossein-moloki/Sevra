@@ -6,9 +6,11 @@ import { UserRole } from '@prisma/client';
 
 describe('Auth Routes', () => {
   afterEach(async () => {
+    await prisma.booking.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
     await prisma.customerAccount.deleteMany();
+    await prisma.service.deleteMany();
     await prisma.salon.deleteMany();
   });
 
