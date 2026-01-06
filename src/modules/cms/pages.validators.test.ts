@@ -26,7 +26,7 @@ describe('CMS pages validators', () => {
     it('accepts valid payloads', () => {
       const result = createPageSchema.safeParse({
         body: {
-          slug: 'home',
+          slug: 'home-page',
           title: 'صفحه اصلی',
           type: PageType.CUSTOM,
           status: PageStatus.DRAFT,
@@ -63,6 +63,48 @@ describe('CMS pages validators', () => {
           expect.objectContaining({ index: 0, type: PageSectionType.HERO }),
         );
       }
+    });
+
+    it('rejects non-url-safe or uppercase slugs', () => {
+      const result = createPageSchema.safeParse({
+        body: {
+          slug: 'Home Page',
+          title: 'صفحه اصلی',
+          type: PageType.CUSTOM,
+          sections: [buildValidHeroSection()],
+        },
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('requires canonicalPath to be a path-only value', () => {
+      const result = createPageSchema.safeParse({
+        body: {
+          slug: 'home',
+          title: 'صفحه اصلی',
+          type: PageType.CUSTOM,
+          canonicalPath: 'https://example.com/home',
+          sections: [buildValidHeroSection()],
+        },
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects robots values outside Prisma enums', () => {
+      const result = createPageSchema.safeParse({
+        body: {
+          slug: 'home',
+          title: 'صفحه اصلی',
+          type: PageType.CUSTOM,
+          robotsIndex: 'MAYBE' as RobotsIndex,
+          robotsFollow: 'ALWAYS' as RobotsFollow,
+          sections: [buildValidHeroSection()],
+        },
+      });
+
+      expect(result.success).toBe(false);
     });
   });
 
