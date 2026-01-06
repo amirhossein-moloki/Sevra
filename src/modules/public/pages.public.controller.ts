@@ -32,7 +32,7 @@ export async function getPublicPage(req: PublicPageRequest, res: Response) {
       status: PageStatus.PUBLISHED,
     },
     include: {
-      sections: { orderBy: { sortOrder: 'asc' } },
+      sections: { orderBy: { sortOrder: 'asc' }, where: { isEnabled: true } },
       salon: { select: { siteSettings: true } },
     },
   });

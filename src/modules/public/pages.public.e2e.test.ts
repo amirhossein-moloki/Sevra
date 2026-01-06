@@ -34,11 +34,38 @@ describe('GET /api/v1/public/salons/:salonSlug/pages/:pageSlug', () => {
             {
               type: PageSectionType.RICH_TEXT,
               dataJson: JSON.stringify({
-                title: 'About us',
+                title: 'Second section',
+                blocks: [{ type: 'paragraph', text: 'Hello world' }],
+              }),
+              sortOrder: 1,
+              isEnabled: true,
+            },
+            {
+              type: PageSectionType.RICH_TEXT,
+              dataJson: JSON.stringify({
+                title: 'First section',
                 blocks: [{ type: 'paragraph', text: 'Hello world' }],
               }),
               sortOrder: 0,
               isEnabled: true,
+            },
+            {
+              type: PageSectionType.RICH_TEXT,
+              dataJson: JSON.stringify({
+                title: 'Third section',
+                blocks: [{ type: 'paragraph', text: 'Hello world' }],
+              }),
+              sortOrder: 2,
+              isEnabled: true,
+            },
+            {
+              type: PageSectionType.RICH_TEXT,
+              dataJson: JSON.stringify({
+                title: 'Hidden section',
+                blocks: [{ type: 'paragraph', text: 'Hello world' }],
+              }),
+              sortOrder: 3,
+              isEnabled: false,
             },
           ],
         },
@@ -105,6 +132,24 @@ describe('GET /api/v1/public/salons/:salonSlug/pages/:pageSlug', () => {
 
     expect(response.text).toContain('<!doctype html>');
     expect(response.text).toContain('<title>About</title>');
+  });
+
+  it('renders enabled sections in sort order', async () => {
+    const response = await request(app)
+      .get(`/api/v1/public/salons/${salon.slug}/pages/${page.slug}`)
+      .expect(200);
+
+    const html = response.text;
+    const firstIndex = html.indexOf('First section');
+    const secondIndex = html.indexOf('Second section');
+    const thirdIndex = html.indexOf('Third section');
+
+    expect(firstIndex).toBeGreaterThan(-1);
+    expect(secondIndex).toBeGreaterThan(-1);
+    expect(thirdIndex).toBeGreaterThan(-1);
+    expect(firstIndex).toBeLessThan(secondIndex);
+    expect(secondIndex).toBeLessThan(thirdIndex);
+    expect(html).not.toContain('Hidden section');
   });
 
   it('redirects to the current slug when slug history matches', async () => {
