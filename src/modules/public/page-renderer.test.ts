@@ -31,6 +31,8 @@ describe('buildSeoMeta', () => {
       seoTitle: 'Page SEO Title',
       seoDescription: 'Page SEO description',
       ogImageUrl: 'https://example.com/page-og.png',
+      robotsIndex: RobotsIndex.INDEX,
+      robotsFollow: RobotsFollow.FOLLOW,
     };
 
     const meta = buildSeoMeta({ page, siteSettings });
@@ -38,6 +40,7 @@ describe('buildSeoMeta', () => {
     expect(meta.title).toBe('Page SEO Title');
     expect(meta.description).toBe('Page SEO description');
     expect(meta.ogImageUrl).toBe('https://example.com/page-og.png');
+    expect(meta.robots).toBe('index, follow');
   });
 
   it('falls back to site defaults when page values are missing', () => {
@@ -76,6 +79,18 @@ describe('buildSeoMeta', () => {
 
     expect(meta.robots).toBe('noindex, follow');
   });
+
+  it('uses NOINDEX/NOFOLLOW when specified', () => {
+    const page: PageInput = {
+      ...basePage,
+      robotsIndex: RobotsIndex.NOINDEX,
+      robotsFollow: RobotsFollow.NOFOLLOW,
+    };
+
+    const meta = buildSeoMeta({ page });
+
+    expect(meta.robots).toBe('noindex, nofollow');
+  });
 });
 
 describe('renderPageDocument', () => {
@@ -92,6 +107,18 @@ describe('renderPageDocument', () => {
     expect(html).toContain('<meta property="og:title" content="OG Title" />');
     expect(html).toContain('<meta property="og:description" content="OG Description" />');
     expect(html).toContain('<meta property="og:image" content="https://example.com/og.png" />');
+  });
+
+  it('renders robots meta tag for NOINDEX/NOFOLLOW', () => {
+    const html = renderPageDocument({
+      page: {
+        ...basePage,
+        robotsIndex: RobotsIndex.NOINDEX,
+        robotsFollow: RobotsFollow.NOFOLLOW,
+      },
+    });
+
+    expect(html).toContain('<meta name="robots" content="noindex, nofollow" />');
   });
 
   it('renders sanitized JSON-LD when structured data is valid', () => {
