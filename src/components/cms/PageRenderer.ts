@@ -1,43 +1,43 @@
 import { PageSectionType } from '@prisma/client';
 
-import {
-  PageSectionInput,
-  escapeHtml,
-  parseSectionData,
-  sectionRenderers,
-} from './sections/sectionRenderers';
+import { PageSectionInput, escapeHtml, sectionRenderers } from './sections/sectionRenderers';
+import { parseSectionDataJson } from '../../modules/cms/section-data';
 
 type PageRendererProps = {
   sections?: PageSectionInput[];
+  pageId?: string;
 };
 
-export const renderPageSections = (sections: PageSectionInput[] = []) =>
+const renderFallbackSection = (sectionType: PageSectionType | string) => `
+  <section class="section">
+    <div class="card-block">
+      <h3>Section unavailable</h3>
+      <p>We couldn't load the ${escapeHtml(String(sectionType))} section.</p>
+    </div>
+  </section>
+`;
+
+export const renderPageSections = (sections: PageSectionInput[] = [], pageId?: string) =>
   [...sections]
     .filter((section) => section?.isEnabled !== false)
     .sort((a, b) => (a?.sortOrder ?? 0) - (b?.sortOrder ?? 0))
     .map((section) => {
       const renderer = sectionRenderers[section.type as PageSectionType];
       if (!renderer) {
-        return `
-          <section class="section">
-            <div class="card-block">
-              <h3>Unsupported section: ${escapeHtml(String(section.type))}</h3>
-            </div>
-          </section>
-        `;
+        return renderFallbackSection(section.type);
       }
-      const data = parseSectionData(section.dataJson);
+      const data = parseSectionDataJson({
+        type: section.type,
+        dataJson: section.dataJson,
+        pageId,
+        sectionId: section.id ?? undefined,
+      });
       if (!data) {
-        return `
-          <section class="section">
-            <div class="card-block">
-              <h3>Invalid data for ${escapeHtml(String(section.type))}</h3>
-            </div>
-          </section>
-        `;
+        return renderFallbackSection(section.type);
       }
       return renderer(data);
     })
     .join('');
 
-export const PageRenderer = ({ sections = [] }: PageRendererProps) => renderPageSections(sections);
+export const PageRenderer = ({ sections = [], pageId }: PageRendererProps) =>
+  renderPageSections(sections, pageId);
