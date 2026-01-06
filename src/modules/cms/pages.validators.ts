@@ -114,5 +114,14 @@ export const updatePageSchema = z.object({
     }),
 });
 
+export const listPagesSchema = z.object({
+  query: z.object({
+    status: z.nativeEnum(PageStatus).optional(),
+    type: z.nativeEnum(PageType).optional(),
+    limit: z.coerce.number().int().positive().max(100).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+  }),
+});
+
 export type CreatePageInput = z.infer<typeof createPageSchema>['body'];
 export type UpdatePageInput = z.infer<typeof updatePageSchema>['body'];
