@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { publicApiRateLimiter } from '../../common/middleware/rateLimit';
 import { resolveSalonBySlug } from '../../common/middleware/resolveSalonBySlug';
+import { getPublicAddresses } from './addresses.public.controller';
+import { getPublicLinks } from './links.public.controller';
+import { getPublicMedia } from './media.public.controller';
 import { getPublicPage } from './pages.public.controller';
 
 export const publicPagesRouter = Router({ mergeParams: true });
@@ -15,16 +18,23 @@ publicPagesRouter.get(
   getPublicPage
 );
 
-publicMediaRouter.all('*', (_req, res) => {
-  res.status(501).json({ message: 'Public media routes placeholder.' });
-});
+publicMediaRouter.get(
+  '/',
+  publicApiRateLimiter,
+  resolveSalonBySlug,
+  getPublicMedia
+);
 
-publicLinksRouter.all('*', (_req, res) => {
-  res.status(501).json({ message: 'Public links routes placeholder.' });
-});
+publicLinksRouter.get(
+  '/',
+  publicApiRateLimiter,
+  resolveSalonBySlug,
+  getPublicLinks
+);
 
-publicAddressesRouter.all('*', (_req, res) => {
-  res
-    .status(501)
-    .json({ message: 'Public addresses routes placeholder.' });
-});
+publicAddressesRouter.get(
+  '/',
+  publicApiRateLimiter,
+  resolveSalonBySlug,
+  getPublicAddresses
+);
