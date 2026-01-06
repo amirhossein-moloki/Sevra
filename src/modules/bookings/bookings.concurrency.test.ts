@@ -16,7 +16,7 @@ const createTestData = async () => {
       salonId: salon.id,
       fullName: 'Test Staff',
       phone: `+1500555000${Math.floor(Math.random() * 10)}`, // Random phone to avoid conflicts
-      role: 'STAFF',
+      role: 'MANAGER',
     },
   });
 

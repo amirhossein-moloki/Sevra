@@ -48,7 +48,7 @@ router.use('/public/salons/:salonSlug/bookings', publicBookingsRoutes);
 router.use('/salons/:salonId/bookings', paymentsRoutes); // This will be scoped within the booking
 
 // --- Webhooks Module ---
-router.use(webhooksRoutes);
+router.use('/api/v1', webhooksRoutes);
 
 
 export default router;
