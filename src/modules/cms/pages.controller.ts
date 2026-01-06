@@ -43,3 +43,12 @@ export async function updatePage(
   const page = await PagesService.updatePage(salonId, pageId, req.body);
   res.status(200).json({ message: 'Page updated successfully', data: page });
 }
+
+export async function getPage(
+  req: Request<{ salonId: string; pageId: string }>,
+  res: Response
+) {
+  const { salonId, pageId } = req.params;
+  const page = await PagesService.getPage(salonId, pageId);
+  res.status(200).json({ data: page });
+}

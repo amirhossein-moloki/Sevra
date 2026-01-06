@@ -123,5 +123,11 @@ export const listPagesSchema = z.object({
   }),
 });
 
+export const getPageSchema = z.object({
+  params: z.object({
+    pageId: z.string().cuid(CUID_MESSAGE),
+  }),
+});
+
 export type CreatePageInput = z.infer<typeof createPageSchema>['body'];
 export type UpdatePageInput = z.infer<typeof updatePageSchema>['body'];

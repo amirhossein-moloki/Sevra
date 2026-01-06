@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { validate } from '../../common/middleware/validate';
 import {
   createPageSchema,
+  getPageSchema,
   listPagesSchema,
   updatePageSchema,
 } from './pages.validators';
@@ -16,6 +17,8 @@ export const cmsPagesRouter = Router({ mergeParams: true });
 cmsPagesRouter.use(authMiddleware, tenantGuard, requireRole([UserRole.MANAGER]));
 
 cmsPagesRouter.get('/', validate(listPagesSchema), PagesController.listPages);
+
+cmsPagesRouter.get('/:pageId', validate(getPageSchema), PagesController.getPage);
 
 cmsPagesRouter.post('/', validate(createPageSchema), PagesController.createPage);
 
