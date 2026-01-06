@@ -10,15 +10,29 @@ import { validateSectionData } from './page-sections.schemas';
 
 const CUID_MESSAGE = 'Invalid CUID';
 
+const slugSchema = z
+  .string()
+  .min(1, 'Slug is required')
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+    message: 'Slug must be URL-safe and lowercase.',
+  });
+
+const canonicalPathSchema = z
+  .string()
+  .min(1)
+  .regex(/^\/(?!\/)[^\s]*$/, {
+    message: 'Canonical path must be a path starting with /.',
+  });
+
 const pageBaseSchema = {
-  slug: z.string().min(1, 'Slug is required'),
+  slug: slugSchema,
   title: z.string().min(1, 'Title is required'),
   type: z.nativeEnum(PageType),
   status: z.nativeEnum(PageStatus).optional(),
   publishedAt: z.string().datetime().optional(),
   seoTitle: z.string().min(1).optional(),
   seoDescription: z.string().min(1).optional(),
-  canonicalPath: z.string().min(1).optional(),
+  canonicalPath: canonicalPathSchema.optional(),
   ogTitle: z.string().min(1).optional(),
   ogDescription: z.string().min(1).optional(),
   ogImageUrl: z.string().min(1).optional(),
