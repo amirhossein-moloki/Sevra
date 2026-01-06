@@ -1,6 +1,6 @@
 import { RobotsFollow, RobotsIndex } from '@prisma/client';
 import type { SalonPage, SalonSiteSettings } from '@prisma/client';
-import { PageRenderer } from '../../components/cms/PageRenderer';
+import { renderPageSections } from '../../components/cms/PageRenderer';
 import { PageSectionInput, escapeHtml } from '../../components/cms/sections/sectionRenderers';
 
 type PageRenderInput = {
@@ -300,7 +300,7 @@ export const renderPageDocument = ({
   </head>
   <body>
     <div class="page">
-      ${PageRenderer({ sections, pageId })}
+      ${renderPageSections(sections ?? [], pageId)}
     </div>
   </body>
 </html>`;
