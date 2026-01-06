@@ -1,6 +1,7 @@
 import { PageSectionType } from '@prisma/client';
 
 export type PageSectionInput = {
+  id?: string | null;
   type: PageSectionType | string;
   dataJson?: string | null;
   isEnabled?: boolean | null;
@@ -18,15 +19,6 @@ export const escapeHtml = (value: string) =>
 const renderButton = (label?: string, url?: string) => {
   if (!label || !url) return '';
   return `<a class="btn" href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
-};
-
-export const parseSectionData = (dataJson?: string | null) => {
-  if (!dataJson) return null;
-  try {
-    return JSON.parse(dataJson) as Record<string, unknown>;
-  } catch (error) {
-    return null;
-  }
 };
 
 const renderHero = (data: Record<string, any>) => {

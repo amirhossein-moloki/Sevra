@@ -4,9 +4,10 @@ import { PageSectionInput, escapeHtml } from '../../components/cms/sections/sect
 type PageRenderInput = {
   title?: string;
   sections?: PageSectionInput[];
+  pageId?: string;
 };
 
-export const renderPageDocument = ({ title, sections }: PageRenderInput) => `<!doctype html>
+export const renderPageDocument = ({ title, sections, pageId }: PageRenderInput) => `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -141,7 +142,7 @@ export const renderPageDocument = ({ title, sections }: PageRenderInput) => `<!d
   </head>
   <body>
     <div class="page">
-      ${PageRenderer({ sections })}
+      ${PageRenderer({ sections, pageId })}
     </div>
   </body>
 </html>`;

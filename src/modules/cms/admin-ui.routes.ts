@@ -337,8 +337,8 @@ cmsAdminUiRouter.get('/salons/:salonId/pages', (req, res) => {
 });
 
 cmsAdminUiRouter.post('/salons/:salonId/pages/preview', (req, res) => {
-  const { title, sections } = req.body ?? {};
-  const html = renderPageDocument({ title, sections });
+  const { title, sections, pageId } = req.body ?? {};
+  const html = renderPageDocument({ title, sections, pageId });
   res.type('html').send(html);
 });
 
@@ -1718,7 +1718,9 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
 
       const buildPreviewPayload = () => ({
         title: readValue(fields.title),
+        pageId: '${pageId}',
         sections: sections.map((section, index) => ({
+          id: section.id,
           type: section.type,
           dataJson: section.dataJson,
           sortOrder: section.sortOrder ?? index,
