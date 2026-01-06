@@ -474,6 +474,18 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         flex-direction: column;
         gap: 10px;
       }
+      .sections-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        gap: 12px;
+      }
+      .sections-header h3 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+      }
       .section-item {
         border: 1px solid #e5e7eb;
         border-radius: 10px;
@@ -520,6 +532,39 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         color: #6b7280;
         border: 1px dashed #d1d5db;
         border-radius: 10px;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 100;
+      }
+      .modal-backdrop.open {
+        display: flex;
+      }
+      .modal {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        width: min(480px, 100%);
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+      }
+      .modal h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .modal p {
+        margin: 0 0 16px;
+        color: #6b7280;
+        font-size: 13px;
+      }
+      .modal .actions {
+        margin-top: 16px;
+        justify-content: flex-end;
       }
     </style>
   </head>
@@ -620,6 +665,10 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
             </div>
           </div>
           <div class="tab-panel" id="tab-sections">
+            <div class="sections-header">
+              <h3>Sections</h3>
+              <button type="button" id="addSectionButton">Add Section</button>
+            </div>
             <ul class="sections-list" id="sectionsList"></ul>
           </div>
           <div class="actions">
@@ -634,6 +683,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       const statusText = document.getElementById('statusText');
       const saveButton = document.getElementById('saveButton');
       const sectionsList = document.getElementById('sectionsList');
+      const addSectionButton = document.getElementById('addSectionButton');
 
       const fields = {
         title: document.getElementById('title'),
@@ -655,6 +705,73 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       const tabButtons = document.querySelectorAll('.tab');
       const panels = document.querySelectorAll('.tab-panel');
       let sections = [];
+      const sectionDefaults = {
+        HERO: {
+          headline: 'صفحه جدید',
+          subheadline: 'رزرو آنلاین و حضوری در شهر شما',
+          primaryCta: { label: 'رزرو نوبت', url: '/booking' },
+          secondaryCta: { label: 'دیدن خدمات', url: '/services' },
+          backgroundImageUrl: 'https://picsum.photos/seed/new-hero/1600/900',
+        },
+        HIGHLIGHTS: {
+          title: 'چرا ما؟',
+          items: [
+            { title: 'محیط بهداشتی', text: 'ضدعفونی منظم ابزار و رعایت کامل پروتکل‌ها' },
+            { title: 'پرسنل حرفه‌ای', text: 'متخصصین با تجربه در مو، پوست و ناخن' },
+            { title: 'رزرو آسان', text: 'رزرو آنلاین/حضوری با مدیریت زمان' },
+          ],
+        },
+        SERVICES_GRID: {
+          title: 'خدمات پرطرفدار',
+          showPrices: true,
+          maxItems: 12,
+        },
+        GALLERY_GRID: {
+          title: 'گالری نمونه کار',
+          categories: ['مو', 'ناخن', 'پوست', 'سالن'],
+          limit: 12,
+        },
+        TESTIMONIALS: {
+          title: 'نظرات مشتریان',
+          limit: 6,
+        },
+        FAQ: {
+          title: 'سوالات پرتکرار',
+          items: [
+            { q: 'برای رزرو آنلاین نیاز به پرداخت است؟', a: 'بسته به سرویس، ممکن است بیعانه فعال باشد.' },
+            { q: 'چطور زمان رزرو را تغییر دهم؟', a: 'از طریق تماس با پذیرش یا پنل رزرو اقدام کنید.' },
+          ],
+        },
+        CTA: {
+          title: 'برای تغییر استایل آماده‌اید؟',
+          text: 'همین الان نوبت خود را رزرو کنید.',
+          buttonLabel: 'رزرو نوبت',
+          buttonUrl: '/booking',
+        },
+        CONTACT_CARD: {
+          title: 'اطلاعات تماس',
+          city: 'تهران',
+          workHours: '09:00 تا 20:00',
+        },
+        MAP: {
+          lat: 35.6892,
+          lng: 51.389,
+          zoom: 14,
+        },
+        RICH_TEXT: {
+          title: 'درباره ما',
+          blocks: [
+            { type: 'paragraph', text: 'ما با تمرکز بر کیفیت، بهداشت و تجربه مشتری فعالیت می‌کنیم.' },
+            { type: 'paragraph', text: 'تیم ما با جدیدترین متدها آماده ارائه خدمات است.' },
+          ],
+        },
+        STAFF_GRID: {
+          title: 'تیم ما',
+          showRoles: true,
+          showBio: true,
+        },
+      };
+      const sectionTypes = Object.keys(sectionDefaults);
 
       const toDatetimeLocal = (value) => {
         if (!value) return '';
@@ -695,7 +812,15 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         button.addEventListener('click', () => setActiveTab(button.dataset.tab));
       });
 
+      const updateSectionSortOrders = () => {
+        sections = sections.map((section, index) => ({
+          ...section,
+          sortOrder: index,
+        }));
+      };
+
       const renderSections = () => {
+        updateSectionSortOrders();
         sectionsList.innerHTML = '';
         if (sections.length === 0) {
           const empty = document.createElement('li');
@@ -713,7 +838,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
             <span class="drag-handle" aria-hidden="true">⠿</span>
             <div class="section-content">
               <div class="section-title">${section.type}</div>
-              <div class="section-meta">Position ${index + 1} • ${section.dataJson?.length ?? 0} chars</div>
+              <div class="section-meta">Position ${section.sortOrder + 1} • ${section.dataJson?.length ?? 0} chars</div>
             </div>
             <label class="toggle">
               <input type="checkbox" data-index="${index}" ${section.isEnabled ? 'checked' : ''} />
@@ -773,6 +898,65 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         sections.splice(toIndex, 0, moved);
         renderSections();
       });
+
+      const buildModal = () => {
+        const modalBackdrop = document.createElement('div');
+        modalBackdrop.className = 'modal-backdrop';
+        modalBackdrop.innerHTML = `
+          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addSectionTitle">
+            <h3 id="addSectionTitle">Add a section</h3>
+            <p>Select a section type to add with a starter template.</p>
+            <div>
+              <label for="sectionTypeSelect">Section type</label>
+              <select id="sectionTypeSelect">
+                ${sectionTypes.map((type) => `<option value="${type}">${type}</option>`).join('')}
+              </select>
+            </div>
+            <div class="actions">
+              <button type="button" id="cancelAddSection">Cancel</button>
+              <button type="button" class="primary" id="confirmAddSection">Add section</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modalBackdrop);
+
+        const closeModal = () => {
+          modalBackdrop.classList.remove('open');
+        };
+
+        modalBackdrop.addEventListener('click', (event) => {
+          if (event.target === modalBackdrop) {
+            closeModal();
+          }
+        });
+
+        const cancelButton = modalBackdrop.querySelector('#cancelAddSection');
+        const confirmButton = modalBackdrop.querySelector('#confirmAddSection');
+        const typeSelect = modalBackdrop.querySelector('#sectionTypeSelect');
+
+        cancelButton.addEventListener('click', closeModal);
+        confirmButton.addEventListener('click', () => {
+          const selectedType = typeSelect.value;
+          const template = sectionDefaults[selectedType];
+          if (!template) return;
+          sections.push({
+            type: selectedType,
+            dataJson: JSON.stringify(template, null, 2),
+            isEnabled: true,
+          });
+          renderSections();
+          closeModal();
+          setActiveTab('sections');
+        });
+
+        return {
+          open: () => {
+            modalBackdrop.classList.add('open');
+          },
+        };
+      };
+
+      const addSectionModal = buildModal();
 
       const populateForm = (page) => {
         fields.title.value = page.title ?? '';
@@ -860,7 +1044,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
           id: section.id,
           type: section.type,
           dataJson: section.dataJson,
-          sortOrder: index,
+          sortOrder: section.sortOrder ?? index,
           isEnabled: section.isEnabled ?? true,
         }));
 
@@ -893,6 +1077,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       };
 
       saveButton.addEventListener('click', savePage);
+      addSectionButton.addEventListener('click', () => addSectionModal.open());
 
       loadStoredToken();
       fetchPage();
