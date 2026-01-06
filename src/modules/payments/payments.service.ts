@@ -24,14 +24,9 @@ const initiatePayment = async ({
     throw new AppError('Booking is already paid.', httpStatus.CONFLICT);
   }
 
-  // 3. Idempotency check (simplified for MVP)
-  // A full implementation would use the IdempotencyKey model.
-  if (idempotencyKey) {
-    // In a real scenario, we would check if a payment with this key already exists.
-    // For MVP, we'll assume the client behaves correctly.
-  }
-
-  // 4. Create the payment record
+  // 3. Create the payment record
+  // The idempotency check is now handled by the idempotencyMiddleware.
+  // The idempotencyKey is still passed to the repo to enforce the DB constraint.
   const { payment } = await PaymentsRepo.createPaymentAndUpdateBooking({
     bookingId,
     paymentData: {
