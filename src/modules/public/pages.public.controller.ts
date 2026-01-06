@@ -38,6 +38,28 @@ export async function getPublicPage(req: PublicPageRequest, res: Response) {
   });
 
   if (page) {
+    const updatedAt = page.updatedAt;
+    const eTag = `W/"${updatedAt.getTime()}"`;
+    const lastModified = updatedAt.toUTCString();
+
+    res.setHeader('ETag', eTag);
+    res.setHeader('Last-Modified', lastModified);
+
+    const ifNoneMatch = req.headers['if-none-match'];
+    if (ifNoneMatch === eTag) {
+      res.status(304).end();
+      return;
+    }
+
+    const ifModifiedSince = req.headers['if-modified-since'];
+    if (ifModifiedSince) {
+      const parsedModifiedSince = new Date(ifModifiedSince);
+      if (!Number.isNaN(parsedModifiedSince.getTime()) && parsedModifiedSince >= updatedAt) {
+        res.status(304).end();
+        return;
+      }
+    }
+
     const { sections, salon, ...pageData } = page;
     const html = renderPageDocument({
       page: pageData,
