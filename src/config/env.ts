@@ -62,6 +62,15 @@ const EnvSchema = z.object({
 
   // Webhooks
   PAYMENT_PROVIDER_WEBHOOK_SECRET: z.string().min(1),
+
+  // Media storage
+  MEDIA_STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+  MEDIA_PUBLIC_BASE_URL: z.string().min(1).default("http://localhost:3000"),
+  MEDIA_LOCAL_ROOT: z.string().default("storage"),
+  MEDIA_LOCAL_PUBLIC_PATH: z.string().default("/media"),
+  MEDIA_S3_BUCKET: z.string().optional(),
+  MEDIA_S3_REGION: z.string().optional(),
+  MEDIA_S3_UPLOAD_URL_TEMPLATE: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -71,6 +80,15 @@ if (!parsed.success) {
   console.error("❌ Invalid environment variables:");
   console.error(parsed.error.flatten().fieldErrors);
   throw new Error("Invalid environment variables");
+}
+
+if (parsed.success && parsed.data.MEDIA_STORAGE_DRIVER === "s3") {
+  if (!parsed.data.MEDIA_S3_BUCKET || !parsed.data.MEDIA_S3_REGION) {
+    throw new Error("MEDIA_S3_BUCKET and MEDIA_S3_REGION are required when MEDIA_STORAGE_DRIVER=s3");
+  }
+  if (!parsed.data.MEDIA_S3_UPLOAD_URL_TEMPLATE) {
+    throw new Error("MEDIA_S3_UPLOAD_URL_TEMPLATE is required when MEDIA_STORAGE_DRIVER=s3");
+  }
 }
 
 export const env = parsed.data;
