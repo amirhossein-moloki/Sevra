@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PageStatus, PageType, RobotsFollow, RobotsIndex } from '@prisma/client';
 import { renderPageDocument } from '../public/page-renderer';
+import { serializeSectionRegistryForEditor } from './page-section-registry';
 
 export const cmsAdminUiRouter = Router();
 
@@ -836,73 +837,12 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       const panels = document.querySelectorAll('.tab-panel');
       let sections = [];
       const htmlTagRegex = /<[^>]+>/;
-      const sectionDefaults = {
-        HERO: {
-          headline: 'صفحه جدید',
-          subheadline: 'رزرو آنلاین و حضوری در شهر شما',
-          primaryCta: { label: 'رزرو نوبت', url: '/booking' },
-          secondaryCta: { label: 'دیدن خدمات', url: '/services' },
-          backgroundImageUrl: 'https://picsum.photos/seed/new-hero/1600/900',
-        },
-        HIGHLIGHTS: {
-          title: 'چرا ما؟',
-          items: [
-            { title: 'محیط بهداشتی', text: 'ضدعفونی منظم ابزار و رعایت کامل پروتکل‌ها' },
-            { title: 'پرسنل حرفه‌ای', text: 'متخصصین با تجربه در مو، پوست و ناخن' },
-            { title: 'رزرو آسان', text: 'رزرو آنلاین/حضوری با مدیریت زمان' },
-          ],
-        },
-        SERVICES_GRID: {
-          title: 'خدمات پرطرفدار',
-          showPrices: true,
-          maxItems: 12,
-        },
-        GALLERY_GRID: {
-          title: 'گالری نمونه کار',
-          categories: ['مو', 'ناخن', 'پوست', 'سالن'],
-          limit: 12,
-        },
-        TESTIMONIALS: {
-          title: 'نظرات مشتریان',
-          limit: 6,
-        },
-        FAQ: {
-          title: 'سوالات پرتکرار',
-          items: [
-            { q: 'برای رزرو آنلاین نیاز به پرداخت است؟', a: 'بسته به سرویس، ممکن است بیعانه فعال باشد.' },
-            { q: 'چطور زمان رزرو را تغییر دهم؟', a: 'از طریق تماس با پذیرش یا پنل رزرو اقدام کنید.' },
-          ],
-        },
-        CTA: {
-          title: 'برای تغییر استایل آماده‌اید؟',
-          text: 'همین الان نوبت خود را رزرو کنید.',
-          buttonLabel: 'رزرو نوبت',
-          buttonUrl: '/booking',
-        },
-        CONTACT_CARD: {
-          title: 'اطلاعات تماس',
-          city: 'تهران',
-          workHours: '09:00 تا 20:00',
-        },
-        MAP: {
-          lat: 35.6892,
-          lng: 51.389,
-          zoom: 14,
-        },
-        RICH_TEXT: {
-          title: 'درباره ما',
-          blocks: [
-            { type: 'paragraph', text: 'ما با تمرکز بر کیفیت، بهداشت و تجربه مشتری فعالیت می‌کنیم.' },
-            { type: 'paragraph', text: 'تیم ما با جدیدترین متدها آماده ارائه خدمات است.' },
-          ],
-        },
-        STAFF_GRID: {
-          title: 'تیم ما',
-          showRoles: true,
-          showBio: true,
-        },
-      };
-      const sectionTypes = Object.keys(sectionDefaults);
+      const cloneData = (value) => JSON.parse(JSON.stringify(value ?? {}));
+      const sectionRegistry = ${serializeSectionRegistryForEditor()};
+      const sectionDefaults = Object.fromEntries(
+        Object.entries(sectionRegistry).map(([type, entry]) => [type, cloneData(entry.defaults)]),
+      );
+      const sectionTypes = Object.keys(sectionRegistry);
 
       const toDatetimeLocal = (value) => {
         if (!value) return '';
@@ -959,8 +899,6 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         });
       };
 
-      const cloneData = (value) => JSON.parse(JSON.stringify(value ?? {}));
-
       const parseSectionData = (section) => {
         const fallback = cloneData(sectionDefaults[section.type] ?? {});
         if (!section.dataJson) return fallback;
@@ -1013,102 +951,20 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         }
       };
 
+      const validationHelpers = {
+        pushError,
+        validateRequiredString,
+        validatePositiveInt,
+        validateBoolean,
+        validateRichTextBlock,
+      };
+
       const validateSection = (type, data) => {
-        const errors = [];
-        if (!data || typeof data !== 'object') {
-          pushError(errors, type, 'Section data is required.');
-          return errors;
+        const entry = sectionRegistry[type];
+        if (!entry || typeof entry.validate !== 'function') {
+          return [`${type}: Unsupported section type.`];
         }
-        switch (type) {
-          case 'HERO':
-            validateRequiredString(data.headline, 'headline', errors);
-            validateRequiredString(data.subheadline, 'subheadline', errors);
-            validateRequiredString(data.primaryCta?.label, 'primaryCta.label', errors);
-            validateRequiredString(data.primaryCta?.url, 'primaryCta.url', errors);
-            validateRequiredString(data.secondaryCta?.label, 'secondaryCta.label', errors);
-            validateRequiredString(data.secondaryCta?.url, 'secondaryCta.url', errors);
-            validateRequiredString(data.backgroundImageUrl, 'backgroundImageUrl', errors);
-            break;
-          case 'HIGHLIGHTS':
-            validateRequiredString(data.title, 'title', errors);
-            if (Array.isArray(data.items)) {
-              data.items.forEach((item, index) => {
-                validateRequiredString(item?.title, `items[${index}].title`, errors);
-                validateRequiredString(item?.text, `items[${index}].text`, errors);
-              });
-            } else {
-              pushError(errors, 'items', 'Must be a list.');
-            }
-            break;
-          case 'SERVICES_GRID':
-            validateRequiredString(data.title, 'title', errors);
-            validateBoolean(data.showPrices, 'showPrices', errors);
-            validatePositiveInt(data.maxItems, 'maxItems', errors);
-            break;
-          case 'GALLERY_GRID':
-            validateRequiredString(data.title, 'title', errors);
-            if (Array.isArray(data.categories)) {
-              data.categories.forEach((value, index) => {
-                validateRequiredString(value, `categories[${index}]`, errors);
-              });
-            } else {
-              pushError(errors, 'categories', 'Must be a list.');
-            }
-            validatePositiveInt(data.limit, 'limit', errors);
-            break;
-          case 'TESTIMONIALS':
-            validateRequiredString(data.title, 'title', errors);
-            validatePositiveInt(data.limit, 'limit', errors);
-            break;
-          case 'FAQ':
-            validateRequiredString(data.title, 'title', errors);
-            if (Array.isArray(data.items)) {
-              data.items.forEach((item, index) => {
-                validateRequiredString(item?.q, `items[${index}].q`, errors);
-                validateRequiredString(item?.a, `items[${index}].a`, errors);
-              });
-            } else {
-              pushError(errors, 'items', 'Must be a list.');
-            }
-            break;
-          case 'CTA':
-            validateRequiredString(data.title, 'title', errors);
-            validateRequiredString(data.text, 'text', errors);
-            validateRequiredString(data.buttonLabel, 'buttonLabel', errors);
-            validateRequiredString(data.buttonUrl, 'buttonUrl', errors);
-            break;
-          case 'CONTACT_CARD':
-            validateRequiredString(data.title, 'title', errors);
-            validateRequiredString(data.city, 'city', errors);
-            validateRequiredString(data.workHours, 'workHours', errors);
-            break;
-          case 'MAP':
-            if (typeof data.lat !== 'number') {
-              pushError(errors, 'lat', 'Must be a number.');
-            }
-            if (typeof data.lng !== 'number') {
-              pushError(errors, 'lng', 'Must be a number.');
-            }
-            validatePositiveInt(data.zoom, 'zoom', errors);
-            break;
-          case 'RICH_TEXT':
-            validateRequiredString(data.title, 'title', errors);
-            if (Array.isArray(data.blocks)) {
-              data.blocks.forEach((block, index) => validateRichTextBlock(block, index, errors));
-            } else {
-              pushError(errors, 'blocks', 'Must be a list.');
-            }
-            break;
-          case 'STAFF_GRID':
-            validateRequiredString(data.title, 'title', errors);
-            validateBoolean(data.showRoles, 'showRoles', errors);
-            validateBoolean(data.showBio, 'showBio', errors);
-            break;
-          default:
-            pushError(errors, type, 'Unsupported section type.');
-            break;
-        }
-        return errors;
+        return entry.validate(data, validationHelpers);
       };
 
       const createLabeledField = (labelText) => {
@@ -1224,6 +1080,15 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         return container;
       };
 
+      const editorHelpers = {
+        createTextInput,
+        createTextarea,
+        createNumberInput,
+        createCheckbox,
+        createListEditor,
+        createLabeledField,
+      };
+
       const buildSectionEditor = (section, metaEl, errorsEl) => {
         const editor = document.createElement('div');
         editor.className = 'section-editor';
@@ -1232,260 +1097,9 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         grid.className = 'editor-grid';
 
         const update = () => syncSectionData(section, metaEl, errorsEl);
-
-        if (section.type === 'HERO') {
-          grid.appendChild(createTextInput('Headline', data.headline, (value) => {
-            data.headline = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Subheadline', data.subheadline, (value) => {
-            data.subheadline = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Primary CTA label', data.primaryCta?.label, (value) => {
-            data.primaryCta = data.primaryCta ?? {};
-            data.primaryCta.label = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Primary CTA URL', data.primaryCta?.url, (value) => {
-            data.primaryCta = data.primaryCta ?? {};
-            data.primaryCta.url = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Secondary CTA label', data.secondaryCta?.label, (value) => {
-            data.secondaryCta = data.secondaryCta ?? {};
-            data.secondaryCta.label = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Secondary CTA URL', data.secondaryCta?.url, (value) => {
-            data.secondaryCta = data.secondaryCta ?? {};
-            data.secondaryCta.url = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Background image URL', data.backgroundImageUrl, (value) => {
-            data.backgroundImageUrl = value;
-            update();
-          }));
-        } else if (section.type === 'HIGHLIGHTS') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          const items = Array.isArray(data.items) ? data.items : (data.items = []);
-          editor.appendChild(
-            createListEditor({
-              items,
-              renderItem: (block, item) => {
-                const itemGrid = document.createElement('div');
-                itemGrid.className = 'editor-grid';
-                itemGrid.appendChild(createTextInput('Item title', item.title, (value) => {
-                  item.title = value;
-                  update();
-                }));
-                itemGrid.appendChild(createTextarea('Item text', item.text, (value) => {
-                  item.text = value;
-                  update();
-                }));
-                block.appendChild(itemGrid);
-              },
-              onAdd: () => {
-                items.push({ title: '', text: '' });
-                update();
-              },
-              onRemove: (index) => {
-                items.splice(index, 1);
-                update();
-              },
-            }),
-          );
-        } else if (section.type === 'SERVICES_GRID') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          grid.appendChild(createNumberInput('Max items', data.maxItems, (value) => {
-            data.maxItems = value;
-            update();
-          }));
-          grid.appendChild(createCheckbox('Show prices', data.showPrices, (value) => {
-            data.showPrices = value;
-            update();
-          }));
-        } else if (section.type === 'GALLERY_GRID') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          grid.appendChild(createNumberInput('Limit', data.limit, (value) => {
-            data.limit = value;
-            update();
-          }));
-          const categories = Array.isArray(data.categories) ? data.categories : (data.categories = []);
-          editor.appendChild(
-            createListEditor({
-              items: categories,
-              renderItem: (block, item, index) => {
-                const itemGrid = document.createElement('div');
-                itemGrid.className = 'editor-grid';
-                itemGrid.appendChild(createTextInput(`Category ${index + 1}`, item, (value) => {
-                  categories[index] = value;
-                  update();
-                }));
-                block.appendChild(itemGrid);
-              },
-              onAdd: () => {
-                categories.push('');
-                update();
-              },
-              onRemove: (index) => {
-                categories.splice(index, 1);
-                update();
-              },
-            }),
-          );
-        } else if (section.type === 'TESTIMONIALS') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          grid.appendChild(createNumberInput('Limit', data.limit, (value) => {
-            data.limit = value;
-            update();
-          }));
-        } else if (section.type === 'FAQ') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          const items = Array.isArray(data.items) ? data.items : (data.items = []);
-          editor.appendChild(
-            createListEditor({
-              items,
-              renderItem: (block, item) => {
-                const itemGrid = document.createElement('div');
-                itemGrid.className = 'editor-grid';
-                itemGrid.appendChild(createTextInput('Question', item.q, (value) => {
-                  item.q = value;
-                  update();
-                }));
-                itemGrid.appendChild(createTextarea('Answer', item.a, (value) => {
-                  item.a = value;
-                  update();
-                }));
-                block.appendChild(itemGrid);
-              },
-              onAdd: () => {
-                items.push({ q: '', a: '' });
-                update();
-              },
-              onRemove: (index) => {
-                items.splice(index, 1);
-                update();
-              },
-            }),
-          );
-        } else if (section.type === 'CTA') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          grid.appendChild(createTextarea('Text', data.text, (value) => {
-            data.text = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Button label', data.buttonLabel, (value) => {
-            data.buttonLabel = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Button URL', data.buttonUrl, (value) => {
-            data.buttonUrl = value;
-            update();
-          }));
-        } else if (section.type === 'CONTACT_CARD') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('City', data.city, (value) => {
-            data.city = value;
-            update();
-          }));
-          grid.appendChild(createTextInput('Work hours', data.workHours, (value) => {
-            data.workHours = value;
-            update();
-          }));
-        } else if (section.type === 'MAP') {
-          grid.appendChild(createNumberInput('Latitude', data.lat, (value) => {
-            data.lat = value;
-            update();
-          }));
-          grid.appendChild(createNumberInput('Longitude', data.lng, (value) => {
-            data.lng = value;
-            update();
-          }));
-          grid.appendChild(createNumberInput('Zoom', data.zoom, (value) => {
-            data.zoom = value;
-            update();
-          }));
-        } else if (section.type === 'RICH_TEXT') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          const blocks = Array.isArray(data.blocks) ? data.blocks : (data.blocks = []);
-          const blockEditor = createListEditor({
-            items: blocks,
-            renderItem: (block, item, index) => {
-              const itemGrid = document.createElement('div');
-              itemGrid.className = 'editor-grid';
-              const typeSelectWrapper = createLabeledField('Block type');
-              const select = document.createElement('select');
-              ['paragraph', 'heading', 'list', 'quote'].forEach((optionValue) => {
-                const option = document.createElement('option');
-                option.value = optionValue;
-                option.textContent = optionValue;
-                select.appendChild(option);
-              });
-              select.value = item.type ?? 'paragraph';
-              select.addEventListener('change', () => {
-                item.type = select.value;
-                update();
-              });
-              typeSelectWrapper.wrapper.appendChild(select);
-              itemGrid.appendChild(typeSelectWrapper.wrapper);
-              itemGrid.appendChild(createTextarea('Text', item.text, (value) => {
-                item.text = value;
-                update();
-              }));
-              itemGrid.appendChild(createCheckbox('Allow HTML', item.allowHtml, (value) => {
-                item.allowHtml = value;
-                update();
-              }));
-              block.appendChild(itemGrid);
-            },
-            onAdd: () => {
-              blocks.push({ type: 'paragraph', text: '' });
-              update();
-            },
-            onRemove: (index) => {
-              blocks.splice(index, 1);
-              update();
-            },
-          });
-          editor.appendChild(blockEditor);
-        } else if (section.type === 'STAFF_GRID') {
-          grid.appendChild(createTextInput('Title', data.title, (value) => {
-            data.title = value;
-            update();
-          }));
-          grid.appendChild(createCheckbox('Show roles', data.showRoles, (value) => {
-            data.showRoles = value;
-            update();
-          }));
-          grid.appendChild(createCheckbox('Show bio', data.showBio, (value) => {
-            data.showBio = value;
-            update();
-          }));
+        const entry = sectionRegistry[section.type];
+        if (entry?.buildEditor) {
+          entry.buildEditor({ section, data, grid, editor, update, helpers: editorHelpers });
         }
 
         if (grid.children.length > 0) {
