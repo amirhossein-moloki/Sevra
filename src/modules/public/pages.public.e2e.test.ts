@@ -134,6 +134,48 @@ describe('GET /api/v1/public/salons/:salonSlug/pages/:pageSlug', () => {
     expect(response.text).toContain('<title>About</title>');
   });
 
+  it('includes caching headers and supports conditional requests', async () => {
+    const response = await request(app)
+      .get(`/api/v1/public/salons/${salon.slug}/pages/${page.slug}`)
+      .expect(200);
+
+    const etag = response.headers.etag;
+    const lastModified = response.headers['last-modified'];
+
+    expect(etag).toBeDefined();
+    expect(lastModified).toBeDefined();
+
+    await request(app)
+      .get(`/api/v1/public/salons/${salon.slug}/pages/${page.slug}`)
+      .set('If-None-Match', etag)
+      .expect(304);
+
+    await request(app)
+      .get(`/api/v1/public/salons/${salon.slug}/pages/${page.slug}`)
+      .set('If-Modified-Since', lastModified)
+      .expect(304);
+  });
+
+  it('busts cache when the page is updated', async () => {
+    const initialResponse = await request(app)
+      .get(`/api/v1/public/salons/${salon.slug}/pages/${page.slug}`)
+      .expect(200);
+
+    const initialEtag = initialResponse.headers.etag;
+
+    await prisma.salonPage.update({
+      where: { id: page.id },
+      data: { title: 'About Updated' },
+    });
+
+    const updatedResponse = await request(app)
+      .get(`/api/v1/public/salons/${salon.slug}/pages/${page.slug}`)
+      .set('If-None-Match', initialEtag)
+      .expect(200);
+
+    expect(updatedResponse.headers.etag).not.toBe(initialEtag);
+  });
+
   it('renders enabled sections in sort order', async () => {
     const response = await request(app)
       .get(`/api/v1/public/salons/${salon.slug}/pages/${page.slug}`)
