@@ -13,6 +13,13 @@ import shiftsRouter from '../modules/shifts/shifts.routes';
 import availabilityRouter from '../modules/availability/availability.routes';
 import bookingsRoutes from '../modules/bookings/bookings.routes';
 import publicBookingsRoutes from '../modules/bookings/bookings.public.routes';
+import { cmsRouter } from '../modules/cms/cms.routes';
+import {
+  publicAddressesRouter,
+  publicLinksRouter,
+  publicMediaRouter,
+  publicPagesRouter,
+} from '../modules/public/public.routes';
 import { paymentsRoutes } from '../modules/payments/payments.routes';
 import { webhooksRoutes } from '../modules/webhooks/webhooks.routes';
 
@@ -46,6 +53,15 @@ router.use('/public/salons/:salonSlug/bookings', publicBookingsRoutes);
 
 // --- Payments Module Routes ---
 router.use('/salons/:salonId/bookings', paymentsRoutes); // This will be scoped within the booking
+
+// --- CMS Module Routes ---
+router.use('/salons/:salonId', cmsRouter);
+
+// --- Public CMS Routes ---
+router.use('/public/salons/:salonSlug/pages', publicPagesRouter);
+router.use('/public/salons/:salonSlug/media', publicMediaRouter);
+router.use('/public/salons/:salonSlug/links', publicLinksRouter);
+router.use('/public/salons/:salonSlug/addresses', publicAddressesRouter);
 
 // --- Webhooks Module ---
 router.use('/api/v1', webhooksRoutes);
