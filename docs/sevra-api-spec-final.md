@@ -347,6 +347,10 @@ Base: `/api/v1/salons/{salonId}`
 | POST | `/salons/{salonId}/media` | Yes | MANAGER | ثبت مدیا (url/altText/...) | `src/modules/cms` |
 | PATCH | `/salons/{salonId}/media/{mediaId}` | Yes | MANAGER | ویرایش مدیا | `src/modules/cms` |
 
+### Media URL strategy
+
+See `docs/media-url-strategy.md` for how `url` and `thumbUrl` are produced and should be consumed by the frontend.
+
 ---
 
 ## 5) DTOهای کلیدی (مختصر و MVP-focused)
