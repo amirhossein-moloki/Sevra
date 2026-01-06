@@ -9,6 +9,8 @@ const prisma = new PrismaClient();
 describe('CMS Pages API E2E Tests', () => {
   let testSalonId: string;
   let managerToken: string;
+  let staffToken: string;
+  let otherSalonManagerToken: string;
   let publishedPageId: string;
 
   const buildHeroSection = () => ({
@@ -55,8 +57,45 @@ describe('CMS Pages API E2E Tests', () => {
       },
     });
 
+    const staff = await prisma.user.create({
+      data: {
+        fullName: 'CMS Staff',
+        phone: `+989121111113${Date.now()}`.slice(0, 14),
+        role: UserRole.STAFF,
+        salonId: testSalonId,
+      },
+    });
+
+    const otherSalon = await prisma.salon.create({
+      data: {
+        name: 'CMS Other Salon',
+        slug: `cms-other-salon-${Date.now()}`,
+      },
+    });
+
+    const otherManager = await prisma.user.create({
+      data: {
+        fullName: 'CMS Other Manager',
+        phone: `+989121111114${Date.now()}`.slice(0, 14),
+        role: UserRole.MANAGER,
+        salonId: otherSalon.id,
+      },
+    });
+
     managerToken = jwt.sign(
       { actorId: manager.id, actorType: 'USER', salonId: testSalonId, role: manager.role },
+      env.JWT_ACCESS_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    staffToken = jwt.sign(
+      { actorId: staff.id, actorType: 'USER', salonId: testSalonId, role: staff.role },
+      env.JWT_ACCESS_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    otherSalonManagerToken = jwt.sign(
+      { actorId: otherManager.id, actorType: 'USER', salonId: otherSalon.id, role: otherManager.role },
       env.JWT_ACCESS_SECRET,
       { expiresIn: '1h' }
     );
@@ -68,6 +107,52 @@ describe('CMS Pages API E2E Tests', () => {
     await prisma.user.deleteMany();
     await prisma.salon.deleteMany();
     await prisma.$disconnect();
+  });
+
+  describe('Authorization', () => {
+    it('should reject requests without a token', async () => {
+      const response = await request(app)
+        .get(`/api/v1/salons/${testSalonId}/pages`)
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authorization header is missing or invalid',
+        },
+      });
+    });
+
+    it('should reject non-manager roles', async () => {
+      const response = await request(app)
+        .get(`/api/v1/salons/${testSalonId}/pages`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Forbidden: You do not have the required permissions.',
+        },
+      });
+    });
+
+    it('should reject access to another salon', async () => {
+      const response = await request(app)
+        .get(`/api/v1/salons/${testSalonId}/pages`)
+        .set('Authorization', `Bearer ${otherSalonManagerToken}`)
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Salon not found.',
+        },
+      });
+    });
   });
 
   describe('POST /api/v1/salons/:salonId/pages', () => {

@@ -14,6 +14,7 @@ const prisma = new PrismaClient();
 describe('CMS Site Settings API E2E Tests', () => {
   let testSalonId: string;
   let managerToken: string;
+  let staffToken: string;
 
   beforeAll(async () => {
     await prisma.salonSiteSettings.deleteMany();
@@ -38,8 +39,23 @@ describe('CMS Site Settings API E2E Tests', () => {
       },
     });
 
+    const staff = await prisma.user.create({
+      data: {
+        fullName: 'CMS Settings Staff',
+        phone: `+98912133334${Date.now()}`.slice(0, 14),
+        role: UserRole.STAFF,
+        salonId: testSalonId,
+      },
+    });
+
     managerToken = jwt.sign(
       { actorId: manager.id, actorType: 'USER', salonId: testSalonId, role: manager.role },
+      env.JWT_ACCESS_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    staffToken = jwt.sign(
+      { actorId: staff.id, actorType: 'USER', salonId: testSalonId, role: staff.role },
       env.JWT_ACCESS_SECRET,
       { expiresIn: '1h' }
     );
@@ -50,6 +66,37 @@ describe('CMS Site Settings API E2E Tests', () => {
     await prisma.user.deleteMany();
     await prisma.salon.deleteMany();
     await prisma.$disconnect();
+  });
+
+  describe('Authorization', () => {
+    it('should reject requests without a token', async () => {
+      const response = await request(app)
+        .get(`/api/v1/salons/${testSalonId}/site-settings`)
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authorization header is missing or invalid',
+        },
+      });
+    });
+
+    it('should reject non-manager roles', async () => {
+      const response = await request(app)
+        .get(`/api/v1/salons/${testSalonId}/site-settings`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Forbidden: You do not have the required permissions.',
+        },
+      });
+    });
   });
 
   describe('GET /api/v1/salons/:salonId/site-settings', () => {

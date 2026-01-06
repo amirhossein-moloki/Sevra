@@ -1,6 +1,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { Prisma } from '@prisma/client';
+import httpStatus from 'http-status';
 
 // We can now safely import AppError
 import AppError from "./AppError";
@@ -80,7 +81,21 @@ function normalizeError(err: any): NormalizedError {
     };
   }
 
-  // 5. Default/Unknown Error
+  // 5. http-errors or similar errors with status codes
+  if (typeof err?.status === "number" || typeof err?.statusCode === "number") {
+    const status = err.status ?? err.statusCode;
+    const statusText = httpStatus[status] as string | undefined;
+    const code = err.code ?? (statusText ? statusText.replace(/\s+/g, "_").toUpperCase() : "HTTP_ERROR");
+
+    return {
+      status,
+      code,
+      message: err.message ?? statusText ?? "Request failed.",
+      details: err.details,
+    };
+  }
+
+  // 6. Default/Unknown Error
   return {
     status: 500,
     code: "INTERNAL_ERROR",
