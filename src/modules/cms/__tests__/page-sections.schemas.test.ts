@@ -72,23 +72,49 @@ describe('page section schemas', () => {
     expect(() => validateSectionData(type as PageSectionType, JSON.stringify(payload))).not.toThrow();
   });
 
-  it('rejects HTML in rich text blocks by default', () => {
+  it('strips HTML in rich text blocks by default', () => {
     const payload = {
       title: 'قوانین',
       blocks: [{ type: 'paragraph', text: '<p>HTML متن</p>' }],
     };
 
-    expect(() => validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload))).toThrow(
-      'HTML is not allowed in rich-text fields.',
-    );
+    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload));
+    expect(parsed.blocks[0].text).toBe('HTML متن');
   });
 
-  it('allows HTML in rich text blocks when explicitly allowed', () => {
+  it('allows safe HTML in rich text blocks when explicitly allowed', () => {
     const payload = {
       title: 'قوانین',
-      blocks: [{ type: 'paragraph', text: '<p>HTML متن</p>', allowHtml: true }],
+      blocks: [{ type: 'paragraph', text: 'متن <strong>پررنگ</strong>', allowHtml: true }],
     };
 
-    expect(() => validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload))).not.toThrow();
+    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload));
+    expect(parsed.blocks[0].text).toBe('متن <strong>پررنگ</strong>');
+  });
+
+  it('sanitizes XSS payloads in rich text blocks', () => {
+    const payload = {
+      title: 'امنیت',
+      blocks: [
+        {
+          type: 'paragraph',
+          text: '<img src=x onerror=alert(1)>Hello<script>alert(2)</script><a href="javascript:alert(3)">bad</a><strong>ok</strong>',
+          allowHtml: true,
+        },
+        {
+          type: 'paragraph',
+          text: '<svg onload=alert(4)>SVG</svg>Plain',
+        },
+      ],
+    };
+
+    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload));
+    expect(parsed.blocks[0].text).toContain('Hello');
+    expect(parsed.blocks[0].text).toContain('<strong>ok</strong>');
+    expect(parsed.blocks[0].text).toContain('<a>bad</a>');
+    expect(parsed.blocks[0].text).not.toContain('script');
+    expect(parsed.blocks[0].text).not.toContain('onerror');
+    expect(parsed.blocks[0].text).not.toContain('javascript:');
+    expect(parsed.blocks[1].text).toBe('SVGPlain');
   });
 });

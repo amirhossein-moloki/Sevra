@@ -1,7 +1,87 @@
 import { z } from 'zod';
 import { PageSectionType } from '@prisma/client';
 
-const htmlTagRegex = /<[^>]+>/;
+const allowedRichTextTags = new Set(['a', 'b', 'strong', 'i', 'em', 'u', 's', 'br', 'span', 'code']);
+const safeHrefPattern = /^(https?:|mailto:|tel:|\/|#)/i;
+const attributeRegex = /([a-zA-Z0-9-:_]+)\s*=\s*(".*?"|'.*?'|[^\s>]+)/g;
+
+const escapeHtmlAttribute = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const sanitizeTagAttributes = (attributes: string) => {
+  const sanitized: Record<string, string> = {};
+  attributeRegex.lastIndex = 0;
+  let match;
+  while ((match = attributeRegex.exec(attributes)) !== null) {
+    const name = match[1].toLowerCase();
+    let value = match[2].trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    sanitized[name] = value;
+  }
+  return sanitized;
+};
+
+const sanitizeRichTextHtml = (value: string, allowHtml: boolean) => {
+  if (!value) return value;
+
+  const withoutDangerousBlocks = value.replace(
+    /<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1>/gi,
+    '',
+  );
+
+  if (!allowHtml) {
+    return withoutDangerousBlocks.replace(/<[^>]*>/g, '');
+  }
+
+  return withoutDangerousBlocks.replace(
+    /<\s*\/?\s*([a-zA-Z0-9]+)([^>]*)>/g,
+    (match, rawTagName: string, rawAttributes: string) => {
+      const tagName = rawTagName.toLowerCase();
+      const isClosing = match.trim().startsWith('</');
+
+      if (!allowedRichTextTags.has(tagName)) {
+        return '';
+      }
+
+      if (isClosing) {
+        return `</${tagName}>`;
+      }
+
+      if (tagName === 'br') {
+        return '<br />';
+      }
+
+      if (tagName !== 'a') {
+        return `<${tagName}>`;
+      }
+
+      const attributes = sanitizeTagAttributes(rawAttributes);
+      const sanitizedAttributes: string[] = [];
+      if (attributes.href && safeHrefPattern.test(attributes.href)) {
+        sanitizedAttributes.push(`href="${escapeHtmlAttribute(attributes.href)}"`);
+      }
+      if (attributes.title) {
+        sanitizedAttributes.push(`title="${escapeHtmlAttribute(attributes.title)}"`);
+      }
+      if (attributes.target) {
+        const target = attributes.target.toLowerCase();
+        if (['_blank', '_self', '_parent', '_top'].includes(target)) {
+          sanitizedAttributes.push(`target="${target}"`);
+          if (target === '_blank') {
+            sanitizedAttributes.push('rel="noopener noreferrer"');
+          }
+        }
+      }
+      if (attributes.rel && !sanitizedAttributes.some((attr) => attr.startsWith('rel='))) {
+        sanitizedAttributes.push(`rel="${escapeHtmlAttribute(attributes.rel)}"`);
+      }
+
+      return `<a${sanitizedAttributes.length ? ` ${sanitizedAttributes.join(' ')}` : ''}>`;
+    },
+  );
+};
 
 const richTextBlockSchema = z
   .object({
@@ -9,15 +89,10 @@ const richTextBlockSchema = z
     text: z.string().min(1),
     allowHtml: z.boolean().optional(),
   })
-  .superRefine((value, ctx) => {
-    if (!value.allowHtml && htmlTagRegex.test(value.text)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'HTML is not allowed in rich-text fields.',
-        path: ['text'],
-      });
-    }
-  });
+  .transform((value) => ({
+    ...value,
+    text: sanitizeRichTextHtml(value.text, Boolean(value.allowHtml)),
+  }));
 
 const heroSchema = z.object({
   headline: z.string().min(1),
