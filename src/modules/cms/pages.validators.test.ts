@@ -8,16 +8,32 @@ import {
 } from '@prisma/client';
 import { createPageSchema, updatePageSchema } from './pages.validators';
 
-const buildValidHeroSection = () => ({
-  type: PageSectionType.HERO,
-  dataJson: JSON.stringify({
-    headline: 'عنوان اصلی',
-    subheadline: 'زیرعنوان',
-    primaryCta: { label: 'رزرو نوبت', url: '/booking' },
-    secondaryCta: { label: 'خدمات', url: '/services' },
-    backgroundImageUrl: 'https://picsum.photos/seed/hero/1600/900',
-  }),
+const seedServicesGridData = {
+  title: 'خدمات پرطرفدار',
+  showPrices: true,
+  maxItems: 12,
+};
+
+const seedHighlightsData = {
+  title: 'چرا ما؟',
+  items: [
+    { title: 'محیط بهداشتی', text: 'ضدعفونی منظم ابزار و رعایت کامل پروتکل‌ها' },
+    { title: 'پرسنل حرفه‌ای', text: 'متخصصین با تجربه در مو، پوست و ناخن' },
+    { title: 'رزرو آسان', text: 'رزرو آنلاین/حضوری با مدیریت زمان' },
+  ],
+};
+
+const buildSeedServicesGridSection = () => ({
+  type: PageSectionType.SERVICES_GRID,
+  dataJson: JSON.stringify(seedServicesGridData),
   sortOrder: 0,
+  isEnabled: true,
+});
+
+const buildSeedHighlightsSection = () => ({
+  type: PageSectionType.HIGHLIGHTS,
+  dataJson: JSON.stringify(seedHighlightsData),
+  sortOrder: 1,
   isEnabled: true,
 });
 
@@ -32,7 +48,7 @@ describe('CMS pages validators', () => {
           status: PageStatus.DRAFT,
           robotsIndex: RobotsIndex.INDEX,
           robotsFollow: RobotsFollow.FOLLOW,
-          sections: [buildValidHeroSection()],
+          sections: [buildSeedServicesGridSection(), buildSeedHighlightsSection()],
         },
       });
 
@@ -47,8 +63,8 @@ describe('CMS pages validators', () => {
           type: PageType.CUSTOM,
           sections: [
             {
-              type: PageSectionType.HERO,
-              dataJson: JSON.stringify({ headline: '' }),
+              type: PageSectionType.SERVICES_GRID,
+              dataJson: JSON.stringify({ showPrices: true, maxItems: 12 }),
             },
           ],
         },
@@ -57,11 +73,12 @@ describe('CMS pages validators', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         const issue = result.error.issues.find(
-          (item) => item.params?.type === PageSectionType.HERO,
+          (item) => item.params?.type === PageSectionType.SERVICES_GRID,
         );
         expect(issue?.params).toEqual(
-          expect.objectContaining({ index: 0, type: PageSectionType.HERO }),
+          expect.objectContaining({ index: 0, type: PageSectionType.SERVICES_GRID }),
         );
+        expect(issue?.path.slice(-3)).toEqual([0, 'dataJson', 'title']);
       }
     });
 
@@ -71,7 +88,7 @@ describe('CMS pages validators', () => {
           slug: 'Home Page',
           title: 'صفحه اصلی',
           type: PageType.CUSTOM,
-          sections: [buildValidHeroSection()],
+          sections: [buildSeedServicesGridSection()],
         },
       });
 
@@ -85,7 +102,7 @@ describe('CMS pages validators', () => {
           title: 'صفحه اصلی',
           type: PageType.CUSTOM,
           canonicalPath: 'https://example.com/home',
-          sections: [buildValidHeroSection()],
+          sections: [buildSeedServicesGridSection()],
         },
       });
 
@@ -100,11 +117,54 @@ describe('CMS pages validators', () => {
           type: PageType.CUSTOM,
           robotsIndex: 'MAYBE' as RobotsIndex,
           robotsFollow: 'ALWAYS' as RobotsFollow,
-          sections: [buildValidHeroSection()],
+          sections: [buildSeedServicesGridSection()],
         },
       });
 
       expect(result.success).toBe(false);
+    });
+
+    it('flags missing required fields with field paths', () => {
+      const result = createPageSchema.safeParse({
+        body: {
+          slug: '',
+          title: 'صفحه اصلی',
+          type: PageType.CUSTOM,
+          sections: [buildSeedServicesGridSection()],
+        },
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const slugIssue = result.error.issues.find(
+          (item) => item.path[item.path.length - 1] === 'slug',
+        );
+        expect(slugIssue?.path).toEqual(['body', 'slug']);
+      }
+    });
+
+    it('flags wrong field types inside section data with paths', () => {
+      const result = createPageSchema.safeParse({
+        body: {
+          slug: 'home',
+          title: 'صفحه اصلی',
+          type: PageType.CUSTOM,
+          sections: [
+            {
+              type: PageSectionType.SERVICES_GRID,
+              dataJson: JSON.stringify({ title: 'خدمات پرطرفدار', showPrices: 'yes', maxItems: 12 }),
+            },
+          ],
+        },
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find(
+          (item) => item.params?.type === PageSectionType.SERVICES_GRID,
+        );
+        expect(issue?.path.slice(-3)).toEqual([0, 'dataJson', 'showPrices']);
+      }
     });
   });
 
@@ -123,7 +183,7 @@ describe('CMS pages validators', () => {
         params: { pageId: cuid() },
         body: {
           title: 'صفحه جدید',
-          sections: [buildValidHeroSection()],
+          sections: [buildSeedServicesGridSection()],
         },
       });
 
