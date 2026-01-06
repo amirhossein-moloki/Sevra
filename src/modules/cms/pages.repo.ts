@@ -70,13 +70,23 @@ export async function listPagesBySalon(salonId: string, filters: PageFilters) {
 export async function updatePage(
   pageId: string,
   data: UpdatePageData,
-  sections?: PageSectionInput[]
+  sections?: PageSectionInput[],
+  slugHistory?: string
 ) {
   const { sections: _sections, ...pageData } = data;
   return prisma.salonPage.update({
     where: { id: pageId },
     data: {
       ...pageData,
+      ...(slugHistory
+        ? {
+            slugHistory: {
+              create: {
+                oldSlug: slugHistory,
+              },
+            },
+          }
+        : {}),
       ...(sections
         ? {
             sections: {

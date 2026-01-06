@@ -135,5 +135,21 @@ describe('CMS Pages API E2E Tests', () => {
       expect(response.body.data.sections).toHaveLength(1);
       expect(response.body.data.sections[0].type).toBe(PageSectionType.RICH_TEXT);
     });
+
+    it('should create slug history when the slug changes', async () => {
+      const response = await request(app)
+        .patch(`/api/v1/salons/${testSalonId}/pages/${publishedPageId}`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ slug: 'home-updated' })
+        .expect(200);
+
+      expect(response.body.data.slug).toBe('home-updated');
+
+      const history = await prisma.salonPageSlugHistory.findFirst({
+        where: { pageId: publishedPageId, oldSlug: 'home' },
+      });
+
+      expect(history).toBeTruthy();
+    });
   });
 });
