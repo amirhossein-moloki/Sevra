@@ -1,5 +1,5 @@
 import { RobotsFollow, RobotsIndex } from '@prisma/client';
-import { buildSeoMeta } from './page-renderer';
+import { buildSeoMeta, renderPageDocument } from './page-renderer';
 
 type PageInput = Parameters<typeof buildSeoMeta>[0]['page'];
 type SiteSettingsInput = NonNullable<Parameters<typeof buildSeoMeta>[0]['siteSettings']>;
@@ -75,5 +75,51 @@ describe('buildSeoMeta', () => {
     const meta = buildSeoMeta({ page });
 
     expect(meta.robots).toBe('noindex, follow');
+  });
+});
+
+describe('renderPageDocument', () => {
+  it('renders open graph meta tags for public pages', () => {
+    const html = renderPageDocument({
+      page: {
+        ...basePage,
+        ogTitle: 'OG Title',
+        ogDescription: 'OG Description',
+        ogImageUrl: 'https://example.com/og.png',
+      },
+    });
+
+    expect(html).toContain('<meta property="og:title" content="OG Title" />');
+    expect(html).toContain('<meta property="og:description" content="OG Description" />');
+    expect(html).toContain('<meta property="og:image" content="https://example.com/og.png" />');
+  });
+
+  it('renders sanitized JSON-LD when structured data is valid', () => {
+    const html = renderPageDocument({
+      page: {
+        ...basePage,
+        structuredDataJson: JSON.stringify({
+          '@context': 'https://schema.org',
+          name: '</script><script>alert(1)</script>',
+        }),
+      },
+    });
+
+    expect(html).toContain('<script type="application/ld+json">');
+    expect(html).toContain(
+      '"name":"\\u003c/script\\u003e\\u003cscript\\u003ealert(1)\\u003c/script\\u003e"'
+    );
+    expect(html).not.toContain('</script><script>alert(1)</script>');
+  });
+
+  it('skips JSON-LD rendering when structured data is invalid', () => {
+    const html = renderPageDocument({
+      page: {
+        ...basePage,
+        structuredDataJson: '{"@context": "https://schema.org",}',
+      },
+    });
+
+    expect(html).not.toContain('application/ld+json');
   });
 });

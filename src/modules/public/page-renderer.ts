@@ -45,6 +45,25 @@ type SeoMeta = {
   structuredDataJson?: string | null;
 };
 
+const sanitizeStructuredDataJson = (structuredDataJson?: string | null) => {
+  if (!structuredDataJson) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(structuredDataJson);
+    if (parsed === null || typeof parsed !== 'object') {
+      return null;
+    }
+    return JSON.stringify(parsed)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/&/g, '\\u0026');
+  } catch {
+    return null;
+  }
+};
+
 const buildRobotsMeta = ({
   robotsIndex,
   robotsFollow,
@@ -117,8 +136,9 @@ const renderSeoMeta = (meta: SeoMeta) => {
   if (meta.ogImageUrl) {
     tags.push(`<meta property="og:image" content="${escapeHtml(meta.ogImageUrl)}" />`);
   }
-  if (meta.structuredDataJson) {
-    tags.push(`<script type="application/ld+json">${meta.structuredDataJson}</script>`);
+  const sanitizedStructuredData = sanitizeStructuredDataJson(meta.structuredDataJson);
+  if (sanitizedStructuredData) {
+    tags.push(`<script type="application/ld+json">${sanitizedStructuredData}</script>`);
   }
 
   return tags.join('\n    ');
