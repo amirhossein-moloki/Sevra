@@ -58,6 +58,8 @@ export async function updatePage(
     data.publishedAt,
     existingPage.publishedAt
   );
+  const slugHistory =
+    data.slug && data.slug !== existingPage.slug ? existingPage.slug : undefined;
 
   return PagesRepo.updatePage(
     pageId,
@@ -66,7 +68,8 @@ export async function updatePage(
       status: nextStatus,
       publishedAt,
     },
-    data.sections
+    data.sections,
+    slugHistory
   );
 }
 
