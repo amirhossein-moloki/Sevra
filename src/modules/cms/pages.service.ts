@@ -69,3 +69,11 @@ export async function updatePage(
     data.sections
   );
 }
+
+export async function getPage(salonId: string, pageId: string) {
+  const page = await PagesRepo.findPageById(salonId, pageId);
+  if (!page) {
+    throw createHttpError(404, 'Page not found');
+  }
+  return page;
+}
