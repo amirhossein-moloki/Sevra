@@ -14,6 +14,7 @@ import availabilityRouter from '../modules/availability/availability.routes';
 import bookingsRoutes from '../modules/bookings/bookings.routes';
 import publicBookingsRoutes from '../modules/bookings/bookings.public.routes';
 import { cmsRouter } from '../modules/cms/cms.routes';
+import { cmsAdminUiRouter } from '../modules/cms/admin-ui.routes';
 import {
   publicAddressesRouter,
   publicLinksRouter,
@@ -56,6 +57,9 @@ router.use('/salons/:salonId/bookings', paymentsRoutes); // This will be scoped 
 
 // --- CMS Module Routes ---
 router.use('/salons/:salonId', cmsRouter);
+
+// --- CMS Admin UI ---
+router.use('/admin', cmsAdminUiRouter);
 
 // --- Public CMS Routes ---
 router.use('/public/salons/:salonSlug/pages', publicPagesRouter);
