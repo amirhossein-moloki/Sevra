@@ -491,9 +491,15 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         border-radius: 10px;
         padding: 12px 14px;
         display: flex;
-        align-items: center;
+        flex-direction: column;
         gap: 12px;
         background: #fafafa;
+      }
+      .section-item-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
       }
       .section-item.dragging {
         opacity: 0.6;
@@ -525,6 +531,54 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         gap: 6px;
         font-size: 12px;
         color: #374151;
+      }
+      .section-editor {
+        width: 100%;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .section-editor .editor-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+      .editor-block {
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        padding: 10px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .editor-block-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .editor-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .section-errors {
+        margin: 0;
+        padding-left: 16px;
+        color: #b91c1c;
+        font-size: 12px;
+      }
+      .section-errors.hidden {
+        display: none;
+      }
+      .field-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
       .empty-state {
         padding: 20px;
@@ -705,6 +759,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       const tabButtons = document.querySelectorAll('.tab');
       const panels = document.querySelectorAll('.tab-panel');
       let sections = [];
+      const htmlTagRegex = /<[^>]+>/;
       const sectionDefaults = {
         HERO: {
           headline: 'صفحه جدید',
@@ -808,6 +863,543 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         });
       };
 
+      const cloneData = (value) => JSON.parse(JSON.stringify(value ?? {}));
+
+      const parseSectionData = (section) => {
+        const fallback = cloneData(sectionDefaults[section.type] ?? {});
+        if (!section.dataJson) return fallback;
+        try {
+          const parsed = JSON.parse(section.dataJson);
+          return parsed && typeof parsed === 'object' ? parsed : fallback;
+        } catch (error) {
+          return fallback;
+        }
+      };
+
+      const ensureSectionData = (section) => {
+        if (!section.data) {
+          section.data = parseSectionData(section);
+        }
+        return section.data;
+      };
+
+      const pushError = (errors, path, message) => {
+        errors.push(`${path}: ${message}`);
+      };
+
+      const validateRequiredString = (value, path, errors) => {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+          pushError(errors, path, 'Required.');
+        }
+      };
+
+      const validatePositiveInt = (value, path, errors) => {
+        if (!Number.isInteger(value) || value <= 0) {
+          pushError(errors, path, 'Must be a positive integer.');
+        }
+      };
+
+      const validateBoolean = (value, path, errors) => {
+        if (typeof value !== 'boolean') {
+          pushError(errors, path, 'Must be true/false.');
+        }
+      };
+
+      const validateRichTextBlock = (block, index, errors) => {
+        if (!block || typeof block !== 'object') {
+          pushError(errors, `blocks[${index}]`, 'Block is required.');
+          return;
+        }
+        validateRequiredString(block.type, `blocks[${index}].type`, errors);
+        validateRequiredString(block.text, `blocks[${index}].text`, errors);
+        if (!block.allowHtml && htmlTagRegex.test(block.text ?? '')) {
+          pushError(errors, `blocks[${index}].text`, 'HTML is not allowed.');
+        }
+      };
+
+      const validateSection = (type, data) => {
+        const errors = [];
+        if (!data || typeof data !== 'object') {
+          pushError(errors, type, 'Section data is required.');
+          return errors;
+        }
+        switch (type) {
+          case 'HERO':
+            validateRequiredString(data.headline, 'headline', errors);
+            validateRequiredString(data.subheadline, 'subheadline', errors);
+            validateRequiredString(data.primaryCta?.label, 'primaryCta.label', errors);
+            validateRequiredString(data.primaryCta?.url, 'primaryCta.url', errors);
+            validateRequiredString(data.secondaryCta?.label, 'secondaryCta.label', errors);
+            validateRequiredString(data.secondaryCta?.url, 'secondaryCta.url', errors);
+            validateRequiredString(data.backgroundImageUrl, 'backgroundImageUrl', errors);
+            break;
+          case 'HIGHLIGHTS':
+            validateRequiredString(data.title, 'title', errors);
+            if (Array.isArray(data.items)) {
+              data.items.forEach((item, index) => {
+                validateRequiredString(item?.title, `items[${index}].title`, errors);
+                validateRequiredString(item?.text, `items[${index}].text`, errors);
+              });
+            } else {
+              pushError(errors, 'items', 'Must be a list.');
+            }
+            break;
+          case 'SERVICES_GRID':
+            validateRequiredString(data.title, 'title', errors);
+            validateBoolean(data.showPrices, 'showPrices', errors);
+            validatePositiveInt(data.maxItems, 'maxItems', errors);
+            break;
+          case 'GALLERY_GRID':
+            validateRequiredString(data.title, 'title', errors);
+            if (Array.isArray(data.categories)) {
+              data.categories.forEach((value, index) => {
+                validateRequiredString(value, `categories[${index}]`, errors);
+              });
+            } else {
+              pushError(errors, 'categories', 'Must be a list.');
+            }
+            validatePositiveInt(data.limit, 'limit', errors);
+            break;
+          case 'TESTIMONIALS':
+            validateRequiredString(data.title, 'title', errors);
+            validatePositiveInt(data.limit, 'limit', errors);
+            break;
+          case 'FAQ':
+            validateRequiredString(data.title, 'title', errors);
+            if (Array.isArray(data.items)) {
+              data.items.forEach((item, index) => {
+                validateRequiredString(item?.q, `items[${index}].q`, errors);
+                validateRequiredString(item?.a, `items[${index}].a`, errors);
+              });
+            } else {
+              pushError(errors, 'items', 'Must be a list.');
+            }
+            break;
+          case 'CTA':
+            validateRequiredString(data.title, 'title', errors);
+            validateRequiredString(data.text, 'text', errors);
+            validateRequiredString(data.buttonLabel, 'buttonLabel', errors);
+            validateRequiredString(data.buttonUrl, 'buttonUrl', errors);
+            break;
+          case 'CONTACT_CARD':
+            validateRequiredString(data.title, 'title', errors);
+            validateRequiredString(data.city, 'city', errors);
+            validateRequiredString(data.workHours, 'workHours', errors);
+            break;
+          case 'MAP':
+            if (typeof data.lat !== 'number') {
+              pushError(errors, 'lat', 'Must be a number.');
+            }
+            if (typeof data.lng !== 'number') {
+              pushError(errors, 'lng', 'Must be a number.');
+            }
+            validatePositiveInt(data.zoom, 'zoom', errors);
+            break;
+          case 'RICH_TEXT':
+            validateRequiredString(data.title, 'title', errors);
+            if (Array.isArray(data.blocks)) {
+              data.blocks.forEach((block, index) => validateRichTextBlock(block, index, errors));
+            } else {
+              pushError(errors, 'blocks', 'Must be a list.');
+            }
+            break;
+          case 'STAFF_GRID':
+            validateRequiredString(data.title, 'title', errors);
+            validateBoolean(data.showRoles, 'showRoles', errors);
+            validateBoolean(data.showBio, 'showBio', errors);
+            break;
+          default:
+            pushError(errors, type, 'Unsupported section type.');
+            break;
+        }
+        return errors;
+      };
+
+      const createLabeledField = (labelText) => {
+        const wrapper = document.createElement('div');
+        const label = document.createElement('label');
+        label.textContent = labelText;
+        wrapper.appendChild(label);
+        return { wrapper, label };
+      };
+
+      const createTextInput = (labelText, value, onInput) => {
+        const { wrapper } = createLabeledField(labelText);
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = value ?? '';
+        input.addEventListener('input', () => onInput(input.value));
+        wrapper.appendChild(input);
+        return wrapper;
+      };
+
+      const createTextarea = (labelText, value, onInput) => {
+        const { wrapper } = createLabeledField(labelText);
+        const textarea = document.createElement('textarea');
+        textarea.value = value ?? '';
+        textarea.addEventListener('input', () => onInput(textarea.value));
+        wrapper.appendChild(textarea);
+        return wrapper;
+      };
+
+      const createNumberInput = (labelText, value, onInput) => {
+        const { wrapper } = createLabeledField(labelText);
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = Number.isFinite(value) ? String(value) : '';
+        input.addEventListener('input', () => {
+          const parsed = Number(input.value);
+          onInput(Number.isFinite(parsed) ? parsed : input.value === '' ? undefined : parsed);
+        });
+        wrapper.appendChild(input);
+        return wrapper;
+      };
+
+      const createCheckbox = (labelText, checked, onChange) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'field-inline';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = Boolean(checked);
+        const label = document.createElement('label');
+        label.textContent = labelText;
+        input.addEventListener('change', () => onChange(input.checked));
+        wrapper.appendChild(input);
+        wrapper.appendChild(label);
+        return wrapper;
+      };
+
+      const syncSectionData = (section, metaEl, errorsEl) => {
+        section.dataJson = JSON.stringify(section.data ?? {}, null, 2);
+        metaEl.textContent = `Position ${section.sortOrder + 1} • ${section.dataJson.length} chars`;
+        const errors = validateSection(section.type, section.data);
+        errorsEl.innerHTML = '';
+        if (errors.length === 0) {
+          errorsEl.classList.add('hidden');
+        } else {
+          errorsEl.classList.remove('hidden');
+          errors.forEach((message) => {
+            const item = document.createElement('li');
+            item.textContent = message;
+            errorsEl.appendChild(item);
+          });
+        }
+      };
+
+      const createListEditor = ({ items, renderItem, onAdd, onRemove }) => {
+        const container = document.createElement('div');
+        container.className = 'editor-block';
+        const list = document.createElement('div');
+        list.className = 'editor-grid';
+        const refresh = () => {
+          list.innerHTML = '';
+          items.forEach((item, index) => {
+            const block = document.createElement('div');
+            block.className = 'editor-block';
+            const header = document.createElement('div');
+            header.className = 'editor-block-header';
+            header.textContent = `Item ${index + 1}`;
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.textContent = 'Remove';
+            removeButton.addEventListener('click', () => {
+              onRemove(index);
+              refresh();
+            });
+            header.appendChild(removeButton);
+            block.appendChild(header);
+            renderItem(block, item, index);
+            list.appendChild(block);
+          });
+        };
+        const actions = document.createElement('div');
+        actions.className = 'editor-actions';
+        const addButton = document.createElement('button');
+        addButton.type = 'button';
+        addButton.textContent = 'Add item';
+        addButton.addEventListener('click', () => {
+          onAdd();
+          refresh();
+        });
+        actions.appendChild(addButton);
+        container.appendChild(list);
+        container.appendChild(actions);
+        refresh();
+        return container;
+      };
+
+      const buildSectionEditor = (section, metaEl, errorsEl) => {
+        const editor = document.createElement('div');
+        editor.className = 'section-editor';
+        const data = ensureSectionData(section);
+        const grid = document.createElement('div');
+        grid.className = 'editor-grid';
+
+        const update = () => syncSectionData(section, metaEl, errorsEl);
+
+        if (section.type === 'HERO') {
+          grid.appendChild(createTextInput('Headline', data.headline, (value) => {
+            data.headline = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Subheadline', data.subheadline, (value) => {
+            data.subheadline = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Primary CTA label', data.primaryCta?.label, (value) => {
+            data.primaryCta = data.primaryCta ?? {};
+            data.primaryCta.label = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Primary CTA URL', data.primaryCta?.url, (value) => {
+            data.primaryCta = data.primaryCta ?? {};
+            data.primaryCta.url = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Secondary CTA label', data.secondaryCta?.label, (value) => {
+            data.secondaryCta = data.secondaryCta ?? {};
+            data.secondaryCta.label = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Secondary CTA URL', data.secondaryCta?.url, (value) => {
+            data.secondaryCta = data.secondaryCta ?? {};
+            data.secondaryCta.url = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Background image URL', data.backgroundImageUrl, (value) => {
+            data.backgroundImageUrl = value;
+            update();
+          }));
+        } else if (section.type === 'HIGHLIGHTS') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          const items = Array.isArray(data.items) ? data.items : (data.items = []);
+          editor.appendChild(
+            createListEditor({
+              items,
+              renderItem: (block, item) => {
+                const itemGrid = document.createElement('div');
+                itemGrid.className = 'editor-grid';
+                itemGrid.appendChild(createTextInput('Item title', item.title, (value) => {
+                  item.title = value;
+                  update();
+                }));
+                itemGrid.appendChild(createTextarea('Item text', item.text, (value) => {
+                  item.text = value;
+                  update();
+                }));
+                block.appendChild(itemGrid);
+              },
+              onAdd: () => {
+                items.push({ title: '', text: '' });
+                update();
+              },
+              onRemove: (index) => {
+                items.splice(index, 1);
+                update();
+              },
+            }),
+          );
+        } else if (section.type === 'SERVICES_GRID') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          grid.appendChild(createNumberInput('Max items', data.maxItems, (value) => {
+            data.maxItems = value;
+            update();
+          }));
+          grid.appendChild(createCheckbox('Show prices', data.showPrices, (value) => {
+            data.showPrices = value;
+            update();
+          }));
+        } else if (section.type === 'GALLERY_GRID') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          grid.appendChild(createNumberInput('Limit', data.limit, (value) => {
+            data.limit = value;
+            update();
+          }));
+          const categories = Array.isArray(data.categories) ? data.categories : (data.categories = []);
+          editor.appendChild(
+            createListEditor({
+              items: categories,
+              renderItem: (block, item, index) => {
+                const itemGrid = document.createElement('div');
+                itemGrid.className = 'editor-grid';
+                itemGrid.appendChild(createTextInput(`Category ${index + 1}`, item, (value) => {
+                  categories[index] = value;
+                  update();
+                }));
+                block.appendChild(itemGrid);
+              },
+              onAdd: () => {
+                categories.push('');
+                update();
+              },
+              onRemove: (index) => {
+                categories.splice(index, 1);
+                update();
+              },
+            }),
+          );
+        } else if (section.type === 'TESTIMONIALS') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          grid.appendChild(createNumberInput('Limit', data.limit, (value) => {
+            data.limit = value;
+            update();
+          }));
+        } else if (section.type === 'FAQ') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          const items = Array.isArray(data.items) ? data.items : (data.items = []);
+          editor.appendChild(
+            createListEditor({
+              items,
+              renderItem: (block, item) => {
+                const itemGrid = document.createElement('div');
+                itemGrid.className = 'editor-grid';
+                itemGrid.appendChild(createTextInput('Question', item.q, (value) => {
+                  item.q = value;
+                  update();
+                }));
+                itemGrid.appendChild(createTextarea('Answer', item.a, (value) => {
+                  item.a = value;
+                  update();
+                }));
+                block.appendChild(itemGrid);
+              },
+              onAdd: () => {
+                items.push({ q: '', a: '' });
+                update();
+              },
+              onRemove: (index) => {
+                items.splice(index, 1);
+                update();
+              },
+            }),
+          );
+        } else if (section.type === 'CTA') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          grid.appendChild(createTextarea('Text', data.text, (value) => {
+            data.text = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Button label', data.buttonLabel, (value) => {
+            data.buttonLabel = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Button URL', data.buttonUrl, (value) => {
+            data.buttonUrl = value;
+            update();
+          }));
+        } else if (section.type === 'CONTACT_CARD') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('City', data.city, (value) => {
+            data.city = value;
+            update();
+          }));
+          grid.appendChild(createTextInput('Work hours', data.workHours, (value) => {
+            data.workHours = value;
+            update();
+          }));
+        } else if (section.type === 'MAP') {
+          grid.appendChild(createNumberInput('Latitude', data.lat, (value) => {
+            data.lat = value;
+            update();
+          }));
+          grid.appendChild(createNumberInput('Longitude', data.lng, (value) => {
+            data.lng = value;
+            update();
+          }));
+          grid.appendChild(createNumberInput('Zoom', data.zoom, (value) => {
+            data.zoom = value;
+            update();
+          }));
+        } else if (section.type === 'RICH_TEXT') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          const blocks = Array.isArray(data.blocks) ? data.blocks : (data.blocks = []);
+          const blockEditor = createListEditor({
+            items: blocks,
+            renderItem: (block, item, index) => {
+              const itemGrid = document.createElement('div');
+              itemGrid.className = 'editor-grid';
+              const typeSelectWrapper = createLabeledField('Block type');
+              const select = document.createElement('select');
+              ['paragraph', 'heading', 'list', 'quote'].forEach((optionValue) => {
+                const option = document.createElement('option');
+                option.value = optionValue;
+                option.textContent = optionValue;
+                select.appendChild(option);
+              });
+              select.value = item.type ?? 'paragraph';
+              select.addEventListener('change', () => {
+                item.type = select.value;
+                update();
+              });
+              typeSelectWrapper.wrapper.appendChild(select);
+              itemGrid.appendChild(typeSelectWrapper.wrapper);
+              itemGrid.appendChild(createTextarea('Text', item.text, (value) => {
+                item.text = value;
+                update();
+              }));
+              itemGrid.appendChild(createCheckbox('Allow HTML', item.allowHtml, (value) => {
+                item.allowHtml = value;
+                update();
+              }));
+              block.appendChild(itemGrid);
+            },
+            onAdd: () => {
+              blocks.push({ type: 'paragraph', text: '' });
+              update();
+            },
+            onRemove: (index) => {
+              blocks.splice(index, 1);
+              update();
+            },
+          });
+          editor.appendChild(blockEditor);
+        } else if (section.type === 'STAFF_GRID') {
+          grid.appendChild(createTextInput('Title', data.title, (value) => {
+            data.title = value;
+            update();
+          }));
+          grid.appendChild(createCheckbox('Show roles', data.showRoles, (value) => {
+            data.showRoles = value;
+            update();
+          }));
+          grid.appendChild(createCheckbox('Show bio', data.showBio, (value) => {
+            data.showBio = value;
+            update();
+          }));
+        }
+
+        if (grid.children.length > 0) {
+          editor.appendChild(grid);
+        }
+        editor.appendChild(errorsEl);
+        syncSectionData(section, metaEl, errorsEl);
+        return editor;
+      };
+
       tabButtons.forEach((button) => {
         button.addEventListener('click', () => setActiveTab(button.dataset.tab));
       });
@@ -830,21 +1422,43 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
           return;
         }
         sections.forEach((section, index) => {
+          ensureSectionData(section);
           const item = document.createElement('li');
           item.className = 'section-item';
           item.setAttribute('draggable', 'true');
           item.dataset.index = index;
-          item.innerHTML = `
-            <span class="drag-handle" aria-hidden="true">⠿</span>
-            <div class="section-content">
-              <div class="section-title">${section.type}</div>
-              <div class="section-meta">Position ${section.sortOrder + 1} • ${section.dataJson?.length ?? 0} chars</div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" data-index="${index}" ${section.isEnabled ? 'checked' : ''} />
-              Enabled
-            </label>
-          `;
+          const header = document.createElement('div');
+          header.className = 'section-item-header';
+          const dragHandle = document.createElement('span');
+          dragHandle.className = 'drag-handle';
+          dragHandle.setAttribute('aria-hidden', 'true');
+          dragHandle.textContent = '⠿';
+          const content = document.createElement('div');
+          content.className = 'section-content';
+          const title = document.createElement('div');
+          title.className = 'section-title';
+          title.textContent = section.type;
+          const meta = document.createElement('div');
+          meta.className = 'section-meta';
+          meta.textContent = `Position ${section.sortOrder + 1} • ${section.dataJson?.length ?? 0} chars`;
+          content.appendChild(title);
+          content.appendChild(meta);
+          const toggleLabel = document.createElement('label');
+          toggleLabel.className = 'toggle';
+          const toggle = document.createElement('input');
+          toggle.type = 'checkbox';
+          toggle.dataset.index = String(index);
+          toggle.checked = Boolean(section.isEnabled);
+          toggleLabel.appendChild(toggle);
+          toggleLabel.append('Enabled');
+          header.appendChild(dragHandle);
+          header.appendChild(content);
+          header.appendChild(toggleLabel);
+          item.appendChild(header);
+          const errorsEl = document.createElement('ul');
+          errorsEl.className = 'section-errors hidden';
+          const editor = buildSectionEditor(section, meta, errorsEl);
+          item.appendChild(editor);
           sectionsList.appendChild(item);
         });
       };
