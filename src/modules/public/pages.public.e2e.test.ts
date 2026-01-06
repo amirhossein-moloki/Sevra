@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 describe('GET /api/v1/public/salons/:salonSlug/pages/:pageSlug', () => {
   let salon: { id: string; slug: string };
   let page: { id: string; slug: string };
+  let draftPage: { id: string; slug: string };
 
   beforeAll(async () => {
     await prisma.salonPageSlugHistory.deleteMany();
@@ -48,10 +49,43 @@ describe('GET /api/v1/public/salons/:salonSlug/pages/:pageSlug', () => {
       },
     });
 
+    draftPage = await prisma.salonPage.create({
+      data: {
+        salonId: salon.id,
+        slug: 'draft',
+        title: 'Draft',
+        status: PageStatus.DRAFT,
+        sections: {
+          create: [
+            {
+              type: PageSectionType.RICH_TEXT,
+              dataJson: JSON.stringify({
+                title: 'Draft section',
+                blocks: [{ type: 'paragraph', text: 'Draft content' }],
+              }),
+              sortOrder: 0,
+              isEnabled: true,
+            },
+          ],
+        },
+      },
+      select: {
+        id: true,
+        slug: true,
+      },
+    });
+
     await prisma.salonPageSlugHistory.create({
       data: {
         pageId: page.id,
         oldSlug: 'about-old',
+      },
+    });
+
+    await prisma.salonPageSlugHistory.create({
+      data: {
+        pageId: draftPage.id,
+        oldSlug: 'draft-old',
       },
     });
   });
@@ -81,5 +115,15 @@ describe('GET /api/v1/public/salons/:salonSlug/pages/:pageSlug', () => {
     expect(response.headers.location).toBe(
       `/api/v1/public/salons/${salon.slug}/pages/${page.slug}`
     );
+  });
+
+  it('returns 404 for draft pages and their slug history', async () => {
+    await request(app)
+      .get(`/api/v1/public/salons/${salon.slug}/pages/${draftPage.slug}`)
+      .expect(404);
+
+    await request(app)
+      .get(`/api/v1/public/salons/${salon.slug}/pages/draft-old`)
+      .expect(404);
   });
 });

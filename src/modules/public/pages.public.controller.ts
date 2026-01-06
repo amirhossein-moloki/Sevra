@@ -9,11 +9,20 @@ type PublicPageRequest = Request<{ salonSlug: string; pageSlug: string }> & {
 };
 
 export async function getPublicPage(req: PublicPageRequest, res: Response) {
-  const { pageSlug } = req.params;
-  const tenant = req.tenant;
+  const { pageSlug, salonSlug } = req.params;
+  let tenant = req.tenant;
 
   if (!tenant?.salonId) {
-    throw createHttpError(400, 'Salon slug is missing from the request params.');
+    if (!salonSlug) {
+      throw createHttpError(400, 'Salon slug is missing from the request params.');
+    }
+
+    const salon = await prisma.salon.findUnique({ where: { slug: salonSlug } });
+    if (!salon) {
+      throw createHttpError(404, 'Salon not found');
+    }
+
+    tenant = { salonId: salon.id, salonSlug: salon.slug };
   }
 
   const page = await prisma.salonPage.findFirst({
