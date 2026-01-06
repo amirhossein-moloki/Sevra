@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { PageStatus, PageType, RobotsFollow, RobotsIndex } from '@prisma/client';
+import { renderPageDocument } from '../public/page-renderer';
 
 export const cmsAdminUiRouter = Router();
 
@@ -335,6 +336,12 @@ cmsAdminUiRouter.get('/salons/:salonId/pages', (req, res) => {
 </html>`);
 });
 
+cmsAdminUiRouter.post('/salons/:salonId/pages/preview', (req, res) => {
+  const { title, sections } = req.body ?? {};
+  const html = renderPageDocument({ title, sections });
+  res.type('html').send(html);
+});
+
 cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
   const { salonId, pageId } = req.params;
   res.type('html').send(`<!doctype html>
@@ -386,6 +393,25 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         gap: 20px;
+      }
+      .view-toggle {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .toggle-button {
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        cursor: pointer;
+        color: #6b7280;
+      }
+      .toggle-button.active {
+        background: #111827;
+        color: #ffffff;
+        border-color: #111827;
       }
       .card {
         background: #ffffff;
@@ -566,6 +592,33 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         margin-top: 16px;
         justify-content: flex-end;
       }
+      .preview-panel {
+        padding: 16px;
+      }
+      .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        gap: 12px;
+      }
+      .preview-header h3 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .preview-status {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+      .preview-frame {
+        width: 100%;
+        min-height: 600px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #ffffff;
+      }
     </style>
   </head>
   <body>
@@ -581,8 +634,12 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       </div>
     </header>
     <main>
+      <div class="view-toggle" role="tablist" aria-label="Editor preview toggle">
+        <button class="toggle-button active" data-view="editor" type="button">Editor</button>
+        <button class="toggle-button" data-view="preview" type="button">Preview</button>
+      </div>
       <div class="layout">
-        <section class="card">
+        <section class="card" id="editorPanel">
           <div class="tabs">
             <button class="tab active" data-tab="meta">Meta</button>
             <button class="tab" data-tab="seo">SEO</button>
@@ -676,6 +733,19 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
             <span class="status-text" id="statusText"></span>
           </div>
         </section>
+        <section class="card preview-panel" id="previewPanel" hidden>
+          <div class="preview-header">
+            <h3>Live preview</h3>
+            <button type="button" id="refreshPreviewButton">Refresh preview</button>
+          </div>
+          <div class="preview-status" id="previewStatus"></div>
+          <iframe
+            id="previewFrame"
+            title="Page preview"
+            class="preview-frame"
+            sandbox="allow-same-origin"
+          ></iframe>
+        </section>
       </div>
     </main>
     <script>
@@ -684,6 +754,12 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       const saveButton = document.getElementById('saveButton');
       const sectionsList = document.getElementById('sectionsList');
       const addSectionButton = document.getElementById('addSectionButton');
+      const viewButtons = document.querySelectorAll('.toggle-button');
+      const editorPanel = document.getElementById('editorPanel');
+      const previewPanel = document.getElementById('previewPanel');
+      const previewFrame = document.getElementById('previewFrame');
+      const previewStatus = document.getElementById('previewStatus');
+      const refreshPreviewButton = document.getElementById('refreshPreviewButton');
 
       const fields = {
         title: document.getElementById('title'),
@@ -797,6 +873,26 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
 
       const setStatus = (message) => {
         statusText.textContent = message ?? '';
+      };
+
+      const setPreviewStatus = (message) => {
+        if (!previewStatus) return;
+        previewStatus.textContent = message ?? '';
+      };
+
+      const setActiveView = (viewName) => {
+        viewButtons.forEach((button) => {
+          button.classList.toggle('active', button.dataset.view === viewName);
+        });
+        if (editorPanel) {
+          editorPanel.hidden = viewName !== 'editor';
+        }
+        if (previewPanel) {
+          previewPanel.hidden = viewName !== 'preview';
+        }
+        if (viewName === 'preview') {
+          loadPreview();
+        }
       };
 
       const setActiveTab = (tabName) => {
@@ -1006,6 +1102,16 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         return value.length > 0 ? value : undefined;
       };
 
+      const buildPreviewPayload = () => ({
+        title: readValue(fields.title),
+        sections: sections.map((section, index) => ({
+          type: section.type,
+          dataJson: section.dataJson,
+          sortOrder: section.sortOrder ?? index,
+          isEnabled: section.isEnabled ?? true,
+        })),
+      });
+
       const buildPayload = () => {
         const payload = {};
         const title = readValue(fields.title);
@@ -1051,6 +1157,29 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         return payload;
       };
 
+      const loadPreview = async () => {
+        if (!previewFrame) return;
+        setPreviewStatus('Loading preview...');
+        try {
+          const response = await fetch('/api/v1/admin/salons/${salonId}/pages/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildPreviewPayload()),
+          });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+          }
+          const html = await response.text();
+          previewFrame.srcdoc = html;
+          setPreviewStatus('Preview updated.');
+        } catch (error) {
+          setPreviewStatus(
+            `Preview failed: ${error instanceof Error ? error.message : 'Unexpected error.'}`,
+          );
+        }
+      };
+
       const savePage = async () => {
         setStatus('Saving...');
         const token = authTokenInput.value.trim();
@@ -1078,6 +1207,16 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
 
       saveButton.addEventListener('click', savePage);
       addSectionButton.addEventListener('click', () => addSectionModal.open());
+      if (refreshPreviewButton) {
+        refreshPreviewButton.addEventListener('click', loadPreview);
+      }
+      viewButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          if (button.dataset.view) {
+            setActiveView(button.dataset.view);
+          }
+        });
+      });
 
       loadStoredToken();
       fetchPage();
