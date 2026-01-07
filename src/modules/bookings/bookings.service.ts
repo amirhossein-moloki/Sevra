@@ -50,10 +50,48 @@ const findAndValidateBooking = async (
   return booking;
 };
 
+const findOrCreateCustomerProfile = async (
+  tx: Prisma.TransactionClient,
+  salonId: string,
+  customer: { fullName: string; phone: string; email?: string }
+) => {
+  const normalizedPhone = normalizePhone(customer.phone);
+  let customerAccount = await tx.customerAccount.findUnique({
+    where: { phone: normalizedPhone },
+  });
+
+  if (!customerAccount) {
+    customerAccount = await tx.customerAccount.create({
+      data: { phone: normalizedPhone, fullName: customer.fullName },
+    });
+  }
+
+  let customerProfile = await tx.salonCustomerProfile.findUnique({
+    where: {
+      salonId_customerAccountId: {
+        salonId,
+        customerAccountId: customerAccount.id,
+      },
+    },
+  });
+
+  if (!customerProfile) {
+    customerProfile = await tx.salonCustomerProfile.create({
+      data: {
+        salonId,
+        customerAccountId: customerAccount.id,
+        displayName: customer.fullName,
+      },
+    });
+  }
+
+  return { customerAccount, customerProfile };
+};
+
 export const bookingsService = {
   async createBooking(input: CreateBookingInput & { salonId: string; createdByUserId: string; }) {
     return prisma.$transaction(async (tx) => {
-      const { salonId, serviceId, staffId, customerProfileId, startAt: startAtString, createdByUserId, note } = input;
+      const { salonId, serviceId, staffId, customer, startAt: startAtString, createdByUserId, note } = input;
       const startAt = new Date(startAtString);
 
       // 1. Fetch Service and Customer Profile details
@@ -65,13 +103,28 @@ export const bookingsService = {
         throw new AppError('Service not found or is not active.', httpStatus.NOT_FOUND);
       }
 
-      const customerProfile = await tx.salonCustomerProfile.findFirst({
-        where: { id: customerProfileId, salonId: salonId },
+      const staff = await tx.user.findFirst({
+        where: {
+          id: staffId,
+          salonId,
+          isActive: true,
+          userServices: { some: { serviceId } },
+        },
+        select: { id: true },
       });
 
-      if (!customerProfile) {
-        throw new AppError('Customer profile not found.', httpStatus.NOT_FOUND);
+      if (!staff) {
+        throw new AppError(
+          'Staff member not found or does not perform this service.',
+          httpStatus.NOT_FOUND
+        );
       }
+
+      const { customerAccount, customerProfile } = await findOrCreateCustomerProfile(
+        tx,
+        salonId,
+        customer
+      );
 
       // 2. Calculate endAt and create booking
       const endAt = addMinutes(startAt, service.durationMinutes);
@@ -81,8 +134,8 @@ export const bookingsService = {
           salonId,
           serviceId,
           staffId,
-          customerProfileId,
-          customerAccountId: customerProfile.customerAccountId,
+          customerProfileId: customerProfile.id,
+          customerAccountId: customerAccount.id,
           createdByUserId,
           startAt,
           endAt,
@@ -196,35 +249,11 @@ export const bookingsService = {
           });
         }
 
-        const normalizedPhone = normalizePhone(input.customer.phone);
-        let customerAccount = await tx.customerAccount.findUnique({
-          where: { phone: normalizedPhone },
-        });
-
-        if (!customerAccount) {
-          customerAccount = await tx.customerAccount.create({
-            data: { phone: normalizedPhone, fullName: input.customer.fullName },
-          });
-        }
-
-        let customerProfile = await tx.salonCustomerProfile.findUnique({
-          where: {
-            salonId_customerAccountId: {
-              salonId: salon.id,
-              customerAccountId: customerAccount.id,
-            },
-          },
-        });
-
-        if (!customerProfile) {
-          customerProfile = await tx.salonCustomerProfile.create({
-            data: {
-              salonId: salon.id,
-              customerAccountId: customerAccount.id,
-              displayName: input.customer.fullName,
-            },
-          });
-        }
+        const { customerAccount, customerProfile } = await findOrCreateCustomerProfile(
+          tx,
+          salon.id,
+          input.customer
+        );
 
         const status = salon.settings?.onlineBookingAutoConfirm
           ? BookingStatus.CONFIRMED

@@ -245,7 +245,7 @@ Example response:
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`
-- **Body** (`createBookingSchema`): `customerProfileId`, `serviceId`, `staffId`, `startAt`, `note?`
+- **Body** (`createBookingSchema`): `customer`, `serviceId`, `staffId`, `startAt`, `note?`
 - **Response**: `res.ok({ data: booking })`
 
 ### GET `/salons/:salonId/bookings`

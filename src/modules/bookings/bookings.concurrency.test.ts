@@ -2,7 +2,7 @@
 import request from 'supertest';
 import app from '../../app';
 import { prisma } from '../../config/prisma';
-import { User, Salon, Service, SalonCustomerProfile, CustomerAccount, UserRole } from '@prisma/client';
+import { User, Salon, Service, UserRole } from '@prisma/client';
 import { sign } from 'jsonwebtoken';
 import { createTestSalon, createTestUser, createTestService } from '../../common/utils/test-utils';
 import httpStatus from 'http-status';
@@ -18,8 +18,6 @@ describe('Booking Concurrency', () => {
   let salon: Salon;
   let staff: User;
   let service: Service;
-  let customerAccount: CustomerAccount;
-  let customerProfile: SalonCustomerProfile;
   let token: string;
 
   beforeAll(async () => {
@@ -35,19 +33,6 @@ describe('Booking Concurrency', () => {
     salon = await createTestSalon({ slug: `test-salon-concurrency-${Date.now()}` });
     staff = await createTestUser({ salonId: salon.id, role: UserRole.MANAGER });
     service = await createTestService({ salonId: salon.id });
-
-    // Create a customer for the booking
-    const customerPhone = `+98912${Math.floor(1000000 + Math.random() * 9000000)}`;
-    customerAccount = await prisma.customerAccount.create({
-      data: { phone: customerPhone },
-    });
-    customerProfile = await prisma.salonCustomerProfile.create({
-      data: {
-        salonId: salon.id,
-        customerAccountId: customerAccount.id,
-        displayName: 'Concurrent Customer',
-      },
-    });
 
     token = generateToken(staff, salon);
   });
@@ -79,7 +64,10 @@ describe('Booking Concurrency', () => {
     startAt.setHours(14, 0, 0, 0); // Use a fixed time for consistency
 
     const bookingPayload = {
-      customerProfileId: customerProfile.id,
+      customer: {
+        fullName: 'Concurrent Customer',
+        phone: `+98912${Math.floor(1000000 + Math.random() * 9000000)}`,
+      },
       serviceId: service.id,
       staffId: staff.id,
       startAt: startAt.toISOString(),
