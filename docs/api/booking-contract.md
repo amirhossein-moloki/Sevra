@@ -197,15 +197,15 @@ This defines the lifecycle of a booking. All state transitions **MUST** adhere t
 
 | Current State | Action / Trigger Endpoint | Next State | Allowed Roles | Error If Invalid |
 | :--- | :--- | :--- | :--- | :--- |
-| `(new)` | `POST /bookings` (Panel) | `CONFIRMED` | `MANAGER`, `STAFF` | `409 OVERLAP_CONFLICT` |
+| `(new)` | `POST /bookings` (Panel) | `CONFIRMED` | `MANAGER`, `RECEPTIONIST` | `409 OVERLAP_CONFLICT` |
 | `(new)` | `POST /bookings` (Public, auto-confirm) | `CONFIRMED` | `Public` | `409 OVERLAP_CONFLICT` |
 | `(new)` | `POST /bookings` (Public, manual-confirm) | `PENDING` | `Public` | `409 OVERLAP_CONFLICT` |
-| `PENDING` | `POST /{id}/confirm` | `CONFIRMED` | `MANAGER`, `STAFF` | `409 INVALID_TRANSITION` |
-| `PENDING` | `POST /{id}/cancel` | `CANCELED` | `MANAGER`, `STAFF` | `409 INVALID_TRANSITION` |
-| `CONFIRMED`| `POST /{id}/complete`| `DONE` | `MANAGER`, `STAFF` | `409 INVALID_TRANSITION` |
-| `CONFIRMED`| `POST /{id}/no-show`| `NO_SHOW` | `MANAGER`, `STAFF` | `409 INVALID_TRANSITION` |
-| `CONFIRMED`| `POST /{id}/cancel` | `CANCELED` | `MANAGER`, `STAFF` | `409 INVALID_TRANSITION` |
-| `ANY` | `PATCH /{id}` (Update details) | `(no change)` | `MANAGER`, `STAFF` | `409` if changing terminal state |
+| `PENDING` | `POST /{id}/confirm` | `CONFIRMED` | `MANAGER`, `RECEPTIONIST` | `409 INVALID_TRANSITION` |
+| `PENDING` | `POST /{id}/cancel` | `CANCELED` | `MANAGER`, `RECEPTIONIST` | `409 INVALID_TRANSITION` |
+| `CONFIRMED`| `POST /{id}/complete`| `DONE` | `MANAGER`, `RECEPTIONIST` | `409 INVALID_TRANSITION` |
+| `CONFIRMED`| `POST /{id}/no-show`| `NO_SHOW` | `MANAGER`, `RECEPTIONIST` | `409 INVALID_TRANSITION` |
+| `CONFIRMED`| `POST /{id}/cancel` | `CANCELED` | `MANAGER`, `RECEPTIONIST` | `409 INVALID_TRANSITION` |
+| `ANY` | `PATCH /{id}` (Update details) | `(no change)` | `MANAGER`, `RECEPTIONIST` | `409` if changing terminal state |
 
 #### Business Rule Guards
 
@@ -221,7 +221,7 @@ Base Path: `/api/v1/salons/{salonId}`
 
 #### 1. Create Booking
 *   **`POST /bookings`**
-*   **Auth**: Required (`MANAGER`, `STAFF`)
+*   **Auth**: Required (`MANAGER`, `RECEPTIONIST`)
 *   **Request Body**:
     ```json
     {
@@ -240,7 +240,7 @@ Base Path: `/api/v1/salons/{salonId}`
 
 #### 2. List Bookings
 *   **`GET /bookings`**
-*   **Auth**: Required (`MANAGER`, `STAFF`)
+*   **Auth**: Required (`MANAGER`, `RECEPTIONIST`, `STAFF`)
 *   **Query Params**: See [Standard Pagination/Filtering](#standard-pagination-filtering--sorting).
 *   **Success Response**: `200 OK` with an array of booking objects in `data` and pagination info in `meta`.
 *   **Error Cases**:
@@ -248,14 +248,14 @@ Base Path: `/api/v1/salons/{salonId}`
 
 #### 3. Get Booking by ID
 *   **`GET /bookings/{bookingId}`**
-*   **Auth**: Required (`MANAGER`, `STAFF`)
+*   **Auth**: Required (`MANAGER`, `RECEPTIONIST`, `STAFF`)
 *   **Success Response**: `200 OK` with the full booking object in `data`.
 *   **Error Cases**:
     *   `404 NOT_FOUND`: No booking with the given ID exists in the salon.
 
 #### 4. Update Booking Details
 *   **`PATCH /bookings/{bookingId}`**
-*   **Auth**: Required (`MANAGER`, `STAFF`)
+*   **Auth**: Required (`MANAGER`, `RECEPTIONIST`)
 *   **Request Body** (all fields are optional):
     ```json
     {
@@ -273,7 +273,7 @@ Base Path: `/api/v1/salons/{salonId}`
 
 #### 5. Confirm Booking
 *   **`POST /bookings/{bookingId}/confirm`**
-*   **Auth**: Required (`MANAGER`, `STAFF`)
+*   **Auth**: Required (`MANAGER`, `RECEPTIONIST`)
 *   **Success Response**: `200 OK` with the updated booking object (`status: "CONFIRMED"`).
 *   **Error Cases**:
     *   `404 NOT_FOUND`: Booking not found.
@@ -281,7 +281,7 @@ Base Path: `/api/v1/salons/{salonId}`
 
 #### 6. Cancel Booking
 *   **`POST /bookings/{bookingId}/cancel`**
-*   **Auth**: Required (`MANAGER`, `STAFF`)
+*   **Auth**: Required (`MANAGER`, `RECEPTIONIST`)
 *   **Request Body**:
     ```json
     {
@@ -295,7 +295,7 @@ Base Path: `/api/v1/salons/{salonId}`
 
 #### 7. Complete Booking
 *   **`POST /bookings/{bookingId}/complete`**
-*   **Auth**: Required (`MANAGER`, `STAFF`)
+*   **Auth**: Required (`MANAGER`, `RECEPTIONIST`)
 *   **Success Response**: `200 OK` with the updated booking object (`status: "DONE"`).
 *   **Error Cases**:
     *   `404 NOT_FOUND`: Booking not found.
@@ -303,7 +303,7 @@ Base Path: `/api/v1/salons/{salonId}`
 
 #### 8. Mark as No-Show
 *   **`POST /bookings/{bookingId}/no-show`**
-*   **Auth**: Required (`MANAGER`, `STAFF`)
+*   **Auth**: Required (`MANAGER`, `RECEPTIONIST`)
 *   **Success Response**: `200 OK` with the updated booking object (`status: "NO_SHOW"`).
 *   **Error Cases**:
     *   `404 NOT_FOUND`: Booking not found.
