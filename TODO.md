@@ -66,7 +66,7 @@ The main functionality of the application.
 - [ ] Implement `POST /bookings` to create a new booking from the admin panel.
 - [ ] **Crucial:** Implement booking overlap check within a database transaction to prevent race conditions.
 - [ ] Implement other booking management endpoints (`GET`, `PATCH`, `cancel`, `complete`, `no-show`).
-- [ ] Write E2E tests for creating bookings (including overlap prevention) and changing booking statuses.
+- [x] Write E2E tests for creating bookings (including overlap prevention) and changing booking statuses.
 
 ---
 
@@ -78,7 +78,7 @@ Opening up the system for online customers.
 - [ ] Implement public-facing endpoints (`GET /public/.../services`, `GET /public/.../availability`).
 - [ ] Implement `POST /public/.../bookings` for online booking.
 - [ ] **Crucial:** Implement `Idempotency-Key` handling for the online booking endpoint to prevent duplicate bookings.
-- [ ] Write E2E tests for the entire public booking flow.
+- [x] Write E2E tests for the entire public booking flow.
 
 ### 4.2: Payments Module
 - [ ] Implement `POST /bookings/{bookingId}/payments` endpoint.

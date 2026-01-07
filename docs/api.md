@@ -405,7 +405,6 @@ All CMS routes require auth + `MANAGER` role + tenant guard.
 
 ## Known Gaps / TODO
 
-- `createPublicBooking` is a placeholder and returns an empty object; public booking flow is not implemented.
 - Payments route path includes a duplicated `/bookings` segment due to how routers are mounted.
 - CMS links and addresses private routes return `501` placeholders.
 - CMS Admin UI route is not protected by auth middleware.
