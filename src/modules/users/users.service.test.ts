@@ -1,6 +1,7 @@
 import * as userService from './users.service';
 import * as userRepo from './users.repo';
 import { UserRole } from '@prisma/client'; // Import UserRole enum
+import AppError from '../../common/errors/AppError';
 
 // Mock the user repository
 jest.mock('./users.repo');
@@ -44,18 +45,17 @@ describe('UserService', () => {
       expect(mockedUserRepo.findUserById).toHaveBeenCalledTimes(1);
     });
 
-    it('should return null if staff member is not found', async () => {
+    it('should throw if staff member is not found', async () => {
       // Arrange
       const salonId = 'salon-id-1';
       const userId = 'user-id-not-found';
 
       mockedUserRepo.findUserById.mockResolvedValue(null);
 
-      // Act
-      const result = await userService.getStaffMember(salonId, userId);
-
       // Assert
-      expect(result).toBeNull();
+      await expect(userService.getStaffMember(salonId, userId)).rejects.toThrow(
+        new AppError('Staff member not found', 404)
+      );
       expect(mockedUserRepo.findUserById).toHaveBeenCalledWith(salonId, userId);
       expect(mockedUserRepo.findUserById).toHaveBeenCalledTimes(1);
     });
