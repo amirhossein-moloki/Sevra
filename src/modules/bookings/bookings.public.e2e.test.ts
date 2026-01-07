@@ -92,7 +92,13 @@ describe('POST /api/v1/public/salons/:salonSlug/bookings', () => {
     expect(secondResponse.status).toBe(201);
     expect(secondResponse.body.data.id).toBe(firstResponse.body.data.id);
 
-    const bookingCount = await prisma.booking.count({ where: { id: firstResponse.body.data.id } });
+    const bookingCount = await prisma.booking.count({
+      where: {
+        salonId: salon.id,
+        staffId: staff.id,
+        startAt,
+      },
+    });
     expect(bookingCount).toBe(1);
   });
 });
