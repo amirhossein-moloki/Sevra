@@ -11,7 +11,33 @@ import {
   ListBookingsQuery,
   UpdateBookingInput,
 } from './bookings.validators';
-import { toZonedTime } from 'date-fns-tz';
+
+const normalizePhone = (phone: string): string => {
+  const trimmed = phone.trim();
+  const hasPlus = trimmed.startsWith('+');
+  const digitsOnly = trimmed.replace(/\D/g, '');
+
+  if (hasPlus) {
+    return `+${digitsOnly}`;
+  }
+
+  if (digitsOnly.startsWith('00')) {
+    return `+${digitsOnly.slice(2)}`;
+  }
+
+  if (digitsOnly.startsWith('0')) {
+    return `+98${digitsOnly.slice(1)}`;
+  }
+
+  return `+${digitsOnly}`;
+};
+
+const timeToDate = (timeStr: string, date: Date): Date => {
+  const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+  const result = new Date(date);
+  result.setHours(hours ?? 0, minutes ?? 0, seconds ?? 0, 0);
+  return result;
+};
 
 const findAndValidateBooking = async (
   bookingId: string,
@@ -77,7 +103,7 @@ export const bookingsService = {
     });
   },
 
-  async createPublicBooking(salonSlug: string, input: CreatePublicBookingInput, requestId: string) {
+  async createPublicBooking(salonSlug: string, input: CreatePublicBookingInput, _requestId: string) {
     try {
       return await prisma.$transaction(async (tx) => {
         const salon = await tx.salon.findUnique({
@@ -115,6 +141,7 @@ export const bookingsService = {
             id: input.staffId,
             salonId: salon.id,
             isActive: true,
+            isPublic: true,
             userServices: { some: { serviceId: input.serviceId } },
           },
         });
@@ -128,21 +155,76 @@ export const bookingsService = {
 
         const endAt = addMinutes(startAt, service.durationMinutes);
 
-        const customerAccount = await tx.customerAccount.upsert({
-          where: { phone: input.customer.phone },
-          update: { fullName: input.customer.fullName },
-          create: { phone: input.customer.phone, fullName: input.customer.fullName },
-        });
-
-        const customerProfile = await tx.salonCustomerProfile.upsert({
-          where: { salonId_customerAccountId: { salonId: salon.id, customerAccountId: customerAccount.id } },
-          update: { displayName: input.customer.fullName },
-          create: {
+        const shift = await tx.shift.findFirst({
+          where: {
             salonId: salon.id,
-            customerAccountId: customerAccount.id,
-            displayName: input.customer.fullName,
+            userId: staff.id,
+            dayOfWeek: startAt.getDay(),
+            isActive: true,
           },
         });
+
+        if (!shift) {
+          throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
+            code: 'SLOT_NOT_AVAILABLE',
+          });
+        }
+
+        const shiftStart = timeToDate(shift.startTime, startAt);
+        const shiftEnd = timeToDate(shift.endTime, startAt);
+
+        if (startAt.getTime() < shiftStart.getTime() || endAt.getTime() > shiftEnd.getTime()) {
+          throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
+            code: 'SLOT_NOT_AVAILABLE',
+          });
+        }
+
+        const overlappingBooking = await tx.booking.findFirst({
+          where: {
+            salonId: salon.id,
+            staffId: staff.id,
+            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+            startAt: { lt: endAt },
+            endAt: { gt: startAt },
+          },
+          select: { id: true },
+        });
+
+        if (overlappingBooking) {
+          throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
+            code: 'SLOT_NOT_AVAILABLE',
+          });
+        }
+
+        const normalizedPhone = normalizePhone(input.customer.phone);
+        let customerAccount = await tx.customerAccount.findUnique({
+          where: { phone: normalizedPhone },
+        });
+
+        if (!customerAccount) {
+          customerAccount = await tx.customerAccount.create({
+            data: { phone: normalizedPhone, fullName: input.customer.fullName },
+          });
+        }
+
+        let customerProfile = await tx.salonCustomerProfile.findUnique({
+          where: {
+            salonId_customerAccountId: {
+              salonId: salon.id,
+              customerAccountId: customerAccount.id,
+            },
+          },
+        });
+
+        if (!customerProfile) {
+          customerProfile = await tx.salonCustomerProfile.create({
+            data: {
+              salonId: salon.id,
+              customerAccountId: customerAccount.id,
+              displayName: input.customer.fullName,
+            },
+          });
+        }
 
         const status = salon.settings?.onlineBookingAutoConfirm
           ? BookingStatus.CONFIRMED
