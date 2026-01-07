@@ -1,6 +1,6 @@
 
 import { addMinutes, isBefore } from 'date-fns';
-import { Booking, BookingStatus, Prisma, UserRole } from '@prisma/client';
+import { Booking, BookingSource, BookingStatus, Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
@@ -78,8 +78,109 @@ export const bookingsService = {
   },
 
   async createPublicBooking(salonSlug: string, input: CreatePublicBookingInput, requestId: string) {
-    // This is a placeholder and would need to be implemented
-    return {} as Booking;
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const salon = await tx.salon.findUnique({
+          where: { slug: salonSlug },
+          include: { settings: true },
+        });
+
+        if (!salon) {
+          throw new AppError('Salon not found.', httpStatus.NOT_FOUND);
+        }
+
+        if (!salon.settings?.allowOnlineBooking) {
+          throw new AppError('Online booking is disabled.', httpStatus.FORBIDDEN, {
+            code: 'ONLINE_BOOKING_DISABLED',
+          });
+        }
+
+        const startAt = new Date(input.startAt);
+        if (isBefore(startAt, new Date())) {
+          throw new AppError('Booking start time must be in the future.', httpStatus.BAD_REQUEST, {
+            code: 'BOOKING_START_TIME_IN_PAST',
+          });
+        }
+
+        const service = await tx.service.findFirst({
+          where: { id: input.serviceId, salonId: salon.id, isActive: true },
+        });
+
+        if (!service) {
+          throw new AppError('Service not found or is not active.', httpStatus.NOT_FOUND);
+        }
+
+        const staff = await tx.user.findFirst({
+          where: {
+            id: input.staffId,
+            salonId: salon.id,
+            isActive: true,
+            userServices: { some: { serviceId: input.serviceId } },
+          },
+        });
+
+        if (!staff) {
+          throw new AppError(
+            'Staff member not found or does not perform this service.',
+            httpStatus.NOT_FOUND
+          );
+        }
+
+        const endAt = addMinutes(startAt, service.durationMinutes);
+
+        const customerAccount = await tx.customerAccount.upsert({
+          where: { phone: input.customer.phone },
+          update: { fullName: input.customer.fullName },
+          create: { phone: input.customer.phone, fullName: input.customer.fullName },
+        });
+
+        const customerProfile = await tx.salonCustomerProfile.upsert({
+          where: { salonId_customerAccountId: { salonId: salon.id, customerAccountId: customerAccount.id } },
+          update: { displayName: input.customer.fullName },
+          create: {
+            salonId: salon.id,
+            customerAccountId: customerAccount.id,
+            displayName: input.customer.fullName,
+          },
+        });
+
+        const status = salon.settings?.onlineBookingAutoConfirm
+          ? BookingStatus.CONFIRMED
+          : BookingStatus.PENDING;
+
+        const booking = await tx.booking.create({
+          data: {
+            salonId: salon.id,
+            serviceId: service.id,
+            staffId: staff.id,
+            customerProfileId: customerProfile.id,
+            customerAccountId: customerAccount.id,
+            createdByUserId: staff.id,
+            startAt,
+            endAt,
+            note: input.note,
+            status,
+            source: BookingSource.ONLINE,
+            serviceNameSnapshot: service.name,
+            serviceDurationSnapshot: service.durationMinutes,
+            servicePriceSnapshot: service.price,
+            currencySnapshot: service.currency,
+            amountDueSnapshot: service.price,
+          },
+        });
+
+        return booking;
+      }, {
+        isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      });
+    } catch (error: any) {
+      if (error?.code === '23P01' && error?.message?.includes('Booking_no_overlap_active')) {
+        throw new AppError('This time slot is already booked.', httpStatus.CONFLICT, {
+          code: 'SLOT_NOT_AVAILABLE',
+        });
+      }
+      throw error;
+    }
   },
 
   async getBookings(salonId: string, query: ListBookingsQuery, actor: { id: string, role: UserRole }) {

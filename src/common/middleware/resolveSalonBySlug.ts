@@ -30,6 +30,7 @@ export const resolveSalonBySlug = async (
 
   // Attach a standardized tenant context to the request.
   (req as any).tenant = { salonId: salon.id, salonSlug: salon.slug };
+  (req as any).salonId = salon.id;
 
   next();
 };
