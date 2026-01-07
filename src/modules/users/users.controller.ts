@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as userService from './users.service';
 import { CreateUserInput, UpdateUserInput } from './users.validators';
-import { Prisma } from '@prisma/client';
 
 export const createUserController = async (
   req: Request<{ salonId: string }, {}, CreateUserInput>,
@@ -13,13 +12,6 @@ export const createUserController = async (
     const newUser = await userService.createStaffMember(salonId, req.body);
     res.status(201).json({ success: true, data: newUser });
   } catch (error) {
-    // Handle unique constraint violation (e.g., duplicate phone number)
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
-      return res.status(409).json({ message: 'A user with this phone number already exists in this salon.' });
-    }
     next(error);
   }
 };
@@ -60,9 +52,6 @@ export const getUserController = async (
   try {
     const { salonId, userId } = req.params;
     const user = await userService.getStaffMember(salonId, userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
     res.status(200).json({ success: true, data: user });
   } catch (error) {
     next(error);

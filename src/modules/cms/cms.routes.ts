@@ -8,6 +8,7 @@ import { authMiddleware } from '../../common/middleware/auth';
 import { tenantGuard } from '../../common/middleware/tenantGuard';
 import { requireRole } from '../../common/middleware/requireRole';
 import { UserRole } from '@prisma/client';
+import createHttpError from 'http-errors';
 
 export const cmsRouter = Router({ mergeParams: true });
 
@@ -19,6 +20,6 @@ cmsRouter.use('/links', cmsLinksRouter);
 cmsRouter.use('/addresses', cmsAddressesRouter);
 cmsRouter.use('/site-settings', cmsSiteSettingsRouter);
 
-cmsRouter.all('*', (_req, res) => {
-  res.status(501).json({ message: 'CMS routes placeholder.' });
+cmsRouter.all('*', (_req, _res, next) => {
+  next(createHttpError(501, 'CMS routes placeholder.'));
 });

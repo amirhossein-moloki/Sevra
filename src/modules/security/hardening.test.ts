@@ -65,6 +65,13 @@ describe('Security Hardening E2E Tests', () => {
         .get(`/api/v1/salons/${salonA.id}/services`)
         .set('Authorization', `Bearer ${tokenManagerB}`);
       expect(res.status).toBe(httpStatus.NOT_FOUND);
+      expect(res.body).toMatchObject({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Salon not found.',
+        },
+      });
     });
   });
 
@@ -84,6 +91,13 @@ describe('Security Hardening E2E Tests', () => {
         .get(`/api/v1/salons/${salonA.id}/bookings/${bookingA2.id}`)
         .set('Authorization', `Bearer ${tokenStaffA1}`);
       expect(res.status).toBe(httpStatus.NOT_FOUND);
+      expect(res.body).toMatchObject({
+        success: false,
+        error: {
+          code: expect.any(String),
+          message: expect.any(String),
+        },
+      });
     });
   });
 

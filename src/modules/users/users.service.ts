@@ -20,6 +20,9 @@ export const getStaffList = async (salonId: string) => {
 
 export const getStaffMember = async (salonId: string, userId: string) => {
   const user = await userRepo.findUserById(salonId, userId);
+  if (!user) {
+    throw new AppError('Staff member not found', 404);
+  }
   return user;
 };
 

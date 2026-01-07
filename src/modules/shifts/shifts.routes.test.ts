@@ -2,27 +2,29 @@ import request from 'supertest';
 import app from '../../app';
 import { prisma } from '../../config/prisma';
 import { UserRole } from '@prisma/client';
+import createHttpError from 'http-errors';
 
 jest.mock('../../common/middleware/auth', () => ({
   authMiddleware: (req, res, next) => {
     if (req.headers.authorization) {
       const token = req.headers.authorization.split(' ')[1];
       if (token === 'mock-manager-token') {
-        req.user = { id: 'mock-manager-id', role: UserRole.MANAGER };
+        req.actor = { id: 'mock-manager-id', role: UserRole.MANAGER, salonId: req.params.salonId };
       } else if (token === 'mock-staff-token') {
-        req.user = { id: 'mock-staff-id', role: UserRole.STAFF };
+        req.actor = { id: 'mock-staff-id', role: UserRole.STAFF, salonId: req.params.salonId };
       }
+      return next();
     }
-    next();
+    return next(createHttpError(401, 'Authorization header is missing or invalid'));
   },
 }));
 
 jest.mock('../../common/middleware/requireRole', () => ({
   requireRole: (roles) => (req, res, next) => {
-    if (req.user && roles.includes(req.user.role)) {
+    if (req.actor && roles.includes(req.actor.role)) {
       next();
     } else {
-      res.status(403).json({ message: 'Forbidden' });
+      next(createHttpError(403, 'Forbidden: You do not have the required permissions.'));
     }
   },
 }));
@@ -104,6 +106,13 @@ describe('Shifts API Endpoints', () => {
         .send(validShiftsPayload);
 
       expect(response.status).toBe(403);
+      expect(response.body).toMatchObject({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Forbidden: You do not have the required permissions.',
+        },
+      });
     });
 
     it('should return a 400 validation error for invalid data', async () => {
