@@ -60,6 +60,7 @@ describe('Services API E2E Tests', () => {
         .send(serviceData);
 
       expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
       expect(response.body.data).toBeDefined();
       expect(response.body.data.id).toBeDefined();
       expect(response.body.data.name).toBe(serviceData.name);

@@ -10,7 +10,7 @@ export const upsertShiftsController = async (
   try {
     const { salonId, userId } = req.params;
     const shifts = await shiftsService.upsertShifts(salonId, userId, req.body);
-    res.status(200).json(shifts);
+    res.status(200).json({ success: true, data: shifts });
   } catch (error) {
     next(error);
   }

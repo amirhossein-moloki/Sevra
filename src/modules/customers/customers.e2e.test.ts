@@ -54,8 +54,9 @@ describe('Customer Routes', () => {
         .send(newCustomer);
 
       expect(res.status).toBe(httpStatus.CREATED);
-      expect(res.body.displayName).toBe(newCustomer.displayName);
-      expect(res.body.customerAccount.phone).toBe(newCustomer.phone);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.displayName).toBe(newCustomer.displayName);
+      expect(res.body.data.customerAccount.phone).toBe(newCustomer.phone);
     });
 
     it('should return 409 if customer phone already exists in the salon', async () => {
@@ -110,13 +111,13 @@ describe('Customer Routes', () => {
           .post(`/api/v1/salons/${salon.id}/customers`)
           .set('Authorization', `Bearer ${receptionistToken}`)
           .send({ phone: '09100000001', fullName: 'Alice' });
-        customer1 = res1.body;
+        customer1 = res1.body.data;
 
         const res2 = await request(app)
           .post(`/api/v1/salons/${salon.id}/customers`)
           .set('Authorization', `Bearer ${receptionistToken}`)
           .send({ phone: '09100000002', fullName: 'Bob' });
-        customer2 = res2.body;
+        customer2 = res2.body.data;
       });
 
       it('should return a list of customers', async () => {
@@ -125,8 +126,9 @@ describe('Customer Routes', () => {
             .set('Authorization', `Bearer ${staffToken}`);
 
         expect(res.status).toBe(httpStatus.OK);
-        expect(res.body.customers).toHaveLength(2);
-        expect(res.body.total).toBe(2);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.customers).toHaveLength(2);
+        expect(res.body.data.total).toBe(2);
       });
 
       it('should filter customers by search query', async () => {
@@ -135,8 +137,9 @@ describe('Customer Routes', () => {
             .set('Authorization', `Bearer ${staffToken}`);
 
         expect(res.status).toBe(httpStatus.OK);
-        expect(res.body.customers).toHaveLength(1);
-        expect(res.body.customers[0].id).toBe(customer1.id);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.customers).toHaveLength(1);
+        expect(res.body.data.customers[0].id).toBe(customer1.id);
       });
   });
 
@@ -150,14 +153,15 @@ describe('Customer Routes', () => {
         .post(`/api/v1/salons/${salon.id}/customers`)
         .set('Authorization', `Bearer ${managerToken}`)
         .send(newCustomer);
-      const customerId = creationRes.body.id;
+      const customerId = creationRes.body.data.id;
 
       const res = await request(app)
         .get(`/api/v1/salons/${salon.id}/customers/${customerId}`)
         .set('Authorization', `Bearer ${staffToken}`);
 
       expect(res.status).toBe(httpStatus.OK);
-      expect(res.body.id).toBe(customerId);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.id).toBe(customerId);
     });
 
     it('should return 404 for a non-existent customer', async () => {
@@ -180,7 +184,7 @@ describe('Customer Routes', () => {
         .post(`/api/v1/salons/${salon.id}/customers`)
         .set('Authorization', `Bearer ${managerToken}`)
         .send(newCustomer);
-      const customerId = creationRes.body.id;
+      const customerId = creationRes.body.data.id;
 
       const updatePayload = {
           displayName: "I'm Updated",
@@ -193,8 +197,9 @@ describe('Customer Routes', () => {
         .send(updatePayload);
 
       expect(res.status).toBe(httpStatus.OK);
-      expect(res.body.displayName).toBe(updatePayload.displayName);
-      expect(res.body.note).toBe(updatePayload.note);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.displayName).toBe(updatePayload.displayName);
+      expect(res.body.data.note).toBe(updatePayload.note);
     });
   });
 
@@ -208,7 +213,7 @@ describe('Customer Routes', () => {
         .post(`/api/v1/salons/${salon.id}/customers`)
         .set('Authorization', `Bearer ${managerToken}`)
         .send(newCustomer);
-      const customerId = creationRes.body.id;
+      const customerId = creationRes.body.data.id;
 
       const res = await request(app)
         .delete(`/api/v1/salons/${salon.id}/customers/${customerId}`)

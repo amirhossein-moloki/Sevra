@@ -15,7 +15,6 @@ const initiatePayment = asyncHandler(async (req: Request, res: Response) => {
 
   res.status(httpStatus.CREATED).json({
     success: true,
-    message: 'Payment initiated successfully.',
     data: result,
   });
 });

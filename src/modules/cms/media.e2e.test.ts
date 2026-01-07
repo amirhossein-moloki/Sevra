@@ -130,6 +130,7 @@ describe('CMS Media API E2E Tests', () => {
         })
         .expect(201);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.purpose).toBe(MediaPurpose.GALLERY);
       galleryMediaId = response.body.data.id;
     });
@@ -157,6 +158,7 @@ describe('CMS Media API E2E Tests', () => {
         })
         .expect(200);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.purpose).toBe(MediaPurpose.COVER);
       expect(response.body.data.altText).toBe('Salon cover image');
       expect(response.body.data.isActive).toBe(false);

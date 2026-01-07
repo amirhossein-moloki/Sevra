@@ -14,5 +14,5 @@ export async function getPublicAddresses(req: PublicSalonRequest, res: Response)
   }
 
   const addresses = await PublicAddressesService.getPublicAddressesBySalon(salonId);
-  res.status(200).json({ data: addresses });
+  res.status(200).json({ success: true, data: addresses });
 }

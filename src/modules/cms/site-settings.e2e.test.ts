@@ -106,6 +106,7 @@ describe('CMS Site Settings API E2E Tests', () => {
         .set('Authorization', `Bearer ${managerToken}`)
         .expect(200);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data).toBeNull();
     });
   });
@@ -124,6 +125,7 @@ describe('CMS Site Settings API E2E Tests', () => {
         })
         .expect(200);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.logoUrl).toBe('https://example.com/logo.png');
       expect(response.body.data.robotsIndex).toBe(RobotsIndex.NOINDEX);
       expect(response.body.data.robotsFollow).toBe(RobotsFollow.NOFOLLOW);
@@ -140,6 +142,7 @@ describe('CMS Site Settings API E2E Tests', () => {
         })
         .expect(200);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.logoUrl).toBe(
         'https://example.com/logo-updated.png'
       );

@@ -28,6 +28,7 @@ describe('Payments E2E', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(201);
 
+      expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('paymentId');
       expect(res.body.data).toHaveProperty('checkoutUrl');
     });
@@ -72,6 +73,7 @@ describe('Payments E2E', () => {
         .set('Authorization', `Bearer ${staffToken}`)
         .expect(201);
 
+      expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('paymentId');
       expect(res.body.data).toHaveProperty('checkoutUrl');
     });

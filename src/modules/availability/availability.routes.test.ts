@@ -121,9 +121,10 @@ describe('GET /public/salons/:salonSlug/availability/slots', () => {
       });
 
     expect(response.status).toBe(200);
-    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body.success).toBe(true);
+    expect(Array.isArray(response.body.data)).toBe(true);
 
-    const returnedTimes = response.body.map((s: any) => new Date(s.time).getTime());
+    const returnedTimes = response.body.data.map((s: any) => new Date(s.time).getTime());
 
     const ten = new Date(new Date(testDate).setHours(10, 0, 0, 0)).getTime();
     const tenFifteen = new Date(new Date(testDate).setHours(10, 15, 0, 0)).getTime(); // Overlaps
@@ -136,7 +137,7 @@ describe('GET /public/salons/:salonSlug/availability/slots', () => {
     expect(returnedTimes).toContain(twelve);
 
     // Also check the staff info in the response
-    expect(response.body[0].staff).toEqual({
+    expect(response.body.data[0].staff).toEqual({
         id: staff.id,
         fullName: staff.fullName,
     });

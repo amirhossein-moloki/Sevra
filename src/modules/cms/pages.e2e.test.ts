@@ -169,6 +169,7 @@ describe('CMS Pages API E2E Tests', () => {
         })
         .expect(201);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.status).toBe(PageStatus.PUBLISHED);
       expect(response.body.data.publishedAt).toBeTruthy();
       expect(response.body.data.sections).toHaveLength(1);
@@ -198,6 +199,7 @@ describe('CMS Pages API E2E Tests', () => {
         .query({ status: PageStatus.PUBLISHED, type: PageType.HOME, limit: 1, offset: 0 })
         .expect(200);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveLength(1);
       expect(response.body.meta.total).toBe(1);
       expect(response.body.data[0].id).toBe(publishedPageId);
@@ -215,6 +217,7 @@ describe('CMS Pages API E2E Tests', () => {
         })
         .expect(200);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.status).toBe(PageStatus.ARCHIVED);
       expect(response.body.data.publishedAt).toBeNull();
       expect(response.body.data.sections).toHaveLength(1);
@@ -228,6 +231,7 @@ describe('CMS Pages API E2E Tests', () => {
         .send({ slug: 'home-updated' })
         .expect(200);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.slug).toBe('home-updated');
 
       const history = await prisma.salonPageSlugHistory.findFirst({

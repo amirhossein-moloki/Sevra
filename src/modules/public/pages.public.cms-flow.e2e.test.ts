@@ -68,6 +68,7 @@ describe('CMS page lifecycle -> public pages', () => {
       })
       .expect(201);
 
+    expect(createResponse.body.success).toBe(true);
     expect(createResponse.body.data.status).toBe(PageStatus.DRAFT);
     expect(createResponse.body.data.publishedAt).toBeNull();
     publishedPageId = createResponse.body.data.id;
@@ -78,6 +79,7 @@ describe('CMS page lifecycle -> public pages', () => {
       .send({ status: PageStatus.PUBLISHED })
       .expect(200);
 
+    expect(publishResponse.body.success).toBe(true);
     expect(publishResponse.body.data.status).toBe(PageStatus.PUBLISHED);
     expect(publishResponse.body.data.publishedAt).toBeTruthy();
 

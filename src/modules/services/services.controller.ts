@@ -17,7 +17,7 @@ export async function createService(
 ) {
   const { salonId } = req.params;
   const newService = await serviceLogic.createService(salonId, req.body);
-  res.status(201).json({ message: 'Service created successfully', data: newService });
+  res.status(201).json({ success: true, data: newService });
 }
 
 /**
@@ -36,7 +36,7 @@ export async function getServices(
   }
 
   const services = await serviceLogic.getServicesForSalon(targetSalonId, isActive === 'true');
-  res.status(200).json({ data: services });
+  res.status(200).json({ success: true, data: services });
 }
 
 /**
@@ -45,7 +45,7 @@ export async function getServices(
 export async function getServiceById(req: Request<{ serviceId: string }>, res: Response) {
   const { serviceId } = req.params;
   const service = await serviceLogic.getServiceById(serviceId);
-  res.status(200).json({ data: service });
+  res.status(200).json({ success: true, data: service });
 }
 
 /**
@@ -57,7 +57,7 @@ export async function updateService(
 ) {
   const { serviceId } = req.params;
   const updatedService = await serviceLogic.updateService(serviceId, req.body);
-  res.status(200).json({ message: 'Service updated successfully', data: updatedService });
+  res.status(200).json({ success: true, data: updatedService });
 }
 
 /**

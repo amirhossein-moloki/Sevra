@@ -82,8 +82,9 @@ describe('Users API Endpoints', () => {
         .set('Authorization', `Bearer ${staffToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.id).toBe(staffId);
-      expect(response.body.fullName).toBe('Test Staff');
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.id).toBe(staffId);
+      expect(response.body.data.fullName).toBe('Test Staff');
     });
 
     it('should return 404 if the user is not found', async () => {

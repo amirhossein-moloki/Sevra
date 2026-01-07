@@ -9,7 +9,7 @@ export async function createPage(
 ) {
   const { salonId } = req.params;
   const page = await PagesService.createPage(salonId, req.body);
-  res.status(201).json({ message: 'Page created successfully', data: page });
+  res.status(201).json({ success: true, data: page });
 }
 
 export async function listPages(req: Request<{ salonId: string }>, res: Response) {
@@ -26,6 +26,7 @@ export async function listPages(req: Request<{ salonId: string }>, res: Response
   });
 
   res.status(200).json({
+    success: true,
     data: pages,
     meta: {
       total,
@@ -41,7 +42,7 @@ export async function updatePage(
 ) {
   const { salonId, pageId } = req.params;
   const page = await PagesService.updatePage(salonId, pageId, req.body);
-  res.status(200).json({ message: 'Page updated successfully', data: page });
+  res.status(200).json({ success: true, data: page });
 }
 
 export async function getPage(
@@ -50,5 +51,5 @@ export async function getPage(
 ) {
   const { salonId, pageId } = req.params;
   const page = await PagesService.getPage(salonId, pageId);
-  res.status(200).json({ data: page });
+  res.status(200).json({ success: true, data: page });
 }

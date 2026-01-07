@@ -30,7 +30,7 @@ Errors follow:
 }
 ```
 
-Not all routes use the envelope (noted per endpoint).
+All JSON routes use the envelope below.
 
 ## Auth
 
@@ -40,7 +40,7 @@ Not all routes use the envelope (noted per endpoint).
 - **Rate limiting**: `publicApiRateLimiter`
 - **Body** (`requestOtpSchema`)
   - `phone` (string, min length 10)
-- **Response**: `res.ok({ data: { message } })`
+- **Response**: `{ "success": true, "data": { "message": "..." } }`
 
 Example request:
 
@@ -54,7 +54,7 @@ Example request:
 - **Body** (`verifyOtpSchema`)
   - `phone` (string, min length 10)
   - `code` (string, length 6)
-- **Response**: `res.ok({ data: { salons: [{ id, name }] } })`
+- **Response**: `{ "success": true, "data": { "salons": [{ "id": "...", "name": "..." }] } }`
 
 ### POST `/auth/user/login/otp`
 
@@ -62,7 +62,7 @@ Example request:
 - **Body** (`loginWithOtpSchema`)
   - `phone` (string)
   - `salonId` (string, CUID)
-- **Response**: `res.ok({ data: { user, tokens } })`
+- **Response**: `{ "success": true, "data": { "user": "...", "tokens": "..." } }`
 
 ### POST `/auth/login`
 
@@ -72,62 +72,62 @@ Example request:
   - `password` (string, required when `actorType=USER`)
   - `actorType` (`USER` or `CUSTOMER`)
   - `salonId` (required when `actorType=USER`)
-- **Response**: `res.ok({ data: { user|customer, tokens } })`
+- **Response**: `{ "success": true, "data": { "user": "...", "tokens": "..." } }`
 
 ### POST `/auth/refresh`
 
 - **Auth**: public
 - **Body** (`refreshSchema`)
   - `refreshToken` (string)
-- **Response**: `res.ok({ data: { accessToken } })`
+- **Response**: `{ "success": true, "data": { "accessToken": "..." } }`
 
 ### POST `/auth/logout`
 
 - **Auth**: required (Bearer access token)
-- **Response**: `res.ok({ data: { message } })`
+- **Response**: `{ "success": true, "data": { "message": "..." } }`
 
 ### GET `/auth/me`
 
 - **Auth**: required (Bearer access token)
-- **Response**: `res.ok({ data: actor })`
+- **Response**: `{ "success": true, "data": { "id": "...", "role": "..." } }`
 
 ## Health
 
 ### GET `/health`
 
 - **Auth**: public
-- **Response**: `{ \"status\": \"ok\" }`
+- **Response**: `{ "success": true, "data": { "status": "ok" } }`
 
 ## Salons
 
 ### GET `/salons`
 
 - **Auth**: public
-- **Response**: `res.ok({ data: salons })`
+- **Response**: `{ "success": true, "data": [ ... ] }`
 
 ### GET `/salons/:id`
 
 - **Auth**: public
-- **Response**: `res.ok({ data: salon })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### POST `/salons`
 
 - **Auth**: required
-- **Response**: `res.ok({ data: salon })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### PATCH `/salons/:id`
 
 - **Auth**: required
 - **Roles**: `MANAGER`
 - **Tenant guard**: salon ID must match the authenticated user.
-- **Response**: `res.ok({ data: salon })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### DELETE `/salons/:id`
 
 - **Auth**: required
 - **Roles**: `MANAGER`
 - **Tenant guard**: salon ID must match the authenticated user.
-- **Response**: `res.ok({ data: salon })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ## Services
 
@@ -136,40 +136,40 @@ Example request:
 - **Auth**: required
 - **Roles**: `MANAGER`
 - **Body** (`createServiceSchema`): `name`, `durationMinutes`, `price`, `currency`, `isActive?`
-- **Response**: `res.ok({ data: service })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### GET `/salons/:salonId/services`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`, `STAFF`
-- **Response**: `res.ok({ data: services })`
+- **Response**: `{ "success": true, "data": [ ... ] }`
 
 ### GET `/salons/:salonId/services/:serviceId`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`, `STAFF`
 - **Params**: `serviceId` (CUID)
-- **Response**: `res.ok({ data: service })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### PATCH `/salons/:salonId/services/:serviceId`
 
 - **Auth**: required
 - **Roles**: `MANAGER`
 - **Body** (`updateServiceSchema`): any of `name`, `durationMinutes`, `price`, `currency`, `isActive`
-- **Response**: `res.ok({ data: service })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### DELETE `/salons/:salonId/services/:serviceId`
 
 - **Auth**: required
 - **Roles**: `MANAGER`
 - **Params**: `serviceId` (CUID)
-- **Response**: `res.ok({ data: service })`
+- **Response**: `204 No Content`
 
 ### GET `/public/salons/:salonSlug/services`
 
 - **Auth**: public
 - **Behavior**: forcibly sets `isActive=true` before querying.
-- **Response**: `res.ok({ data: services })`
+- **Response**: `{ "success": true, "data": [ ... ] }`
 
 ## Staff / Users
 
@@ -178,30 +178,30 @@ Example request:
 - **Auth**: required
 - **Roles**: `MANAGER`
 - **Body** (`createUserSchema`): `fullName`, `phone` (Iranian format `09xxxxxxxxx`), `role`, optional public profile fields.
-- **Response**: `res.ok({ data: user })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### GET `/salons/:salonId/staff`
 
 - **Auth**: required
-- **Response**: `res.ok({ data: users })`
+- **Response**: `{ "success": true, "data": [ ... ] }`
 
 ### GET `/salons/:salonId/staff/:userId`
 
 - **Auth**: required
-- **Response**: `res.ok({ data: user })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### PUT `/salons/:salonId/staff/:userId`
 
 - **Auth**: required
 - **Roles**: `MANAGER`
 - **Body** (`updateUserSchema`): fields such as `fullName`, `role`, `isActive`, public profile fields.
-- **Response**: `res.ok({ data: user })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### DELETE `/salons/:salonId/staff/:userId`
 
 - **Auth**: required
 - **Roles**: `MANAGER`
-- **Response**: `res.ok({ data: user })`
+- **Response**: `204 No Content`
 
 ## Shifts
 
@@ -214,7 +214,7 @@ Example request:
   - `startTime` (HH:MM)
   - `endTime` (HH:MM)
   - `isActive` (boolean)
-- **Response**: `res.ok({ data: shifts })`
+- **Response**: `{ "success": true, "data": [ ... ] }`
 
 ## Availability (Public)
 
@@ -226,17 +226,20 @@ Example request:
   - `staffId` (CUID, optional)
   - `startDate` (date string)
   - `endDate` (date string, must be > startDate)
-- **Response**: **plain JSON array**, not wrapped in `res.ok`.
+- **Response**: `{ "success": true, "data": [ ... ] }`
 
 Example response:
 
 ```json
-[
-  {
-    "time": "2024-08-01T09:00:00.000Z",
-    "staff": { "id": "ck...", "fullName": "Ava" }
-  }
-]
+{
+  "success": true,
+  "data": [
+    {
+      "time": "2024-08-01T09:00:00.000Z",
+      "staff": { "id": "ck...", "fullName": "Ava" }
+    }
+  ]
+}
 ```
 
 ## Bookings (Private)
@@ -246,53 +249,53 @@ Example response:
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`
 - **Body** (`createBookingSchema`): `customer`, `serviceId`, `staffId`, `startAt`, `note?`
-- **Response**: `res.ok({ data: booking })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### GET `/salons/:salonId/bookings`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`, `STAFF`
 - **Query** (`listBookingsQuerySchema`): `page`, `pageSize`, `sortBy`, `sortOrder`, `status`, `staffId`, `customerProfileId`, `dateFrom`, `dateTo`
-- **Response**: `res.ok({ data, meta })` where `meta` includes pagination.
+- **Response**: `{ "success": true, "data": [ ... ], "meta": { "page": 1, "pageSize": 20, "total": 0 } }`
 
 ### GET `/salons/:salonId/bookings/:bookingId`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`, `STAFF`
 - **Params**: `bookingId` (CUID)
-- **Response**: `res.ok({ data: booking })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### PATCH `/salons/:salonId/bookings/:bookingId`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`
 - **Body** (`updateBookingSchema`): any of `serviceId`, `staffId`, `startAt`, `note`
-- **Response**: `res.ok({ data: booking })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### POST `/salons/:salonId/bookings/:bookingId/confirm`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`
-- **Response**: `res.ok({ data: booking })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### POST `/salons/:salonId/bookings/:bookingId/cancel`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`
 - **Body** (`cancelBookingSchema`): `reason?`
-- **Response**: `res.ok({ data: booking })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### POST `/salons/:salonId/bookings/:bookingId/complete`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`
-- **Response**: `res.ok({ data: booking })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ### POST `/salons/:salonId/bookings/:bookingId/no-show`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`
-- **Response**: `res.ok({ data: booking })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 
 ## Bookings (Public)
 
@@ -304,7 +307,7 @@ Example response:
   - `serviceId`, `staffId`, `startAt`
   - `customer`: `{ fullName, phone, email? }`
   - `note?`
-- **Response**: `res.ok({ data: booking })`
+- **Response**: `{ "success": true, "data": { "...": "..." } }`
 - **Note**: service implementation is a placeholder.
 
 ## Payments
@@ -317,12 +320,11 @@ Example response:
 - **Roles**: `MANAGER`, `RECEPTIONIST`, `STAFF`
 - **Headers**: `Idempotency-Key`
 - **Body**: none (params validation only via `InitPaymentValidators`)
-- **Response**: `201 Created` (custom JSON, not using `res.ok`):
+- **Response**: `201 Created`:
 
 ```json
 {
   "success": true,
-  "message": "Payment initiated successfully.",
   "data": {
     "paymentId": "...",
     "paymentStatus": "INITIATED",
@@ -383,16 +385,16 @@ All CMS routes require auth + `MANAGER` role + tenant guard.
 
 ### GET `/public/salons/:salonSlug/media`
 
-- Returns JSON: `{ data: media[] }`
+- Returns JSON: `{ success: true, data: media[] }`
 - Adds `Cache-Control: public, max-age=300, stale-while-revalidate=300`
 
 ### GET `/public/salons/:salonSlug/links`
 
-- Returns JSON: `{ data: links[] }`
+- Returns JSON: `{ success: true, data: links[] }`
 
 ### GET `/public/salons/:salonSlug/addresses`
 
-- Returns JSON: `{ data: addresses[] }`
+- Returns JSON: `{ success: true, data: addresses[] }`
 
 ## Webhooks
 
@@ -401,7 +403,7 @@ All CMS routes require auth + `MANAGER` role + tenant guard.
 - **Important**: this is mounted under `/api/v1` *again* in `src/routes/index.ts`, so the full path is `/api/v1/api/v1/webhooks/payments/:provider`.
 - **Auth**: signature-based (HMAC SHA-256) using `X-Signature` header.
 - **Body**: raw JSON; middleware uses `express.json({ verify })` to capture the raw body.
-- **Response**: `{ success: true, message: 'Webhook received and processed.' }`
+- **Response**: `{ success: true, data: { message: 'Webhook received and processed.' } }`
 
 ## Known Gaps / TODO
 

@@ -83,6 +83,7 @@ describe("Salon API - E2E with Auth", () => {
         .send(staffSalonData)
         .expect(201);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(staffSalonData.name);
       expect(response.body.data.slug).toBe(staffSalonData.slug);
     });
@@ -94,6 +95,7 @@ describe("Salon API - E2E with Auth", () => {
         .send(newSalonData)
         .expect(201);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(newSalonData.name);
       expect(response.body.data.slug).toBe(newSalonData.slug);
       createdSalonId = response.body.data.id; // Save for later tests
@@ -122,6 +124,7 @@ describe("Salon API - E2E with Auth", () => {
         .send(updateData)
         .expect(200);
 
+      expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe(updateData.name);
     });
   });
@@ -152,6 +155,7 @@ describe("Salon API - E2E with Auth", () => {
   describe("GET /api/v1/salons (Public)", () => {
     it("should still be public and return a list of active salons", async () => {
         const response = await request(app).get("/api/v1/salons").expect(200);
+        expect(response.body.success).toBe(true);
         expect(Array.isArray(response.body.data)).toBe(true);
         // Should only contain the initial salon, as the other was soft-deleted
         expect(response.body.data.length).toBe(1);

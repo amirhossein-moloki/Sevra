@@ -74,6 +74,7 @@ describe('Security Hardening E2E Tests', () => {
         .get(`/api/v1/salons/${salonA.id}/bookings`)
         .set('Authorization', `Bearer ${tokenStaffA1}`);
       expect(res.status).toBe(httpStatus.OK);
+      expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].id).toBe(bookingA1.id);
     });
