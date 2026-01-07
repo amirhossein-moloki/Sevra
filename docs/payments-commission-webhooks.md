@@ -23,6 +23,10 @@ Route: `POST /api/v1/salons/:salonId/bookings/bookings/:bookingId/payments/init`
 
 **Note:** The route path includes duplicated `/bookings` due to how the router is mounted.
 
+### Decision (MVP Scope)
+
+**Keep initiation mocked (Option A).** The current code creates a `Payment` with provider `ZARINPAL` and returns a sandbox checkout URL in `PaymentsService.initiatePayment`, while webhook handling is already implemented and tested to finalize `Payment.status` and `Booking.paymentState`. There is no provider SDK or API integration configured beyond the webhook secret, so the smallest change-set consistent with existing infrastructure is to keep initiation mocked and rely on webhooks as the real finalizer.
+
 ## Commission
 
 ### Data Model

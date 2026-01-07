@@ -1,6 +1,7 @@
 import request from 'supertest';
+import cuid from 'cuid';
 import app from '../../app';
-import { createTestSalon, createTestService, createTestBooking, createTestUser, signToken } from '../../../../test-utils/helpers';
+import { createTestSalon, createTestService, createTestBooking, createTestUser, generateToken } from '../../common/utils/test-utils';
 import { BookingPaymentState, UserRole } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 
@@ -18,7 +19,7 @@ describe('Payments E2E', () => {
     const service = await createTestService({ salonId });
     const booking = await createTestBooking({ salonId, serviceId: service.id, staffId: user.id });
     bookingId = booking.id;
-    token = signToken({ userId: user.id, salonId: salon.id, role: user.role });
+    token = generateToken({ userId: user.id, salonId: salon.id, role: user.role });
   });
 
   describe('POST /api/v1/salons/:salonId/bookings/:bookingId/payments/init', () => {
@@ -26,6 +27,7 @@ describe('Payments E2E', () => {
       const res = await request(app)
         .post(`/api/v1/salons/${salonId}/bookings/${bookingId}/payments/init`)
         .set('Authorization', `Bearer ${token}`)
+        .set('Idempotency-Key', cuid())
         .expect(201);
 
       expect(res.body.success).toBe(true);
@@ -42,6 +44,7 @@ describe('Payments E2E', () => {
       await request(app)
         .post(`/api/v1/salons/${salonId}/bookings/${bookingId}/payments/init`)
         .set('Authorization', `Bearer ${token}`)
+        .set('Idempotency-Key', cuid())
         .expect(409);
     });
 
@@ -56,6 +59,7 @@ describe('Payments E2E', () => {
       await request(app)
         .post(`/api/v1/salons/${salonB.id}/bookings/${bookingB.id}/payments/init`)
         .set('Authorization', `Bearer ${token}`)
+        .set('Idempotency-Key', cuid())
         .expect(404);
     });
 
@@ -66,11 +70,12 @@ describe('Payments E2E', () => {
         role: UserRole.STAFF,
         phone: '1112223333', // a different phone number
       });
-      const staffToken = signToken({ userId: staffUser.id, salonId, role: staffUser.role });
+      const staffToken = generateToken({ userId: staffUser.id, salonId, role: staffUser.role });
 
       const res = await request(app)
         .post(`/api/v1/salons/${salonId}/bookings/${bookingId}/payments/init`)
         .set('Authorization', `Bearer ${staffToken}`)
+        .set('Idempotency-Key', cuid())
         .expect(201);
 
       expect(res.body.success).toBe(true);

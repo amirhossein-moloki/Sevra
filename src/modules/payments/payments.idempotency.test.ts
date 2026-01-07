@@ -3,7 +3,7 @@ import cuid from 'cuid';
 import app from '../../app';
 import { prisma } from '../../config/prisma';
 import { UserRole } from '@prisma/client';
-import { createTestSalon, createTestUser, createTestService, createTestBooking, signToken } from '../../common/utils/test-utils';
+import { createTestSalon, createTestUser, createTestService, createTestBooking, generateToken } from '../../common/utils/test-utils';
 
 describe('Payments Idempotency E2E', () => {
   let salonId: string;
@@ -25,15 +25,11 @@ describe('Payments Idempotency E2E', () => {
 
     const user = await createTestUser({ salonId, role: UserRole.MANAGER });
     userId = user.id;
-    token = signToken({ userId: user.id, salonId: salon.id, role: user.role });
+    token = generateToken({ userId: user.id, salonId: salon.id, role: user.role });
 
     const service = await createTestService({ salonId });
     const booking = await createTestBooking({ salonId, serviceId: service.id, staffId: userId });
     bookingId = booking.id;
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
   });
 
   describe('POST /api/v1/salons/:salonId/bookings/:bookingId/payments/init', () => {
