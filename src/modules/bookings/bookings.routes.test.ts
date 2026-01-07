@@ -6,6 +6,7 @@ import { User, Salon, Service, SalonCustomerProfile, CustomerAccount, Shift } fr
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { add, set, getDay } from 'date-fns';
+import cuid from 'cuid';
 
 describe('Bookings API E2E Tests', () => {
   let salon: Salon;
@@ -135,6 +136,63 @@ describe('Bookings API E2E Tests', () => {
       expect(response.body.data).toHaveProperty('id');
       expect(response.body.data.staffId).toBe(staff.id);
       expect(response.body.data.createdByUserId).toBe(manager.id);
+    });
+
+    it('should return 404 when service does not exist', async () => {
+      const nextWeek = add(new Date(), { days: 7 });
+      const bookingStartTime = set(nextWeek, { hours: 11, minutes: 0, seconds: 0, milliseconds: 0 });
+      if (getDay(bookingStartTime) !== shift.dayOfWeek) {
+        bookingStartTime.setDate(bookingStartTime.getDate() + (shift.dayOfWeek - getDay(bookingStartTime)));
+      }
+
+      const response = await request(app)
+        .post(`/api/v1/salons/${salon.id}/bookings`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          serviceId: cuid(),
+          staffId: staff.id,
+          startAt: bookingStartTime.toISOString(),
+          customer: {
+            fullName: 'Missing Service',
+            phone: '1234567891',
+          },
+        });
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 404 when staff does not exist', async () => {
+      const nextWeek = add(new Date(), { days: 7 });
+      const bookingStartTime = set(nextWeek, { hours: 12, minutes: 0, seconds: 0, milliseconds: 0 });
+      if (getDay(bookingStartTime) !== shift.dayOfWeek) {
+        bookingStartTime.setDate(bookingStartTime.getDate() + (shift.dayOfWeek - getDay(bookingStartTime)));
+      }
+
+      const response = await request(app)
+        .post(`/api/v1/salons/${salon.id}/bookings`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          serviceId: service.id,
+          staffId: cuid(),
+          startAt: bookingStartTime.toISOString(),
+          customer: {
+            fullName: 'Missing Staff',
+            phone: '1234567892',
+          },
+        });
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 400 for missing required fields', async () => {
+      const response = await request(app)
+        .post(`/api/v1/salons/${salon.id}/bookings`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({
+          serviceId: service.id,
+        });
+
+      expect(response.status).toBe(400);
     });
 
     it('should fail with 409 Conflict if time slot is overlapping', async () => {

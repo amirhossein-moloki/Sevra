@@ -378,7 +378,7 @@ See `docs/media-url-strategy.md` for how `url` and `thumbUrl` are produced and s
 {
   "serviceId": "cuid",
   "staffId": "cuid",
-  "customerProfileId": "cuid",
+  "customer": { "phone": "09123456789", "fullName": "Sara" },
   "startAt": "2025-01-05T11:00:00Z",
   "note": "..."
 }

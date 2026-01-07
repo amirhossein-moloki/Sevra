@@ -84,8 +84,8 @@ All error responses (`4xx` and `5xx`) **MUST** conform to the following JSON str
     "message": "The provided data was invalid.",
     "details": [
       {
-        "field": "customerProfileId",
-        "message": "Customer profile is required"
+        "field": "customer.fullName",
+        "message": "Customer name is required"
       }
     ]
   }
@@ -225,7 +225,11 @@ Base Path: `/api/v1/salons/{salonId}`
 *   **Request Body**:
     ```json
     {
-      "customerProfileId": "cuid_abc",
+      "customer": {
+        "fullName": "Sara Example",
+        "phone": "+989121234567",
+        "email": "sara@example.com"
+      },
       "serviceId": "cuid_def",
       "staffId": "cuid_ghi",
       "startAt": "2024-10-27T10:00:00.000Z",
@@ -235,7 +239,7 @@ Base Path: `/api/v1/salons/{salonId}`
 *   **Success Response**: `201 Created` with the full booking object in `data`.
 *   **Error Cases**:
     *   `400 VALIDATION_ERROR`: Missing or invalid fields.
-    *   `404 NOT_FOUND`: `customerProfileId`, `serviceId`, or `staffId` does not exist.
+    *   `404 NOT_FOUND`: `serviceId` or `staffId` does not exist.
     *   `409 OVERLAP_CONFLICT`: Booking overlaps with another for the same staff member.
 
 #### 2. List Bookings

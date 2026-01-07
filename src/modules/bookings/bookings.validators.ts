@@ -11,11 +11,15 @@ const CUID_MESSAGE = 'Invalid CUID';
 
 export const createBookingSchema = z.object({
   body: z.object({
-    customerProfileId: z.string().cuid(CUID_MESSAGE),
     serviceId: z.string().cuid(CUID_MESSAGE),
     staffId: z.string().cuid(CUID_MESSAGE),
     startAt: z.string().datetime(),
-    note: z.string().optional(),
+    customer: z.object({
+      fullName: z.string().min(2),
+      phone: z.string().min(10), // E.164 normalization will be handled in the service
+      email: z.string().email().optional(),
+    }),
+    note: z.string().max(500).optional(),
   }),
 });
 
