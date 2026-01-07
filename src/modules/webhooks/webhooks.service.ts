@@ -1,4 +1,4 @@
-import { PaymentStatus, BookingPaymentState, IdempotencyStatus } from '@prisma/client';
+import { PaymentStatus, IdempotencyStatus, Prisma } from '@prisma/client';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { prisma } from '../../config/prisma';
@@ -35,20 +35,36 @@ const processPaymentWebhook = async ({
     return;
   }
 
-  // 2. Create the idempotency key and process the event in a transaction
+  // 2. Create the idempotency key before processing
   try {
-    await prisma.$transaction(async (tx) => {
-      // Create the key to lock this event
-      await tx.idempotencyKey.create({
-        data: {
-          key: eventId,
-          scope: idempotencyScope,
-          status: IdempotencyStatus.IN_PROGRESS,
-          // Set a reasonable expiry, e.g., 24 hours
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
+    await prisma.idempotencyKey.create({
+      data: {
+        key: eventId,
+        scope: idempotencyScope,
+        status: IdempotencyStatus.IN_PROGRESS,
+        // Set a reasonable expiry, e.g., 24 hours
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const racedKey = await prisma.idempotencyKey.findUnique({
+        where: { scope_key: { scope: idempotencyScope, key: eventId } },
       });
 
+      if (racedKey) {
+        if (racedKey.status === IdempotencyStatus.IN_PROGRESS) {
+          throw new AppError('Request is already being processed.', httpStatus.CONFLICT);
+        }
+        return;
+      }
+    }
+    throw error;
+  }
+
+  // 3. Process the event in a transaction
+  try {
+    await prisma.$transaction(async (tx) => {
       // Find the payment record
       const payment = await tx.payment.findUnique({
         where: { id: paymentId },
@@ -60,7 +76,7 @@ const processPaymentWebhook = async ({
         throw new AppError('Payment not found.', httpStatus.NOT_FOUND);
       }
 
-      // 3. Apply the state machine logic
+      // Apply the state machine logic
       switch (eventStatus) {
         case 'SUCCEEDED':
           await PaymentsRepo.handleSuccessfulPayment(tx, paymentId);
@@ -77,7 +93,7 @@ const processPaymentWebhook = async ({
           throw new AppError(`Unknown event status: ${eventStatus}`, httpStatus.BAD_REQUEST);
       }
 
-      // 4. Mark the idempotency key as completed
+      // Mark the idempotency key as completed
       await tx.idempotencyKey.update({
         where: { scope_key: { scope: idempotencyScope, key: eventId } },
         data: { status: IdempotencyStatus.COMPLETED },
