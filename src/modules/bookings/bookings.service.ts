@@ -309,9 +309,164 @@ export const bookingsService = {
   },
 
   async updateBooking(bookingId: string, salonId: string, data: UpdateBookingInput) {
-    const booking = await findAndValidateBooking(bookingId, salonId);
-    // Add logic to update booking
-    return booking;
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const booking = await tx.booking.findFirst({ where: { id: bookingId, salonId } });
+        if (!booking) {
+          throw new AppError('Booking not found.', httpStatus.NOT_FOUND);
+        }
+
+        if ([BookingStatus.CANCELED, BookingStatus.DONE, BookingStatus.NO_SHOW].includes(booking.status)) {
+          throw new AppError('Booking is in a terminal state', httpStatus.CONFLICT, {
+            code: 'INVALID_TRANSITION',
+          });
+        }
+
+        const serviceChanged = !!data.serviceId && data.serviceId !== booking.serviceId;
+        const staffChanged = !!data.staffId && data.staffId !== booking.staffId;
+        const startAtChanged = !!data.startAt;
+        const hasTimeChange = serviceChanged || staffChanged || startAtChanged;
+
+        const effectiveServiceId = serviceChanged ? data.serviceId! : booking.serviceId;
+        const effectiveStaffId = staffChanged ? data.staffId! : booking.staffId;
+
+        let effectiveService = null;
+        if (serviceChanged) {
+          effectiveService = await tx.service.findFirst({
+            where: { id: effectiveServiceId, salonId, isActive: true },
+          });
+
+          if (!effectiveService) {
+            throw new AppError('Service not found or is not active.', httpStatus.NOT_FOUND);
+          }
+        } else if (hasTimeChange) {
+          effectiveService = await tx.service.findFirst({
+            where: { id: effectiveServiceId, salonId },
+          });
+
+          if (!effectiveService) {
+            throw new AppError('Service not found.', httpStatus.NOT_FOUND);
+          }
+        }
+
+        if (staffChanged || serviceChanged) {
+          const staff = await tx.user.findFirst({
+            where: {
+              id: effectiveStaffId,
+              salonId,
+              isActive: true,
+              userServices: { some: { serviceId: effectiveServiceId } },
+            },
+            select: { id: true },
+          });
+
+          if (!staff) {
+            throw new AppError(
+              'Staff member not found or does not perform this service.',
+              httpStatus.NOT_FOUND
+            );
+          }
+        }
+
+        const updateData: Prisma.BookingUpdateInput = {};
+
+        if (serviceChanged && effectiveService) {
+          updateData.serviceId = effectiveServiceId;
+          updateData.serviceNameSnapshot = effectiveService.name;
+          updateData.serviceDurationSnapshot = effectiveService.durationMinutes;
+          updateData.servicePriceSnapshot = effectiveService.price;
+          updateData.currencySnapshot = effectiveService.currency;
+          updateData.amountDueSnapshot = effectiveService.price;
+        }
+
+        if (staffChanged) {
+          updateData.staffId = effectiveStaffId;
+        }
+
+        if (data.note !== undefined) {
+          updateData.note = data.note;
+        }
+
+        if (hasTimeChange) {
+          const newStartAt = data.startAt ? new Date(data.startAt) : booking.startAt;
+          const serviceDurationMinutes = effectiveService
+            ? effectiveService.durationMinutes
+            : booking.serviceDurationSnapshot;
+          const newEndAt = addMinutes(newStartAt, serviceDurationMinutes);
+
+          const shift = await tx.shift.findFirst({
+            where: {
+              salonId,
+              userId: effectiveStaffId,
+              dayOfWeek: newStartAt.getDay(),
+              isActive: true,
+            },
+          });
+
+          if (!shift) {
+            throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
+              code: 'SLOT_NOT_AVAILABLE',
+            });
+          }
+
+          const shiftStart = timeToDate(shift.startTime, newStartAt);
+          const shiftEnd = timeToDate(shift.endTime, newStartAt);
+
+          if (newStartAt.getTime() < shiftStart.getTime() || newEndAt.getTime() > shiftEnd.getTime()) {
+            throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
+              code: 'SLOT_NOT_AVAILABLE',
+            });
+          }
+
+          const settings = await tx.settings.findUnique({
+            where: { salonId },
+          });
+
+          const preventOverlaps = settings?.preventOverlaps ?? true;
+          if (preventOverlaps) {
+            const overlappingBooking = await tx.booking.findFirst({
+              where: {
+                salonId,
+                staffId: effectiveStaffId,
+                id: { not: booking.id },
+                status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DONE] },
+                startAt: { lt: newEndAt },
+                endAt: { gt: newStartAt },
+              },
+              select: { id: true },
+            });
+
+            if (overlappingBooking) {
+              throw new AppError('Booking overlaps with another for the same staff member.', httpStatus.CONFLICT, {
+                code: 'OVERLAP_CONFLICT',
+              });
+            }
+          }
+
+          if (data.startAt) {
+            updateData.startAt = newStartAt;
+          }
+
+          if (serviceChanged || data.startAt) {
+            updateData.endAt = newEndAt;
+          }
+        }
+
+        return tx.booking.update({
+          where: { id: bookingId },
+          data: updateData,
+        });
+      }, {
+        isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      });
+    } catch (error: any) {
+      if (error?.code === '23P01' && error?.message?.includes('Booking_no_overlap_active')) {
+        throw new AppError('Booking overlaps with another for the same staff member.', httpStatus.CONFLICT, {
+          code: 'OVERLAP_CONFLICT',
+        });
+      }
+      throw error;
+    }
   },
 
   async confirmBooking(bookingId: string, salonId: string, actor: { id: string, role: UserRole }) {
