@@ -14,5 +14,5 @@ export async function getPublicLinks(req: PublicSalonRequest, res: Response) {
   }
 
   const links = await PublicLinksService.getPublicLinksBySalon(salonId);
-  res.status(200).json({ data: links });
+  res.status(200).json({ success: true, data: links });
 }

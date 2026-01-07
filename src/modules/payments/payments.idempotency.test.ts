@@ -49,6 +49,7 @@ describe('Payments Idempotency E2E', () => {
         .send()
         .expect(201);
 
+      expect(res1.body.success).toBe(true);
       const paymentId1 = res1.body.data.paymentId;
       expect(paymentId1).toBeDefined();
 
@@ -60,6 +61,7 @@ describe('Payments Idempotency E2E', () => {
         .send()
         .expect(201);
 
+      expect(res2.body.success).toBe(true);
       const paymentId2 = res2.body.data.paymentId;
       expect(paymentId2).toBe(paymentId1);
 

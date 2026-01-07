@@ -88,7 +88,8 @@ describe('Shifts API Endpoints', () => {
         .send(validShiftsPayload);
 
       expect(response.status).toBe(200);
-      expect(response.body.length).toBe(validShiftsPayload.length);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.length).toBe(validShiftsPayload.length);
 
       const shifts = await prisma.shift.findMany({ where: { userId: staffId }, orderBy: { dayOfWeek: 'asc' } });
       expect(shifts.length).toBe(validShiftsPayload.length);

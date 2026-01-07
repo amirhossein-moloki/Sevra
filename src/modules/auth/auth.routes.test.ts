@@ -37,7 +37,8 @@ describe('Auth Routes', () => {
           });
 
         expect(res.status).toBe(200);
-        expect(res.body.data.data.tokens).toHaveProperty('accessToken');
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.tokens).toHaveProperty('accessToken');
       });
 
     it('should not login a user with invalid credentials', async () => {
@@ -71,7 +72,8 @@ describe('Auth Routes', () => {
           .send({ phone: '1234567890' });
 
         expect(res.status).toBe(200);
-        expect(res.body.data.data.message).toContain('OTP sent');
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.message).toContain('OTP sent');
       });
 
     it('should return an error for a non-existing user', async () => {
@@ -101,6 +103,7 @@ describe('Auth Routes', () => {
           .send({ phone, code });
 
         expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
       });
 
     it('should return an error for an invalid OTP', async () => {
@@ -139,7 +142,8 @@ describe('Auth Routes', () => {
           .send({ phone, salonId: salon.id });
 
         expect(res.status).toBe(200);
-        expect(res.body.data.data.tokens).toHaveProperty('accessToken');
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.tokens).toHaveProperty('accessToken');
       });
 
     it('should not login a user with an unverified OTP', async () => {
@@ -169,14 +173,15 @@ describe('Auth Routes', () => {
         .post('/api/v1/auth/login')
         .send({ phone: '1234567890', actorType: 'CUSTOMER' });
 
-      const { refreshToken } = loginRes.body.data.data.tokens;
+      const { refreshToken } = loginRes.body.data.tokens;
 
       const res = await request(app)
         .post('/api/v1/auth/refresh')
         .send({ refreshToken });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.data).toHaveProperty('accessToken');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('accessToken');
     });
   });
 
@@ -187,14 +192,15 @@ describe('Auth Routes', () => {
         .post('/api/v1/auth/login')
         .send({ phone: '1234567890', actorType: 'CUSTOMER' });
 
-      const { accessToken } = loginRes.body.data.data.tokens;
+      const { accessToken } = loginRes.body.data.tokens;
 
       const res = await request(app)
         .get('/api/v1/auth/me')
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.data.phone).toBe('1234567890');
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.phone).toBe('1234567890');
     });
   });
 
@@ -205,13 +211,14 @@ describe('Auth Routes', () => {
         .post('/api/v1/auth/login')
         .send({ phone: '1234567890', actorType: 'CUSTOMER' });
 
-      const { accessToken } = loginRes.body.data.data.tokens;
+      const { accessToken } = loginRes.body.data.tokens;
 
       const res = await request(app)
         .post('/api/v1/auth/logout')
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
     });
   });
 });

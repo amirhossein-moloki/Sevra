@@ -76,6 +76,7 @@ describe('POST /api/v1/public/salons/:salonSlug/bookings', () => {
       .send(payload);
 
     expect(firstResponse.status).toBe(201);
+    expect(firstResponse.body.success).toBe(true);
     expect(firstResponse.body.data.status).toBe('PENDING');
     expect(firstResponse.body.data.serviceId).toBe(service.id);
     expect(firstResponse.body.data.staffId).toBe(staff.id);
@@ -90,6 +91,7 @@ describe('POST /api/v1/public/salons/:salonSlug/bookings', () => {
       .send(payload);
 
     expect(secondResponse.status).toBe(201);
+    expect(secondResponse.body.success).toBe(true);
     expect(secondResponse.body.data.id).toBe(firstResponse.body.data.id);
 
     const bookingCount = await prisma.booking.count({

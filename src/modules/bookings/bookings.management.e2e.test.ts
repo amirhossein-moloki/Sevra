@@ -82,6 +82,7 @@ describe('Booking Management E2E', () => {
       });
 
     expect(createResponse.status).toBe(201);
+    expect(createResponse.body.success).toBe(true);
     expect(createResponse.body.data.id).toBeDefined();
 
     const bookingId = createResponse.body.data.id;
@@ -95,6 +96,7 @@ describe('Booking Management E2E', () => {
       });
 
     expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.success).toBe(true);
     expect(new Date(updateResponse.body.data.startAt).toISOString()).toBe(updatedStartAt.toISOString());
 
     const expectedEndAt = add(updatedStartAt, { minutes: service.durationMinutes });
@@ -105,6 +107,7 @@ describe('Booking Management E2E', () => {
       .set('Authorization', `Bearer ${managerToken}`);
 
     expect(completeResponse.status).toBe(200);
+    expect(completeResponse.body.success).toBe(true);
     expect(completeResponse.body.data.status).toBe('DONE');
   });
 });

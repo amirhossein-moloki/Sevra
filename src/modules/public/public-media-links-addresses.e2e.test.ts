@@ -144,6 +144,7 @@ describe('Public Media, Links, and Addresses API', () => {
       .get(`/api/v1/public/salons/${salon.slug}/media`)
       .expect(200);
 
+    expect(response.body.success).toBe(true);
     expect(response.body.data).toHaveLength(2);
     expect(response.body.data[0].sortOrder).toBe(1);
     expect(response.body.data[1].sortOrder).toBe(2);
@@ -155,6 +156,7 @@ describe('Public Media, Links, and Addresses API', () => {
       .get(`/api/v1/public/salons/${salon.slug}/links`)
       .expect(200);
 
+    expect(response.body.success).toBe(true);
     expect(response.body.data).toHaveLength(2);
     expect(response.body.data[0]).toHaveProperty('isPrimary');
     expect(response.body.data[1]).toHaveProperty('isPrimary');
@@ -165,6 +167,7 @@ describe('Public Media, Links, and Addresses API', () => {
       .get(`/api/v1/public/salons/${salon.slug}/addresses`)
       .expect(200);
 
+    expect(response.body.success).toBe(true);
     expect(response.body.data).toHaveLength(2);
     const cities = response.body.data.map((address: { city: string }) => address.city);
     expect(cities).toEqual(expect.arrayContaining(['Tehran', 'Shiraz']));

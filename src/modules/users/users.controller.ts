@@ -11,7 +11,7 @@ export const createUserController = async (
   try {
     const { salonId } = req.params;
     const newUser = await userService.createStaffMember(salonId, req.body);
-    res.status(201).json(newUser);
+    res.status(201).json({ success: true, data: newUser });
   } catch (error) {
     // Handle unique constraint violation (e.g., duplicate phone number)
     if (
@@ -46,7 +46,7 @@ export const getUsersController = async (
   try {
     const { salonId } = req.params;
     const staff = await userService.getStaffList(salonId);
-    res.status(200).json(staff);
+    res.status(200).json({ success: true, data: staff });
   } catch (error) {
     next(error);
   }
@@ -63,7 +63,7 @@ export const getUserController = async (
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.status(200).json(user);
+    res.status(200).json({ success: true, data: user });
   } catch (error) {
     next(error);
   }
@@ -81,7 +81,7 @@ export const updateUserController = async (
       userId,
       req.body
     );
-    res.status(200).json(updatedUser);
+    res.status(200).json({ success: true, data: updatedUser });
   } catch (error) {
     next(error);
   }

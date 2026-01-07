@@ -16,7 +16,7 @@ const handlePaymentWebhook = asyncHandler(async (req: Request, res: Response) =>
 
   res.status(httpStatus.OK).json({
     success: true,
-    message: 'Webhook received and processed.',
+    data: { message: 'Webhook received and processed.' },
   });
 });
 
