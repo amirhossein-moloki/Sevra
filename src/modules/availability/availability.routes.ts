@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getAvailability } from './availability.controller';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 // Note: The full path will be determined by how this router is mounted.
 // We expect something like /public/salons/:salonSlug/availability

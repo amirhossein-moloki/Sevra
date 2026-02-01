@@ -41,10 +41,12 @@ export const parseSectionDataJson = ({
     return null;
   }
 
-  if (!isKnownSectionType(String(type))) {
-    logSectionDataError('Unsupported section type.', { pageId, sectionId, type });
+  const typeStr = String(type);
+  if (!isKnownSectionType(typeStr)) {
+    logSectionDataError('Unsupported section type.', { pageId, sectionId, type: typeStr });
     return null;
   }
+  const sectionType = typeStr as PageSectionType;
 
   let parsedJson: unknown;
   try {
@@ -54,7 +56,7 @@ export const parseSectionDataJson = ({
     return null;
   }
 
-  const schema = pageSectionSchemaByType(type);
+  const schema = pageSectionSchemaByType(sectionType);
   if (!schema) {
     logSectionDataError('Missing schema for section type.', { pageId, sectionId, type });
     return null;

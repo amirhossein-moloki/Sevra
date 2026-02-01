@@ -20,6 +20,7 @@ import {
   publicLinksRouter,
   publicMediaRouter,
   publicPagesRouter,
+  publicSalonRouter,
 } from '../modules/public/public.routes';
 import { paymentsRoutes } from '../modules/payments/payments.routes';
 import { webhooksRoutes } from '../modules/webhooks/webhooks.routes';
@@ -52,7 +53,11 @@ router.use('/salons/:salonId/staff', staffRouter);
 router.use('/salons/:salonId/staff/:userId/shifts', shiftsRouter);
 
 // --- Availability Module Routes ---
-router.use('/public/salons/:salonSlug/availability', availabilityRouter);
+router.use(
+  '/public/salons/:salonSlug/availability',
+  resolveSalonBySlug,
+  availabilityRouter
+);
 
 // --- Bookings Module Routes ---
 router.use('/salons/:salonId/bookings', bookingsRoutes);
@@ -63,6 +68,9 @@ router.use('/salons/:salonId/customers', customersRouter);
 
 // --- Reviews Module Routes ---
 router.use('/salons/:salonId/reviews', privateReviewsRouter);
+
+// Public Salon Root & Reviews
+router.use('/public/salons/:salonSlug', publicSalonRouter);
 router.use('/public/salons/:salonSlug', publicReviewsRouter);
 
 // --- Settings Module Routes ---

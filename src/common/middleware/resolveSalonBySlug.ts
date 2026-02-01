@@ -23,7 +23,9 @@ export const resolveSalonBySlug = async (
     return next(createHttpError(400, "Salon slug is missing from the request params."));
   }
 
-  const salon = await prisma.salon.findUnique({ where: { slug: salonSlug } });
+  const salon = await prisma.salon.findUnique({
+    where: { slug: salonSlug, isActive: true },
+  });
   if (!salon) {
     return next(createHttpError(404, "Salon not found"));
   }
