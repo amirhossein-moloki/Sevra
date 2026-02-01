@@ -98,9 +98,17 @@ const handleFailedPayment = async (
   });
 };
 
+const updatePayment = (paymentId: string, data: Prisma.PaymentUpdateInput) => {
+  return prisma.payment.update({
+    where: { id: paymentId },
+    data,
+  });
+};
+
 export const PaymentsRepo = {
   findBookingForUpdate,
   createPaymentAndUpdateBooking,
   handleSuccessfulPayment,
   handleFailedPayment,
+  updatePayment,
 };

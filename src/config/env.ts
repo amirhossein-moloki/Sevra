@@ -63,6 +63,11 @@ const EnvSchema = z.object({
   // Webhooks
   PAYMENT_PROVIDER_WEBHOOK_SECRET: z.string().min(1),
 
+  // ZarinPal
+  ZARINPAL_MERCHANT_ID: z.string().min(1).default("00000000-0000-0000-0000-000000000000"),
+  ZARINPAL_CALLBACK_URL: z.string().min(1).default("http://localhost:3000/api/v1/payments/callback"),
+  ZARINPAL_SANDBOX: z.preprocess(toBool, z.boolean()).default(true),
+
   // Media storage
   MEDIA_STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   MEDIA_PUBLIC_BASE_URL: z.string().min(1).default("http://localhost:3000"),

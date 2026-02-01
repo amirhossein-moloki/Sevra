@@ -1,9 +1,11 @@
 
 import { addMinutes, isBefore } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { Booking, BookingSource, BookingStatus, Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
+import { getZonedStartAndEnd } from '../../common/utils/date';
 import {
   CancelBookingInput,
   CreateBookingInput,
@@ -32,12 +34,6 @@ const normalizePhone = (phone: string): string => {
   return `+${digitsOnly}`;
 };
 
-const timeToDate = (timeStr: string, date: Date): Date => {
-  const [hours, minutes, seconds] = timeStr.split(':').map(Number);
-  const result = new Date(date);
-  result.setHours(hours ?? 0, minutes ?? 0, seconds ?? 0, 0);
-  return result;
-};
 
 const findAndValidateBooking = async (
   bookingId: string,
@@ -207,12 +203,14 @@ export const bookingsService = {
         }
 
         const endAt = addMinutes(startAt, service.durationMinutes);
+        const timeZone = salon.settings?.timeZone || 'UTC';
+        const zonedStartAt = toZonedTime(startAt, timeZone);
 
         const shift = await tx.shift.findFirst({
           where: {
             salonId: salon.id,
             userId: staff.id,
-            dayOfWeek: startAt.getDay(),
+            dayOfWeek: zonedStartAt.getDay(),
             isActive: true,
           },
         });
@@ -223,8 +221,8 @@ export const bookingsService = {
           });
         }
 
-        const shiftStart = timeToDate(shift.startTime, startAt);
-        const shiftEnd = timeToDate(shift.endTime, startAt);
+        const shiftStart = getZonedStartAndEnd(shift.startTime, startAt, timeZone);
+        const shiftEnd = getZonedStartAndEnd(shift.endTime, startAt, timeZone);
 
         if (startAt.getTime() < shiftStart.getTime() || endAt.getTime() > shiftEnd.getTime()) {
           throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
@@ -417,17 +415,23 @@ export const bookingsService = {
         }
 
         if (hasTimeChange) {
+          const settings = await tx.settings.findUnique({
+            where: { salonId },
+          });
+          const timeZone = settings?.timeZone || 'UTC';
+
           const newStartAt = data.startAt ? new Date(data.startAt) : booking.startAt;
           const serviceDurationMinutes = effectiveService
             ? effectiveService.durationMinutes
             : booking.serviceDurationSnapshot;
           const newEndAt = addMinutes(newStartAt, serviceDurationMinutes);
+          const zonedNewStartAt = toZonedTime(newStartAt, timeZone);
 
           const shift = await tx.shift.findFirst({
             where: {
               salonId,
               userId: effectiveStaffId,
-              dayOfWeek: newStartAt.getDay(),
+              dayOfWeek: zonedNewStartAt.getDay(),
               isActive: true,
             },
           });
@@ -438,18 +442,14 @@ export const bookingsService = {
             });
           }
 
-          const shiftStart = timeToDate(shift.startTime, newStartAt);
-          const shiftEnd = timeToDate(shift.endTime, newStartAt);
+          const shiftStart = getZonedStartAndEnd(shift.startTime, newStartAt, timeZone);
+          const shiftEnd = getZonedStartAndEnd(shift.endTime, newStartAt, timeZone);
 
           if (newStartAt.getTime() < shiftStart.getTime() || newEndAt.getTime() > shiftEnd.getTime()) {
             throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
               code: 'SLOT_NOT_AVAILABLE',
             });
           }
-
-          const settings = await tx.settings.findUnique({
-            where: { salonId },
-          });
 
           const preventOverlaps = settings?.preventOverlaps ?? true;
           if (preventOverlaps) {
