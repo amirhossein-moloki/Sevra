@@ -1,12 +1,57 @@
 import { Request, Response } from 'express';
 import createHttpError from 'http-errors';
-import { PageStatus } from '@prisma/client';
+import { PageStatus, PageType } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { renderPageDocument } from './page-renderer';
 
-type PublicPageRequest = Request<{ salonSlug: string; pageSlug: string }> & {
+type PublicPageRequest = Request<{ salonSlug: string; pageSlug?: string }> & {
   tenant?: { salonId: string; salonSlug: string };
 };
+
+export async function getPublicSalonHome(req: PublicPageRequest, res: Response) {
+  const { salonSlug } = req.params;
+  let tenant = req.tenant;
+
+  if (!tenant?.salonId) {
+    if (!salonSlug) {
+      throw createHttpError(400, 'Salon slug is missing from the request params.');
+    }
+
+    const salon = await prisma.salon.findUnique({
+      where: { slug: salonSlug, isActive: true },
+    });
+    if (!salon) {
+      throw createHttpError(404, 'Salon not found');
+    }
+
+    tenant = { salonId: salon.id, salonSlug: salon.slug };
+  }
+
+  const page = await prisma.salonPage.findFirst({
+    where: {
+      salonId: tenant.salonId,
+      type: PageType.HOME,
+      status: PageStatus.PUBLISHED,
+    },
+    include: {
+      sections: { orderBy: { sortOrder: 'asc' }, where: { isEnabled: true } },
+      salon: { select: { siteSettings: true } },
+    },
+  });
+
+  if (!page) {
+    throw createHttpError(404, 'Home page not found');
+  }
+
+  const { sections, salon, ...pageData } = page;
+  const html = renderPageDocument({
+    page: pageData,
+    siteSettings: salon?.siteSettings ?? null,
+    sections,
+    pageId: page.id,
+  });
+  res.status(200).type('html').send(html);
+}
 
 export async function getPublicPage(req: PublicPageRequest, res: Response) {
   const { pageSlug, salonSlug } = req.params;

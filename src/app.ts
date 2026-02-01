@@ -10,7 +10,12 @@ const app = express();
 
 app.use(express.json());
 app.use(cors());
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static('uploads'));
 
 import loggerMiddleware from './common/middleware/logger';
 

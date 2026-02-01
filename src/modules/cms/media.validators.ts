@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { MediaPurpose, MediaType } from '@prisma/client';
 
 const CUID_MESSAGE = 'Invalid CUID';
-const ALT_TEXT_REQUIRED_PURPOSES = new Set([
+const ALT_TEXT_REQUIRED_PURPOSES = new Set<MediaPurpose>([
   MediaPurpose.LOGO,
   MediaPurpose.COVER,
 ]);
@@ -37,6 +37,21 @@ export const createMediaSchema = z.object({
   body: z
     .object({
       ...baseFields,
+    })
+    .superRefine((data, ctx) => {
+      validateAltTextForPurpose(data.purpose, data.altText, ctx);
+    }),
+});
+
+export const uploadMediaSchema = z.object({
+  body: z
+    .object({
+      purpose: baseFields.purpose,
+      altText: baseFields.altText,
+      category: baseFields.category,
+      caption: baseFields.caption,
+      sortOrder: z.coerce.number().int().min(0).optional(),
+      isActive: z.coerce.boolean().optional(),
     })
     .superRefine((data, ctx) => {
       validateAltTextForPurpose(data.purpose, data.altText, ctx);

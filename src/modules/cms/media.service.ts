@@ -3,7 +3,7 @@ import { MediaPurpose, MediaType } from '@prisma/client';
 import * as MediaRepo from './media.repo';
 import { CreateMediaInput, UpdateMediaInput } from './media.types';
 
-const ALT_TEXT_REQUIRED_PURPOSES = new Set([
+const ALT_TEXT_REQUIRED_PURPOSES = new Set<MediaPurpose>([
   MediaPurpose.LOGO,
   MediaPurpose.COVER,
 ]);
