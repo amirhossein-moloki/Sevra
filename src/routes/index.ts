@@ -68,7 +68,7 @@ router.use('/public/salons/:salonSlug/links', publicLinksRouter);
 router.use('/public/salons/:salonSlug/addresses', publicAddressesRouter);
 
 // --- Webhooks Module ---
-router.use('/api/v1', webhooksRoutes);
+router.use(webhooksRoutes);
 
 
 export default router;
