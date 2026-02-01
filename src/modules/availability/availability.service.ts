@@ -1,7 +1,9 @@
 import { GetAvailabilityQuery } from './availability.validators';
 import { prisma } from '../../config/prisma';
 import createHttpError from 'http-errors';
-import { add, format, isBefore, isEqual, set } from 'date-fns';
+import { add, isBefore, isEqual, startOfDay } from 'date-fns';
+import { format as formatTz, toZonedTime } from 'date-fns-tz';
+import { getZonedStartAndEnd } from '../../common/utils/date';
 
 type TimeSlot = {
   time: string;
@@ -11,13 +13,7 @@ type TimeSlot = {
   };
 };
 
-// Helper to convert 'HH:mm:ss' to a Date object for a specific day
 const SLOT_INTERVAL_MINUTES = 15;
-
-const timeToDate = (timeStr: string, date: Date): Date => {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  return set(date, { hours, minutes, seconds: 0, milliseconds: 0 });
-};
 
 export const getAvailableSlots = async (
   query: GetAvailabilityQuery & { salonSlug: string }
@@ -31,7 +27,11 @@ export const getAvailableSlots = async (
       salon: { slug: salonSlug },
     },
     include: {
-        salon: true,
+        salon: {
+          include: {
+            settings: true
+          }
+        },
     }
   });
 
@@ -39,6 +39,7 @@ export const getAvailableSlots = async (
     throw createHttpError(404, 'Service not found in this salon.');
   }
   const salonId = service.salonId;
+  const timeZone = service.salon.settings?.timeZone || 'UTC';
 
   // 2. Determine which staff members to check
   let staffToCheck = [];
@@ -70,16 +71,14 @@ export const getAvailableSlots = async (
   const bookings = await prisma.booking.findMany({
     where: {
       staffId: { in: staffIds },
-      // Corrected spelling
       status: { notIn: ['CANCELED', 'NO_SHOW'] },
-      startAt: { gte: startDate }, // Corrected field
-      endAt: { lte: endDate }, // Corrected field
+      startAt: { gte: startDate },
+      endAt: { lte: endDate },
     },
   });
 
   // --- Core Logic: Generate and Filter Slots ---
   const availableSlots: TimeSlot[] = [];
-  // Corrected field
   const serviceDuration = service.durationMinutes;
 
   // Create maps for quick lookups
@@ -91,8 +90,7 @@ export const getAvailableSlots = async (
 
   const bookingsByStaffAndDate: { [key: string]: any[] } = {};
   for (const booking of bookings) {
-    // Corrected field
-    const dateKey = format(booking.startAt, 'yyyy-MM-dd');
+    const dateKey = formatTz(booking.startAt, 'yyyy-MM-dd', { timeZone });
     const key = `${booking.staffId}-${dateKey}`;
     if (!bookingsByStaffAndDate[key]) bookingsByStaffAndDate[key] = [];
     bookingsByStaffAndDate[key].push(booking);
@@ -100,17 +98,16 @@ export const getAvailableSlots = async (
 
   for (const staff of staffToCheck) {
     for (let day = new Date(startDate); isBefore(day, endDate) || isEqual(day, endDate); day = add(day, { days: 1 })) {
-      // Corrected: use getDay() where Sunday is 0
-      const dayOfWeek = day.getDay();
+      const dayOfWeek = toZonedTime(day, timeZone).getDay();
       const staffShifts = shiftsByUserId[staff.id];
       const shift = staffShifts ? staffShifts[dayOfWeek] : null;
 
       if (!shift) continue; // No shift for this day
 
-      const shiftStart = timeToDate(shift.startTime, day);
-      const shiftEnd = timeToDate(shift.endTime, day);
+      const shiftStart = getZonedStartAndEnd(shift.startTime, day, timeZone);
+      const shiftEnd = getZonedStartAndEnd(shift.endTime, day, timeZone);
 
-      const dateKey = format(day, 'yyyy-MM-dd');
+      const dateKey = formatTz(day, 'yyyy-MM-dd', { timeZone });
       const staffBookings = bookingsByStaffAndDate[`${staff.id}-${dateKey}`] || [];
 
       // Iterate through the shift duration, creating potential slots
@@ -119,7 +116,6 @@ export const getAvailableSlots = async (
 
         let isOverlapped = false;
         for (const booking of staffBookings) {
-          // Corrected fields
           const bookingStart = new Date(booking.startAt);
           const bookingEnd = new Date(booking.endAt);
           // Check for overlap: (StartA < EndB) and (EndA > StartB)
@@ -131,7 +127,7 @@ export const getAvailableSlots = async (
 
         if (!isOverlapped) {
           availableSlots.push({
-            time: slotStart.toISOString(), // Use standard ISO format
+            time: slotStart.toISOString(),
             staff: {
               id: staff.id,
               fullName: staff.fullName,
