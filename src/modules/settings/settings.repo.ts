@@ -1,16 +1,19 @@
-
 import { prisma } from '../../config/prisma';
-import { Settings } from '@prisma/client';
+import { UpdateSettingsInput } from './settings.types';
 
-/**
- * Finds the settings for a given salon.
- * @param {string} salonId - The ID of the salon.
- * @returns {Promise<Settings | null>} The settings object or null if not found.
- */
-export const findSetting = async (salonId: string): Promise<Settings | null> => {
+export async function findBySalonId(salonId: string) {
   return prisma.settings.findUnique({
-    where: {
+    where: { salonId },
+  });
+}
+
+export async function updateBySalonId(salonId: string, data: UpdateSettingsInput) {
+  return prisma.settings.upsert({
+    where: { salonId },
+    update: data,
+    create: {
       salonId,
+      ...data,
     },
   });
-};
+}

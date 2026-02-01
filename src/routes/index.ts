@@ -23,6 +23,12 @@ import {
 } from '../modules/public/public.routes';
 import { paymentsRoutes } from '../modules/payments/payments.routes';
 import { webhooksRoutes } from '../modules/webhooks/webhooks.routes';
+import { customersRouter } from '../modules/customers/customers.routes';
+import {
+  privateReviewsRouter,
+  publicReviewsRouter,
+} from '../modules/reviews/reviews.routes';
+import { settingsRouter } from '../modules/settings/settings.routes';
 
 const router = Router();
 
@@ -51,6 +57,16 @@ router.use('/public/salons/:salonSlug/availability', availabilityRouter);
 // --- Bookings Module Routes ---
 router.use('/salons/:salonId/bookings', bookingsRoutes);
 router.use('/public/salons/:salonSlug/bookings', publicBookingsRoutes);
+
+// --- Customers Module Routes ---
+router.use('/salons/:salonId/customers', customersRouter);
+
+// --- Reviews Module Routes ---
+router.use('/salons/:salonId/reviews', privateReviewsRouter);
+router.use('/public/salons/:salonSlug', publicReviewsRouter);
+
+// --- Settings Module Routes ---
+router.use('/salons/:salonId/settings', settingsRouter);
 
 // --- Payments Module Routes ---
 router.use('/salons/:salonId/bookings', paymentsRoutes); // This will be scoped within the booking

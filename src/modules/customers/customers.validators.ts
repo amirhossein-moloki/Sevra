@@ -2,37 +2,38 @@ import { z } from 'zod';
 
 export const createCustomerSchema = z.object({
   body: z.object({
-    phone: z
-      .string({ required_error: 'Phone number is required' })
-      .min(10, 'Phone number is too short'),
-    fullName: z
-      .string({ required_error: 'Full name is required' })
-      .min(2, 'Full name must be at least 2 characters'),
-    displayName: z
-      .string()
-      .min(2, 'Display name must be at least 2 characters')
-      .optional(),
+    phone: z.string().regex(/^09\d{9}$/, 'Invalid Iranian phone number format'),
+    fullName: z.string().optional(),
+    displayName: z.string().optional(),
     note: z.string().optional(),
   }),
 });
 
 export const updateCustomerSchema = z.object({
-  body: z
-    .object({
-      displayName: z
-        .string()
-        .min(2, 'Display name must be at least 2 characters'),
-      note: z.string().optional(),
-    })
-    .partial()
-    .refine(
-      (data) => Object.keys(data).length > 0,
-      'At least one field must be provided to update',
-    ),
+  body: z.object({
+    displayName: z.string().optional(),
+    note: z.string().optional(),
+  }),
+  params: z.object({
+    salonId: z.string().cuid(),
+    customerId: z.string().cuid(),
+  }),
 });
 
-export const customerIdParamsSchema = z.object({
+export const getCustomersSchema = z.object({
+  query: z.object({
+    search: z.string().optional(),
+    page: z.string().regex(/^\d+$/).transform(Number).optional(),
+    limit: z.string().regex(/^\d+$/).transform(Number).optional(),
+  }),
   params: z.object({
-    customerId: z.string().cuid('Invalid customer ID format'),
+    salonId: z.string().cuid(),
+  }),
+});
+
+export const customerIdParamSchema = z.object({
+  params: z.object({
+    salonId: z.string().cuid(),
+    customerId: z.string().cuid(),
   }),
 });
