@@ -1,97 +1,65 @@
-# Sevra API Implementation TODO List
+# Sevra MVP - Remaining Tasks
 
-This document outlines the necessary steps to reach the Minimum Viable Product (MVP) for the Sevra API, based on the initial analysis. The tasks are organized by priority to ensure a structured and dependency-aware development process.
+This list represents the work required to reach a fully functional Minimum Viable Product (MVP).
 
----
+## 1. Core Logic Refinements
 
-## Priority 1: Infrastructure & Core Auth
+### 1.1 Timezone Support (High Priority)
+- [ ] Implement timezone-aware calculations in `availability.service.ts`.
+- [ ] Implement timezone-aware validation in `bookings.service.ts`.
+- [ ] Ensure all date/time inputs and outputs are correctly handled according to `salon.settings.timeZone`.
 
-These are the absolute prerequisites for any other feature.
-
-### 1.1: Core Infrastructure
-- [x] Implement and register global `errorHandler` middleware.
-- [x] Implement and register `responseEnvelope` middleware.
-- [ ] Implement and register `validate` (Zod) middleware.
-- [ ] Implement and register `rateLimit` middleware.
-- [ ] Configure and integrate `logger` (Pino).
-
-### 1.2: Authentication Module
-- [ ] Implement `login` logic in `auth.service.ts` (password hashing, JWT generation).
-- [ ] Implement `refreshToken` rotation logic with `Session` management in the database.
-- [ ] Implement `logout` logic (session revocation).
-- [ ] Implement `me` endpoint logic to get the current user's profile.
-- [ ] Implement `auth.controller.ts` to handle HTTP requests for all auth endpoints.
-- [ ] Create and register `auth.routes.ts` in the main application router.
-
-### 1.3: Security Middleware
-- [ ] Implement `auth` middleware to verify JWT and attach the user to the request object.
-- [ ] Implement `tenantGuard` middleware to enforce `salonId` access control on all relevant routes.
-
-### 1.4: Testing Foundation
-- [ ] Install and configure Jest & Supertest for End-to-End (E2E) testing.
-- [ ] Write E2E tests for all Auth endpoints (`/login`, `/refresh`, `/logout`, `/me`) to cover success and failure scenarios.
+### 1.2 Real Payment Integration
+- [ ] Replace mocked initiation in `PaymentsService.initiatePayment` with real ZarinPal API integration.
+- [ ] Securely handle API keys and merchant IDs via environment variables.
 
 ---
 
-## Priority 2: Core Salon Management
+## 2. Missing Modules (Skeleton Exists)
 
-With auth in place, we can now build the core features for managing a salon.
+### 2.1 Customers (CRM) Module
+- [ ] Implement `GET /salons/:salonId/customers` (List with search/filter).
+- [ ] Implement `GET /salons/:salonId/customers/:id` (Detail).
+- [ ] Implement `POST /salons/:salonId/customers` (Manual creation).
+- [ ] Implement `PATCH /salons/:salonId/customers/:id` (Update notes/profile).
 
-### 2.1: Services Module
-- [ ] Implement full CRUD (Create, Read, Update, Delete) for Services.
-- [ ] Ensure all service routes are protected by `auth` and `tenantGuard` middleware.
-- [ ] Write E2E tests for the Services module CRUD operations.
+### 2.2 Reviews Module
+- [ ] Implement `POST /public/salons/:salonSlug/bookings/:bookingId/reviews` (Submit review).
+- [ ] Implement `GET /public/salons/:salonSlug/reviews` (List published reviews).
+- [ ] Implement `PATCH /salons/:salonId/reviews/:id/status` (Moderate review: publish/hide).
 
-### 2.2: Users/Staff Module
-- [ ] Implement endpoints to list, create, and edit staff members.
-- [ ] Implement `requireRole('MANAGER')` middleware for user creation/editing routes.
-- [ ] Write E2E tests for the Users module.
-
-### 2.3: Shifts Module
-- [ ] Implement `PUT /users/{userId}/shifts` endpoint to upsert (create or update) weekly shifts for a staff member.
-- [ ] Write E2E tests for the Shifts module.
-
----
-
-## Priority 3: Booking Core
-
-The main functionality of the application.
-
-### 3.1: Availability Module
-- [ ] Implement the `GET /availability/slots` service and endpoint.
-- [ ] Ensure timezone calculations are handled correctly based on `salon.settings.timeZone`.
-- [ ] Write E2E tests for availability logic with various scenarios (considering shifts, existing bookings, and service durations).
-
-### 3.2: Bookings Module (Panel)
-- [ ] Implement `POST /bookings` to create a new booking from the admin panel.
-- [ ] **Crucial:** Implement booking overlap check within a database transaction to prevent race conditions.
-- [ ] Implement other booking management endpoints (`GET`, `PATCH`, `cancel`, `complete`, `no-show`).
-- [x] Write E2E tests for creating bookings (including overlap prevention) and changing booking statuses.
+### 2.3 Settings Module
+- [ ] Implement `GET /salons/:salonId/settings` (Fetch current configuration).
+- [ ] Implement `PATCH /salons/:salonId/settings` (Update timezone, work hours, online booking toggles).
 
 ---
 
-## Priority 4: Public Flow & Payments
+## 3. Infrastructure & Stabilization
 
-Opening up the system for online customers.
+### 3.1 Testing Environment
+- [ ] Fix pre-existing TypeScript errors in the test suite.
+- [ ] Resolve Docker/Prisma permission issues in the CI pipeline.
+- [ ] Achieve >80% code coverage for core business logic (Bookings, Availability, Payments).
 
-### 4.1: Public Booking Module
-- [ ] Implement public-facing endpoints (`GET /public/.../services`, `GET /public/.../availability`).
-- [ ] Implement `POST /public/.../bookings` for online booking.
-- [ ] **Crucial:** Implement `Idempotency-Key` handling for the online booking endpoint to prevent duplicate bookings.
-- [x] Write E2E tests for the entire public booking flow.
-
-### 4.2: Payments Module
-- [ ] Implement `POST /bookings/{bookingId}/payments` endpoint.
-- [ ] Implement the logic to update `Booking.paymentState` atomically after a payment is recorded.
-- [ ] Write E2E tests for recording payments and verifying the `paymentState` update.
+### 3.2 Error Handling & Logging
+- [ ] Ensure all 5xx errors are sanitized in production.
+- [ ] Implement audit logging for sensitive actions (e.g., manual payment overrides, booking cancellations).
 
 ---
 
-## Priority 5: Secondary Features (Post-MVP)
+## 4. CMS & Public Site
 
-These features can be developed after the core MVP is stable.
+### 4.1 Public Routes
+- [ ] Verify all public routes (`/public/salons/:salonSlug/...`) are correctly enforcing `salonSlug` and `isActive` checks.
+- [ ] Ensure SEO metadata is correctly served for each page.
 
-- [ ] Customers Module (CRM)
-- [ ] Reviews Module
-- [ ] Commission Module
-- [ ] CMS / Site Builder Module
+### 4.2 Media Management
+- [ ] Implement secure file upload logic for salon logos and gallery images.
+- [ ] Implement image resizing/thumbnail generation.
+
+---
+
+## 5. Post-MVP (Phase 2)
+- [ ] **Commissions Module**: Full implementation of calculation and payout tracking.
+- [ ] **Notifications**: SMS/WhatsApp reminders for bookings.
+- [ ] **Advanced Analytics**: Revenue reporting and staff performance tracking.
