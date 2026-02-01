@@ -174,7 +174,7 @@ describe('Customer Routes', () => {
     });
   });
 
-  describe('PUT /api/v1/salons/:salonId/customers/:customerId', () => {
+  describe('PATCH /api/v1/salons/:salonId/customers/:customerId', () => {
     it('should update a customer and return 200', async () => {
        const newCustomer = {
         phone: '09351112233',
@@ -192,7 +192,7 @@ describe('Customer Routes', () => {
       };
 
       const res = await request(app)
-        .put(`/api/v1/salons/${salon.id}/customers/${customerId}`)
+        .patch(`/api/v1/salons/${salon.id}/customers/${customerId}`)
         .set('Authorization', `Bearer ${receptionistToken}`)
         .send(updatePayload);
 
