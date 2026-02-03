@@ -1,6 +1,6 @@
 
 // src/types/express.d.ts
-import { UserRole } from '@prisma/client';
+import { SessionActorType, UserRole } from '@prisma/client';
 import { Request } from 'express';
 
 // Extend the Express Request interface to include our custom properties
@@ -12,6 +12,7 @@ declare global {
         actorId?: string;
         role?: UserRole;
         salonId?: string;
+        actorType?: SessionActorType;
       };
       salonId?: string; // salonId is added by various middlewares for panel routes
       id?: string;
@@ -28,6 +29,7 @@ export interface AppRequest extends Request {
     actorId?: string;
     role?: UserRole;
     salonId?: string;
+    actorType: SessionActorType;
   };
   tenant: { salonId: string };
 }

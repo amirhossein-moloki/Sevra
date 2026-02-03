@@ -6,7 +6,7 @@ import { tenantGuard } from '../../common/middleware/tenantGuard';
 import { requireRole } from '../../common/middleware/requireRole';
 import { validate } from '../../common/middleware/validate';
 import { UserRole } from '@prisma/client';
-import { asyncHandler } from '../../common/utils/asyncHandler';
+import { asyncHandler } from '../../common/middleware/asyncHandler';
 import {
   upsertPolicySchema,
   listCommissionsQuerySchema,

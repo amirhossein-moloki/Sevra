@@ -81,7 +81,9 @@ export const updateBooking = async (
   const booking = await bookingsService.updateBooking(
     req.params.bookingId,
     req.tenant.salonId,
-    req.body
+    req.body,
+    req.actor,
+    { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
   res.status(httpStatus.OK).json({
     success: true,
@@ -116,7 +118,8 @@ export const cancelBooking = async (
     req.params.bookingId,
     req.tenant.salonId,
     req.actor,
-    req.body
+    req.body,
+    { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
   res.status(httpStatus.OK).json({
     success: true,
@@ -133,7 +136,8 @@ export const completeBooking = async (
   const booking = await bookingsService.completeBooking(
     req.params.bookingId,
     req.tenant.salonId,
-    req.actor
+    req.actor,
+    { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
   res.status(httpStatus.OK).json({
     success: true,
@@ -150,7 +154,8 @@ export const markAsNoShow = async (
   const booking = await bookingsService.markAsNoShow(
     req.params.bookingId,
     req.tenant.salonId,
-    req.actor
+    req.actor,
+    { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
   res.status(httpStatus.OK).json({
     success: true,

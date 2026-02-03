@@ -1,15 +1,21 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import * as userService from './users.service';
 import { CreateUserInput, UpdateUserInput } from './users.validators';
+import { AppRequest } from '../../types/express';
 
 export const createUserController = async (
-  req: Request<{ salonId: string }, {}, CreateUserInput>,
+  req: AppRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { salonId } = req.params;
-    const newUser = await userService.createStaffMember(salonId, req.body);
+    const newUser = await userService.createStaffMember(
+      salonId,
+      req.body,
+      req.actor,
+      { ip: req.ip, userAgent: req.headers['user-agent'] }
+    );
     res.status(201).json({ success: true, data: newUser });
   } catch (error) {
     next(error);
@@ -17,13 +23,18 @@ export const createUserController = async (
 };
 
 export const deleteUserController = async (
-  req: Request<{ salonId: string; userId: string }>,
+  req: AppRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { salonId, userId } = req.params;
-    await userService.deleteStaffMember(salonId, userId);
+    await userService.deleteStaffMember(
+      salonId,
+      userId,
+      req.actor,
+      { ip: req.ip, userAgent: req.headers['user-agent'] }
+    );
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -31,7 +42,7 @@ export const deleteUserController = async (
 };
 
 export const getUsersController = async (
-  req: Request<{ salonId: string }>,
+  req: AppRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -45,7 +56,7 @@ export const getUsersController = async (
 };
 
 export const getUserController = async (
-  req: Request<{ salonId: string, userId: string }>,
+  req: AppRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -59,7 +70,7 @@ export const getUserController = async (
 };
 
 export const updateUserController = async (
-  req: Request<{ salonId: string; userId: string }, {}, UpdateUserInput>,
+  req: AppRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -68,7 +79,9 @@ export const updateUserController = async (
     const updatedUser = await userService.updateStaffMember(
       salonId,
       userId,
-      req.body
+      req.body,
+      req.actor,
+      { ip: req.ip, userAgent: req.headers['user-agent'] }
     );
     res.status(200).json({ success: true, data: updatedUser });
   } catch (error) {
