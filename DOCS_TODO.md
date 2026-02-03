@@ -84,13 +84,20 @@
 * [x] `GET /public/salons/:salonSlug/pages/:pageSlug` - صفحات پویا
 * [x] `POST /salons/:salonId/media/upload` - آپلود تصویر
 
+### ۳.۹ ماژول‌های تکمیلی (Remaining Modules)
+
+* [ ] `GET /public/salons/:salonSlug/availability` - بررسی ظرفیت خالی
+* [ ] `GET /salons/:salonId/audit-logs` - گزارش وقایع (Audit)
+* [ ] `GET /salons/:salonId/reviews` - مدیریت نظرات
+* [ ] `POST /webhooks/zarinpal` - وب‌هوک پرداخت
+
 ---
 
 ## ۴. اولویت‌بندی اجرا
 
-1. **اولویت بالا:** Auth، Public Bookings، Availability (انجام شد)
+1. **اولویت بالا:** Auth، Public Bookings، Availability (Availability در حال تکمیل)
 2. **اولویت متوسط:** Salon Management، Services، Staff (انجام شد)
-3. **اولویت پایین:** Audit Logs، CMS، Webhooks (بخشی انجام شد)
+3. **اولویت پایین:** Audit Logs، CMS، Webhooks (در حال تکمیل)
 
 ---
 
