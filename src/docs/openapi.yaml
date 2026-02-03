@@ -1,0 +1,187 @@
+openapi: 3.0.0
+info:
+  title: Sevra API
+  description: API Documentation for Sevra Beauty Salon Management System
+  version: 1.0.0
+  contact:
+    name: Sevra Support
+    email: support@sevra.com
+
+servers:
+  - url: /api/v1
+    description: V1 API
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Detailed error message"
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+
+    Success:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        phone:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, MANAGER, STAFF, CUSTOMER]
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      tags:
+        - System
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /auth/user/otp/request:
+    post:
+      summary: Request OTP for User
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+              properties:
+                phone:
+                  type: string
+                  example: "09123456789"
+      responses:
+        '200':
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /auth/user/otp/verify:
+    post:
+      summary: Verify OTP and get Token
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - code
+              properties:
+                phone:
+                  type: string
+                  example: "09123456789"
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/login:
+    post:
+      summary: Classic Login (Email/Password)
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - actorType
+              properties:
+                phone:
+                  type: string
+                password:
+                  type: string
+                actorType:
+                  type: string
+                  enum: [USER, SYSTEM_ADMIN]
+                salonId:
+                  type: string
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/me:
+    get:
+      summary: Get current user info
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
