@@ -9,9 +9,12 @@
     "lint": "eslint . --ext .ts",
     "test": "cross-env NODE_ENV=test dotenv -e .env.test -- bash -c 'sudo docker compose up -d db && sleep 2 && sudo -E npx prisma migrate reset --force && jest --runInBand --detectOpenHandles'",
     "test:unit": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --testPathIgnorePatterns=e2e",
-    "test:e2e": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --testPathPattern=e2e --runInBand"
+    "test:e2e": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --testPathPattern=e2e --runInBand",
+    "test:coverage": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --coverage --runInBand"
   },
   "dependencies": {
+    "@sentry/node": "^10.38.0",
+    "@sentry/profiling-node": "^10.38.0",
     "argon2": "^0.44.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",

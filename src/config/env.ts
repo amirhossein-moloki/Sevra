@@ -76,6 +76,11 @@ const EnvSchema = z.object({
   MEDIA_S3_BUCKET: z.string().optional(),
   MEDIA_S3_REGION: z.string().optional(),
   MEDIA_S3_UPLOAD_URL_TEMPLATE: z.string().optional(),
+
+  // Sentry
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_ENABLED: z.preprocess(toBool, z.boolean()).default(false),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(1.0),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

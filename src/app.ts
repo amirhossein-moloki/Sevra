@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -8,6 +10,18 @@ import { v4 as uuidv4 } from 'uuid';
 import routes from './routes';
 import { errorHandler } from './common/errors/errorHandler';
 import { responseMiddleware } from './common/middleware/response';
+import { env } from './config/env';
+
+if (env.SENTRY_ENABLED && env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: env.SENTRY_DSN,
+    integrations: [
+      nodeProfilingIntegration(),
+    ],
+    tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE,
+    environment: env.NODE_ENV,
+  });
+}
 
 const app = express();
 
@@ -40,6 +54,10 @@ const swaggerDocument = YAML.load(path.join(__dirname, 'docs/openapi.yaml'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use('/api/v1', routes);
+
+if (env.SENTRY_ENABLED && env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 app.use(errorHandler);
 
