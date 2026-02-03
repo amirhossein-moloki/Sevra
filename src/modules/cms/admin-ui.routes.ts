@@ -240,15 +240,15 @@ cmsAdminUiRouter.get('/salons/:salonId/pages', (req, res) => {
         }
         stateMessage.hidden = false;
         stateMessage.innerHTML = isError
-          ? `<strong>Unable to load pages</strong>${message}`
-          : `<strong>No pages found</strong>${message}`;
+          ? \`<strong>Unable to load pages</strong>\${message}\`
+          : \`<strong>No pages found</strong>\${message}\`;
         stateMessage.classList.toggle('error', isError);
       };
 
       const updatePagination = () => {
         const currentPage = Math.floor(offset / limit) + 1;
         const totalPages = Math.max(1, Math.ceil(total / limit));
-        paginationSummary.textContent = `Page ${currentPage} of ${totalPages} • ${total} total`;
+        paginationSummary.textContent = \`Page \${currentPage} of \${totalPages} • \${total} total\`;
         prevButton.disabled = offset === 0;
         nextButton.disabled = offset + limit >= total;
       };
@@ -257,14 +257,14 @@ cmsAdminUiRouter.get('/salons/:salonId/pages', (req, res) => {
         pagesBody.innerHTML = '';
         pages.forEach((page) => {
           const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${page.title ?? '-'}</td>
-            <td>${page.slug ?? '-'}</td>
-            <td>${page.type ?? '-'}</td>
-            <td><span class="badge">${page.status ?? '-'}</span></td>
-            <td>${page.updatedAt ? new Date(page.updatedAt).toLocaleString() : '-'}</td>
-            <td><a class="link-button" href="/api/v1/admin/salons/${salonId}/pages/${page.id}">Edit</a></td>
-          `;
+          row.innerHTML = \`
+            <td>\${page.title ?? '-'}</td>
+            <td>\${page.slug ?? '-'}</td>
+            <td>\${page.type ?? '-'}</td>
+            <td><span class="badge">\${page.status ?? '-'}</span></td>
+            <td>\${page.updatedAt ? new Date(page.updatedAt).toLocaleString() : '-'}</td>
+            <td><a class="link-button" href="/api/v1/admin/salons/${salonId}/pages/\${page.id}">Edit</a></td>
+          \`;
           pagesBody.appendChild(row);
         });
       };
@@ -283,9 +283,9 @@ cmsAdminUiRouter.get('/salons/:salonId/pages', (req, res) => {
         if (token) saveToken();
 
         try {
-          const response = await fetch(`/api/v1/salons/${salonId}/pages?${params}`,
+          const response = await fetch(\`/api/v1/salons/${salonId}/pages?\${params}\`,
             {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
+              headers: token ? { Authorization: \`Bearer \${token}\` } : {},
             }
           );
           if (!response.ok) {
@@ -305,7 +305,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages', (req, res) => {
           statusText.textContent = 'Loaded';
         } catch (error) {
           setState({
-            message: `${error instanceof Error ? error.message : 'Unexpected error.'}`,
+            message: \`\${error instanceof Error ? error.message : 'Unexpected error.'}\`,
             isError: true,
           });
           statusText.textContent = 'Failed to load.';
@@ -895,7 +895,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
           button.classList.toggle('active', button.dataset.tab === tabName);
         });
         panels.forEach((panel) => {
-          panel.classList.toggle('active', panel.id === `tab-${tabName}`);
+          panel.classList.toggle('active', panel.id === \`tab-\${tabName}\`);
         });
       };
 
@@ -918,7 +918,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       };
 
       const pushError = (errors, path, message) => {
-        errors.push(`${path}: ${message}`);
+        errors.push(\`\${path}: \${message}\`);
       };
 
       const validateRequiredString = (value, path, errors) => {
@@ -941,13 +941,13 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
 
       const validateRichTextBlock = (block, index, errors) => {
         if (!block || typeof block !== 'object') {
-          pushError(errors, `blocks[${index}]`, 'Block is required.');
+          pushError(errors, \`blocks[\${index}]\`, 'Block is required.');
           return;
         }
-        validateRequiredString(block.type, `blocks[${index}].type`, errors);
-        validateRequiredString(block.text, `blocks[${index}].text`, errors);
+        validateRequiredString(block.type, \`blocks[\${index}].type\`, errors);
+        validateRequiredString(block.text, \`blocks[\${index}].text\`, errors);
         if (!block.allowHtml && htmlTagRegex.test(block.text ?? '')) {
-          pushError(errors, `blocks[${index}].text`, 'HTML is not allowed.');
+          pushError(errors, \`blocks[\${index}].text\`, 'HTML is not allowed.');
         }
       };
 
@@ -962,7 +962,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       const validateSection = (type, data) => {
         const entry = sectionRegistry[type];
         if (!entry || typeof entry.validate !== 'function') {
-          return [`${type}: Unsupported section type.`];
+          return [\`\${type}: Unsupported section type.\`];
         }
         return entry.validate(data, validationHelpers);
       };
@@ -1023,7 +1023,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
 
       const syncSectionData = (section, metaEl, errorsEl) => {
         section.dataJson = JSON.stringify(section.data ?? {}, null, 2);
-        metaEl.textContent = `Position ${section.sortOrder + 1} • ${section.dataJson.length} chars`;
+        metaEl.textContent = \`Position \${section.sortOrder + 1} • \${section.dataJson.length} chars\`;
         const errors = validateSection(section.type, section.data);
         errorsEl.innerHTML = '';
         if (errors.length === 0) {
@@ -1050,7 +1050,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
             block.className = 'editor-block';
             const header = document.createElement('div');
             header.className = 'editor-block-header';
-            header.textContent = `Item ${index + 1}`;
+            header.textContent = \`Item \${index + 1}\`;
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
             removeButton.textContent = 'Remove';
@@ -1150,7 +1150,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
           title.textContent = section.type;
           const meta = document.createElement('div');
           meta.className = 'section-meta';
-          meta.textContent = `Position ${section.sortOrder + 1} • ${section.dataJson?.length ?? 0} chars`;
+          meta.textContent = \`Position \${section.sortOrder + 1} • \${section.dataJson?.length ?? 0} chars\`;
           content.appendChild(title);
           content.appendChild(meta);
           const toggleLabel = document.createElement('label');
@@ -1226,14 +1226,14 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       const buildModal = () => {
         const modalBackdrop = document.createElement('div');
         modalBackdrop.className = 'modal-backdrop';
-        modalBackdrop.innerHTML = `
+        modalBackdrop.innerHTML = \`
           <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addSectionTitle">
             <h3 id="addSectionTitle">Add a section</h3>
             <p>Select a section type to add with a starter template.</p>
             <div>
               <label for="sectionTypeSelect">Section type</label>
               <select id="sectionTypeSelect">
-                ${sectionTypes.map((type) => `<option value="${type}">${type}</option>`).join('')}
+                \${sectionTypes.map((type) => \`<option value="\${type}">\${type}</option>\`).join('')}
               </select>
             </div>
             <div class="actions">
@@ -1241,7 +1241,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
               <button type="button" class="primary" id="confirmAddSection">Add section</button>
             </div>
           </div>
-        `;
+        \`;
         document.body.appendChild(modalBackdrop);
 
         const closeModal = () => {
@@ -1311,7 +1311,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
 
         try {
           const response = await fetch('/api/v1/salons/${salonId}/pages/${pageId}', {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            headers: token ? { Authorization: \`Bearer \${token}\` } : {},
           });
           if (!response.ok) {
             const errorText = await response.text();
@@ -1321,7 +1321,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
           populateForm(payload.data);
           setStatus('Loaded');
         } catch (error) {
-          setStatus(`Failed to load page: ${error instanceof Error ? error.message : 'Unexpected error.'}`);
+          setStatus(\`Failed to load page: \${error instanceof Error ? error.message : 'Unexpected error.'}\`);
         }
       };
 
@@ -1405,7 +1405,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
           setPreviewStatus('Preview updated.');
         } catch (error) {
           setPreviewStatus(
-            `Preview failed: ${error instanceof Error ? error.message : 'Unexpected error.'}`,
+            \`Preview failed: \${error instanceof Error ? error.message : 'Unexpected error.'}\`,
           );
         }
       };
@@ -1419,7 +1419,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              ...(token ? { Authorization: \`Bearer \${token}\` } : {}),
             },
             body: JSON.stringify(buildPayload()),
           });
@@ -1431,7 +1431,7 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
           populateForm(payload.data);
           setStatus('Saved');
         } catch (error) {
-          setStatus(`Save failed: ${error instanceof Error ? error.message : 'Unexpected error.'}`);
+          setStatus(\`Save failed: \${error instanceof Error ? error.message : 'Unexpected error.'}\`);
         }
       };
 

@@ -30,6 +30,7 @@ import {
   publicReviewsRouter,
 } from '../modules/reviews/reviews.routes';
 import { settingsRouter } from '../modules/settings/settings.routes';
+import { resolveSalonBySlug } from '../common/middleware/resolveSalonBySlug';
 
 const router = Router();
 
