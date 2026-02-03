@@ -1,82 +1,65 @@
-# Sevra Project - Development Roadmap & TODO
+# Sevra Project - Development Roadmap & TODO (Production-Ready)
 
-This document tracks the progress and remaining tasks for the Sevra salon management system.
+این سند نقشه راه پروژه Sevra را برای رسیدن به سطح **Level 4 (Production-Ready)** ترسیم می‌کند.
 
-## 1. Completed Modules (MVP Core) ✅
+## ۱. ارزیابی فعلی کیفیت نرم‌افزار (Software Quality Assessment)
 
-### 1.1 Core Infrastructure
-- [x] Timezone-aware availability and booking logic.
-- [x] Multi-tenant isolation (SalonId middleware).
-- [x] Global error handling with 5xx sanitization.
-- [x] Real ZarinPal payment integration (v4).
-- [x] Idempotency middleware for critical endpoints.
+| شاخص | وضعیت | نمره (۱-۵) | توضیحات |
+| :--- | :--- | :---: | :--- |
+| **معماری** | MVP | ۳ | ساختار ماژولار و استفاده از الگوی Controller-Service-Repository به صورت نسبی (Inconsistent). جداسازی مسئولیت‌ها در اکثر موارد رعایت شده است. |
+| **کدنویسی** | High Quality | ۴ | استفاده از TypeScript Strict Mode، Zod برای اعتبار‌سنجی و پینو برای لاگینگ. استانداردها به خوبی رعایت شده‌اند. |
+| **تست** | Basic | ۲ | تست‌های واحد و E2E برای عملکردهای حیاتی (رزرو، همزمانی) وجود دارد، اما پوشش کلی (Coverage) پایین است. |
+| **امنیت** | Solid | ۳ | RBAC، سیستم Idempotency، پاکسازی PII در لاگ‌ها و مدیریت خطای امن پیاده‌سازی شده‌اند. بخش Audit Log نیاز به تکمیل دارد. |
+| **زیرساخت** | Ready for Scale | ۳ | CI/CD اولیه با GitHub Actions و لاگینگ ساختاریافته وجود دارد. نیاز به Monitoring و بهبود پایداری پایپلاین تست. |
+| **عملکرد** | Functional | ۳ | محدودسازی نرخ (Rate Limiting) و مدیریت همزمانی در سطح دیتابیس انجام شده است. نیاز به Caching لایه سرویس. |
+| **مستندسازی** | Minimal | ۲ | مستندات README و TODO وجود دارند اما OpenAPI/Swagger ناقص است. |
 
-### 1.2 Business Modules
-- [x] **Bookings**: Create, Update, Cancel, Complete, No-show.
-- [x] **Availability**: Shift-based slot calculation.
-- [x] **Customers (CRM)**: Global account and salon-specific profiles.
-- [x] **Settings**: Salon configuration, work hours, and online booking toggles.
-- [x] **Reviews**: Public submissions and moderation.
-- [x] **CMS**: Page builder, SEO metadata, and Media management (uploads/resizing).
+**سطح فعلی پروژه: Level 3 (MVP)**
 
 ---
 
-## 2. High Priority Remaining Tasks (Stabilization) 🚀
+## ۲. لیست TODO برای رسیدن به Production-Ready
 
-### 2.1 Audit Logging (Security & Accountability)
-- [ ] **Prisma Schema Update**: Add `AuditLog` model to track `actorId`, `action`, `entity`, `entityId`, `oldData`, `newData`.
-- [ ] **AuditService**: Implement a centralized service to record sensitive events.
-- [ ] **Instrumentation**:
-    - [ ] Log booking cancellations and manual price overrides.
-    - [ ] Log staff role changes and access modifications.
-    - [ ] Log salon settings and payment policy changes.
-- [ ] **API**: `GET /salons/:salonId/audit-logs` (Restricted to MANAGER).
+### a. معماری و ساختار کد (High Priority)
+- [ ] **یکپارچه‌سازی لایه Repository**: انتقال تمامی کوئری‌های Prisma به فایل‌های `.repo.ts` برای تمام ماژول‌ها جهت بهبود تست‌پذیری و قابلیت نگهداری.
+- [ ] **الگوی Unit of Work**: پیاده‌سازی مکانیزم تراکنش‌های پیچیده به صورت متمرکز در سرویس‌ها بدون وابستگی مستقیم به Prisma Client در منطق تجاری.
+- [ ] **بهبود سیستم Dependency Injection**: بررسی استفاده از یک IoC Container ساده برای مدیریت طول عمر سرویس‌ها (توصیه شده برای Scale بالا).
 
-### 2.2 Notification Service (Real SMS)
-- [ ] **Environment Setup**: Configure `SMSIR_API_KEY` and `SMSIR_LINE_NUMBER`.
-- [ ] **SmsService Implementation**: Replace mocks with real calls to `smsir-js`.
-- [ ] **Template Management**: Define and map Template IDs for:
-    - [ ] OTP Verification.
-    - [ ] Booking Confirmation (Customer & Staff).
-    - [ ] Booking Cancellation.
-    - [ ] Appointment Reminders (scheduled tasks).
-- [ ] **Notification Orcherstration**: Create `NotificationService` to handle multi-channel logic (SMS, later WhatsApp/Email).
+### b. تست و پوشش تست (High Priority)
+- [ ] **افزایش Coverage به ۸۰٪+**: تمرکز روی تست‌های واحد برای `CommissionsService` و `AvailabilityService`.
+- [ ] **تست‌های نفوذ خودکار**: اضافه کردن ابزارهای اسکن امنیتی در پایپلاین CI/CD.
+- [ ] **Load Testing**: انجام تست فشار روی اندپوینت‌های عمومی (Public Booking) برای شناسایی Bottleneckها.
 
-### 2.3 Analytics & Reporting
-- [ ] **AnalyticsService**: Implement aggregation logic for business metrics.
-- [ ] **Revenue Reports**:
-    - [ ] Total revenue summary (Paid vs. Pending).
-    - [ ] Revenue by Service category.
-    - [ ] Revenue by Staff member.
-- [ ] **Performance Metrics**:
-    - [ ] Staff booking completion vs. cancellation rates.
-    - [ ] Staff average rating from reviews.
-- [ ] **Endpoints**:
-    - [ ] `GET /salons/:salonId/analytics/summary`
-    - [ ] `GET /salons/:salonId/analytics/revenue`
-    - [ ] `GET /salons/:salonId/analytics/staff`
+### c. امنیت و احراز هویت (Critical)
+- [ ] **تکمیل سیستم Audit Logging**: پیاده‌سازی کامل سرویس ثبت وقایع حساس (تغییر نقش، لغو رزرو، تغییر قیمت) با استفاده از مدل موجود در دیتابیس.
+- [ ] **Refresh Token Rotation**: پیاده‌سازی مکانیزم چرخش توکن برای امنیت بیشتر سشن‌ها.
+- [ ] **مدیریت Secrets**: انتقال تمامی کلیدهای حساس به یک Secret Manager (مانند AWS Secrets Manager یا HashiCorp Vault) در محیط تولید.
 
----
+### d. زیرساخت و CI/CD (Medium Priority)
+- [ ] **مانیتورینگ و APM**: یکپارچه‌سازی با ابزارهایی مانند Sentry (برای خطاها) و Prometheus/Grafana (برای متریک‌ها).
+- [ ] **تثبیت محیط تست**: حل مشکل Docker-in-Docker در CI و جداسازی کامل محیط تست از دیتابیس توسعه.
+- [ ] **Backups**: پیاده‌سازی استراتژی پشتیبان‌گیری خودکار از دیتابیس (Daily Off-site Backups).
 
-## 3. Quality Assurance & Testing 🧪
+### e. عملکرد و بهینه‌سازی (Medium Priority)
+- [ ] **لایه Caching (Redis)**: پیاده‌سازی کش برای اطلاعات سالن‌ها و سرویس‌ها در اندپوینت‌های عمومی برای کاهش بار دیتابیس.
+- [ ] **بهینه‌سازی کوئری‌ها**: بررسی و اضافه کردن ایندکس‌های لازم برای گزارش‌های تحلیلی سنگین.
+- [ ] **Image Optimization**: بهبود لایه آپلود تصاویر با استفاده از CDN و فرمت‌های مدرن مانند WebP.
 
-### 3.1 Test Coverage
-- [ ] **Unit Tests**:
-    - [ ] Increase coverage for `CommissionsService` (calculation edge cases).
-    - [ ] Add tests for `AnalyticsService` data aggregations.
-- [ ] **E2E Tests**:
-    - [ ] Full lifecycle: Public Booking -> Payment -> Webhook -> Commission -> Completion.
-    - [ ] Audit log verification for sensitive actions.
-    - [ ] Multi-tenant data leakage prevention tests.
+### f. مستندسازی و مانیتورینگ (High Priority)
+- [ ] **تکمیل OpenAPI/Swagger**: ارائه مستندات تعاملی برای API جهت استفاده توسعه‌دهندگان فرانت‌هند و شرکا.
+- [ ] **مستندات استقرار (Deployment Guide)**: تدوین راهنمای گام‌به‌گام برای راه‌اندازی پروژه در محیط‌های مختلف (Staging/Production).
 
-### 3.2 CI/CD Improvements
-- [ ] Resolve Docker-in-Docker permission issues for Prisma migrations in CI.
-- [ ] Implement automated code coverage reporting.
+### g. UX و قابلیت توسعه (Low Priority)
+- [ ] **Webhooks برای مشتریان**: امکان ارسال ایونت‌های بیزینسی به سیستم‌های خارجی.
+- [ ] **سیستم قالب‌بندی ایمیل/SMS**: جداسازی منطق پیام‌ها از کد (Template Management).
 
 ---
 
-## 4. Post-MVP (Phase 2) 🛠️
-- [ ] **WhatsApp Integration**: Official API integration for richer notifications.
-- [ ] **Inventory Management**: Track salon products and stock levels.
-- [ ] **Mobile App**: PWA or Native app for staff management.
-- [ ] **Advanced SEO**: Automated sitemap generation and schema.org enhancements.
+## ۳. خلاصه نهایی و اولویت‌های آنی
+
+*   **سطح فعلی پروژه**: Level 3 (MVP)
+*   **درصد تکمیل برای Production-Ready**: ۷۰٪
+*   **۳ اولویت برتر (بیشترین تاثیر)**:
+    1.  **Audit Logging**: برای شفافیت و امنیت عملیات مالی و مدیریتی.
+    2.  **Infrastructure Stability**: حل مشکلات CI و اضافه کردن Monitoring حرفه‌ای.
+    3.  **Test Coverage**: تضمین عدم بروز Regression در هنگام توسعه فیچرهای جدید.
