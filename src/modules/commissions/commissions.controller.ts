@@ -22,7 +22,12 @@ export const upsertPolicy = async (
   res: Response,
   _next: NextFunction
 ) => {
-  const policy = await commissionsService.upsertPolicy(req.tenant.salonId, req.body);
+  const policy = await commissionsService.upsertPolicy(
+    req.tenant.salonId,
+    req.body,
+    req.actor,
+    { ip: req.ip, userAgent: req.headers['user-agent'] }
+  );
   res.status(httpStatus.OK).json({
     success: true,
     data: policy,
@@ -51,7 +56,9 @@ export const recordPayment = async (
   const payment = await commissionsService.recordPayment(
     req.params.commissionId,
     req.tenant.salonId,
-    req.body
+    req.body,
+    req.actor,
+    { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
   res.status(httpStatus.CREATED).json({
     success: true,

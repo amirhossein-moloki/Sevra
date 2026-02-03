@@ -31,6 +31,7 @@ import {
 } from '../modules/reviews/reviews.routes';
 import { settingsRouter } from '../modules/settings/settings.routes';
 import { commissionsRoutes } from '../modules/commissions/commissions.routes';
+import auditRoutes from '../modules/audit/audit.routes';
 import { resolveSalonBySlug } from '../common/middleware/resolveSalonBySlug';
 
 const router = Router();
@@ -80,6 +81,9 @@ router.use('/salons/:salonId/settings', settingsRouter);
 
 // --- Commissions Module Routes ---
 router.use('/salons/:salonId/commissions', commissionsRoutes);
+
+// --- Audit Module Routes ---
+router.use('/salons/:salonId/audit-logs', auditRoutes);
 
 // --- Payments Module Routes ---
 router.use('/salons/:salonId/bookings', paymentsRoutes); // This will be scoped within the booking

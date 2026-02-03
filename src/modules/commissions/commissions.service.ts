@@ -1,10 +1,11 @@
 
-import { BookingSource, CommissionStatus, CommissionType, CommissionPaymentStatus, Prisma } from '@prisma/client';
+import { BookingSource, CommissionStatus, CommissionType, CommissionPaymentStatus, Prisma, SessionActorType } from '@prisma/client';
 import { CommissionsRepo } from './commissions.repo';
 import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { ListCommissionsQuery, RecordCommissionPaymentInput, UpsertPolicyInput } from './commissions.validators';
+import { auditService } from '../audit/audit.service';
 
 export const commissionsService = {
   async getPolicy(salonId: string) {
@@ -15,7 +16,14 @@ export const commissionsService = {
     return policy;
   },
 
-  async upsertPolicy(salonId: string, input: UpsertPolicyInput) {
+  async upsertPolicy(
+    salonId: string,
+    input: UpsertPolicyInput,
+    actor: { id: string; actorType: SessionActorType },
+    context?: { ip?: string; userAgent?: string }
+  ) {
+    const existingPolicy = await CommissionsRepo.findPolicyBySalonId(salonId);
+
     const data: Prisma.SalonCommissionPolicyCreateInput = {
       type: input.type,
       percentBps: input.percentBps,
@@ -27,7 +35,22 @@ export const commissionsService = {
       salon: { connect: { id: salonId } },
     };
 
-    return CommissionsRepo.upsertPolicy(salonId, data);
+    const policy = await CommissionsRepo.upsertPolicy(salonId, data);
+
+    await auditService.recordLog({
+      salonId,
+      actorId: actor.id,
+      actorType: actor.actorType,
+      action: 'COMMISSION_POLICY_UPSERT',
+      entity: 'SalonCommissionPolicy',
+      entityId: policy.id,
+      oldData: existingPolicy,
+      newData: policy,
+      ipAddress: context?.ip,
+      userAgent: context?.userAgent,
+    });
+
+    return policy;
   },
 
   async calculateCommission(bookingId: string) {
@@ -118,7 +141,13 @@ export const commissionsService = {
     };
   },
 
-  async recordPayment(commissionId: string, salonId: string, input: RecordCommissionPaymentInput) {
+  async recordPayment(
+    commissionId: string,
+    salonId: string,
+    input: RecordCommissionPaymentInput,
+    actor: { id: string; actorType: SessionActorType },
+    context?: { ip?: string; userAgent?: string }
+  ) {
     return prisma.$transaction(async (tx) => {
       const commission = await tx.bookingCommission.findFirst({
         where: { id: commissionId, salonId }
@@ -138,6 +167,18 @@ export const commissionsService = {
           referenceCode: input.referenceCode,
           paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
         }
+      });
+
+      await auditService.recordLog({
+        salonId,
+        actorId: actor.id,
+        actorType: actor.actorType,
+        action: 'COMMISSION_PAYMENT_RECORD',
+        entity: 'CommissionPayment',
+        entityId: payment.id,
+        newData: payment,
+        ipAddress: context?.ip,
+        userAgent: context?.userAgent,
       });
 
       // If fully paid, update commission status

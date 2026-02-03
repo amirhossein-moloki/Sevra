@@ -1,12 +1,13 @@
 
 import { addMinutes, isBefore } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { Booking, BookingSource, BookingStatus, Prisma, UserRole } from '@prisma/client';
+import { Booking, BookingSource, BookingStatus, Prisma, SessionActorType, UserRole } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { getZonedStartAndEnd } from '../../common/utils/date';
 import { commissionsService } from '../commissions/commissions.service';
+import { auditService } from '../audit/audit.service';
 import {
   CancelBookingInput,
   CreateBookingInput,
@@ -336,7 +337,13 @@ export const bookingsService = {
     return booking;
   },
 
-  async updateBooking(bookingId: string, salonId: string, data: UpdateBookingInput) {
+  async updateBooking(
+    bookingId: string,
+    salonId: string,
+    data: UpdateBookingInput,
+    actor: { id: string; actorType: SessionActorType },
+    context?: { ip?: string; userAgent?: string }
+  ) {
     try {
       return await prisma.$transaction(async (tx) => {
         const booking = await tx.booking.findFirst({ where: { id: bookingId, salonId } });
@@ -482,10 +489,25 @@ export const bookingsService = {
           }
         }
 
-        return tx.booking.update({
+        const updatedBooking = await tx.booking.update({
           where: { id: bookingId },
           data: updateData,
         });
+
+        await auditService.recordLog({
+          salonId,
+          actorId: actor.id,
+          actorType: actor.actorType,
+          action: 'BOOKING_UPDATE',
+          entity: 'Booking',
+          entityId: bookingId,
+          oldData: booking,
+          newData: updatedBooking,
+          ipAddress: context?.ip,
+          userAgent: context?.userAgent,
+        });
+
+        return updatedBooking;
       }, {
         isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
       });
@@ -516,7 +538,13 @@ export const bookingsService = {
     });
   },
 
-  async cancelBooking(bookingId: string, salonId: string, actor: { id: string, role: UserRole }, data: CancelBookingInput) {
+  async cancelBooking(
+    bookingId: string,
+    salonId: string,
+    actor: { id: string; role: UserRole; actorType: SessionActorType },
+    data: CancelBookingInput,
+    context?: { ip?: string; userAgent?: string }
+  ) {
     if (actor.role === UserRole.STAFF) {
       throw new AppError('Forbidden.', httpStatus.FORBIDDEN);
     }
@@ -527,7 +555,7 @@ export const bookingsService = {
       throw new AppError('Invalid state transition: Booking cannot be canceled.', httpStatus.CONFLICT);
     }
 
-    return prisma.booking.update({
+    const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: BookingStatus.CANCELED,
@@ -536,9 +564,29 @@ export const bookingsService = {
         cancelReason: data.reason,
       },
     });
+
+    await auditService.recordLog({
+      salonId,
+      actorId: actor.id,
+      actorType: actor.actorType,
+      action: 'BOOKING_CANCEL',
+      entity: 'Booking',
+      entityId: bookingId,
+      oldData: booking,
+      newData: updatedBooking,
+      ipAddress: context?.ip,
+      userAgent: context?.userAgent,
+    });
+
+    return updatedBooking;
   },
 
-  async completeBooking(bookingId: string, salonId: string, actor: { id: string, role: UserRole }) {
+  async completeBooking(
+    bookingId: string,
+    salonId: string,
+    actor: { id: string; role: UserRole; actorType: SessionActorType },
+    context?: { ip?: string; userAgent?: string }
+  ) {
     if (actor.role === UserRole.STAFF) {
       throw new AppError('Forbidden.', httpStatus.FORBIDDEN);
     }
@@ -557,6 +605,19 @@ export const bookingsService = {
       },
     });
 
+    await auditService.recordLog({
+      salonId,
+      actorId: actor.id,
+      actorType: actor.actorType,
+      action: 'BOOKING_COMPLETE',
+      entity: 'Booking',
+      entityId: bookingId,
+      oldData: booking,
+      newData: updatedBooking,
+      ipAddress: context?.ip,
+      userAgent: context?.userAgent,
+    });
+
     // Trigger commission calculation
     await commissionsService.calculateCommission(bookingId).catch((err) => {
       console.error('Failed to calculate commission for booking:', bookingId, err);
@@ -565,7 +626,12 @@ export const bookingsService = {
     return updatedBooking;
   },
 
-  async markAsNoShow(bookingId: string, salonId: string, actor: { id: string, role: UserRole }) {
+  async markAsNoShow(
+    bookingId: string,
+    salonId: string,
+    actor: { id: string; role: UserRole; actorType: SessionActorType },
+    context?: { ip?: string; userAgent?: string }
+  ) {
     if (actor.role === UserRole.STAFF) {
       throw new AppError('Forbidden.', httpStatus.FORBIDDEN);
     }
@@ -576,12 +642,27 @@ export const bookingsService = {
       throw new AppError('Invalid state transition: Booking cannot be marked as no-show.', httpStatus.CONFLICT);
     }
 
-    return prisma.booking.update({
+    const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: BookingStatus.NO_SHOW,
         noShowAt: new Date(),
       },
     });
+
+    await auditService.recordLog({
+      salonId,
+      actorId: actor.id,
+      actorType: actor.actorType,
+      action: 'BOOKING_NOSHOW',
+      entity: 'Booking',
+      entityId: bookingId,
+      oldData: booking,
+      newData: updatedBooking,
+      ipAddress: context?.ip,
+      userAgent: context?.userAgent,
+    });
+
+    return updatedBooking;
   },
 };
