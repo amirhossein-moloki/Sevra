@@ -6,35 +6,35 @@
 
 ## ۱. وضعیت فعلی
 *   **فایل اصلی:** `src/docs/openapi.yaml`
-*   **میزان تکمیل:** ۰٪ (فایل فعلی خالی است)
+*   **میزان تکمیل:** ۱۵٪
 *   **آدرس دسترسی:** `/api-docs`
 
 ---
 
 ## ۲. اجزای عمومی مورد نیاز (General Components)
 قبل از تعریف اندپوینت‌ها، موارد زیر باید در `openapi.yaml` تعریف شوند:
-- [ ] ساختار پایه OpenAPI 3.0.0
-- [ ] تعریف Security Schemes (JWT Bearer Token)
-- [ ] تعریف مدل‌های داده‌ای مشترک (Common Schemas):
-    - [ ] `ErrorResponse`
-    - [ ] `Pagination`
-    - [ ] `Salon`
-    - [ ] `User`
-    - [ ] `Booking`
-    - [ ] `Service`
+- [x] ساختار پایه OpenAPI 3.0.0
+- [x] تعریف Security Schemes (JWT Bearer Token)
+- [x] تعریف مدل‌های داده‌ای مشترک (Common Schemas):
+    - [x] `ErrorResponse`
+    - [x] `Pagination`
+    - [x] `Salon`
+    - [x] `User`
+    - [x] `Booking`
+    - [x] `Service`
 
 ---
 
 ## ۳. چک‌لیست ماژول‌ها (Module Checklist)
 
 ### ۳.۱ ماژول احراز هویت (Auth)
-- [ ] `POST /auth/user/otp/request` - درخواست کد تایید
-- [ ] `POST /auth/user/otp/verify` - تایید کد و دریافت توکن
-- [ ] `POST /auth/user/login/otp` - ورود با کد یکبار مصرف
-- [ ] `POST /auth/login` - ورود کلاسیک (ایمیل/پسورد)
-- [ ] `POST /auth/refresh` - نوسازی توکن
-- [ ] `POST /auth/logout` - خروج
-- [ ] `GET /auth/me` - اطلاعات کاربر جاری
+- [x] `POST /auth/user/otp/request` - درخواست کد تایید
+- [x] `POST /auth/user/otp/verify` - تایید کد و دریافت توکن
+- [x] `POST /auth/user/login/otp` - ورود با کد یکبار مصرف
+- [x] `POST /auth/login` - ورود کلاسیک (ایمیل/پسورد)
+- [x] `POST /auth/refresh` - نوسازی توکن
+- [x] `POST /auth/logout` - خروج
+- [x] `GET /auth/me` - اطلاعات کاربر جاری
 
 ### ۳.۲ ماژول سالن‌ها (Salons)
 - [ ] `GET /salons` - لیست سالن‌ها (ادمین سیستم)

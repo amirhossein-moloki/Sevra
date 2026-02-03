@@ -19,18 +19,26 @@ components:
       bearerFormat: JWT
 
   schemas:
-    Error:
+    # --- Common Wrappers ---
+    ErrorResponse:
       type: object
       properties:
         success:
           type: boolean
           example: false
         error:
-          type: string
-          example: "Detailed error message"
-        code:
-          type: string
-          example: "VALIDATION_ERROR"
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Invalid request payload."
+            details:
+              type: object
+        meta:
+          $ref: '#/components/schemas/Meta'
 
     Success:
       type: object
@@ -40,36 +48,204 @@ components:
           example: true
         data:
           type: object
+        meta:
+          $ref: '#/components/schemas/Meta'
 
-    AuthResponse:
+    Meta:
       type: object
       properties:
-        success:
+        requestId:
+          type: string
+          example: "ckp1234567890"
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 100
+
+    # --- Domain Models ---
+    UserRole:
+      type: string
+      enum: [MANAGER, RECEPTIONIST, STAFF]
+
+    BookingStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, DONE, CANCELED, NO_SHOW]
+
+    BookingPaymentState:
+      type: string
+      enum: [UNPAID, PENDING, PARTIALLY_PAID, PAID, REFUNDED, OVERPAID, FAILED, CANCELED]
+
+    Salon:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        isActive:
           type: boolean
-        data:
-          type: object
-          properties:
-            accessToken:
-              type: string
-            refreshToken:
-              type: string
-            user:
-              $ref: '#/components/schemas/User'
+        description:
+          type: string
+        seoTitle:
+          type: string
+        seoDescription:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     User:
       type: object
       properties:
         id:
           type: string
+        salonId:
+          type: string
+        fullName:
+          type: string
         phone:
           type: string
-        firstName:
-          type: string
-        lastName:
-          type: string
         role:
+          $ref: '#/components/schemas/UserRole'
+        isActive:
+          type: boolean
+        isPublic:
+          type: boolean
+        publicName:
           type: string
-          enum: [ADMIN, MANAGER, STAFF, CUSTOMER]
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        phone:
+          type: string
+        fullName:
+          type: string
+        phoneVerifiedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+        salonId:
+          type: string
+        name:
+          type: string
+        durationMinutes:
+          type: integer
+        price:
+          type: integer
+        currency:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+        salonId:
+          type: string
+        customerProfileId:
+          type: string
+        customerAccountId:
+          type: string
+        serviceId:
+          type: string
+        staffId:
+          type: string
+        createdByUserId:
+          type: string
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/BookingStatus'
+        paymentState:
+          $ref: '#/components/schemas/BookingPaymentState'
+        amountDueSnapshot:
+          type: integer
+        currencySnapshot:
+          type: string
+        note:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # --- Auth Specific ---
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            tokens:
+              type: object
+              properties:
+                accessToken:
+                  type: string
+                refreshToken:
+                  type: string
+            user:
+              $ref: '#/components/schemas/User'
+            customer:
+              $ref: '#/components/schemas/Customer'
+        meta:
+          $ref: '#/components/schemas/Meta'
 
 paths:
   /health:
@@ -87,7 +263,8 @@ paths:
 
   /auth/user/otp/request:
     post:
-      summary: Request OTP for User
+      summary: درخواست کد تایید (OTP)
+      description: ارسال کد تایید به شماره موبایل کاربر (پرسنل/مدیر)
       tags:
         - Auth
       requestBody:
@@ -104,15 +281,22 @@ paths:
                   example: "09123456789"
       responses:
         '200':
-          description: OTP sent
+          description: کد تایید ارسال شد
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+        '404':
+          description: کاربری با این شماره یافت نشد
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /auth/user/otp/verify:
     post:
-      summary: Verify OTP and get Token
+      summary: تایید کد OTP
+      description: تایید کد ارسال شده و دریافت لیست سالن‌های مجاز
       tags:
         - Auth
       requestBody:
@@ -133,15 +317,37 @@ paths:
                   example: "123456"
       responses:
         '200':
-          description: Verified
+          description: کد تایید شد
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      salons:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+        '401':
+          description: کد نامعتبر یا منقضی شده
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/login:
+  /auth/user/login/otp:
     post:
-      summary: Classic Login (Email/Password)
+      summary: ورود با کد OTP
+      description: نهایی کردن ورود پس از تایید کد و انتخاب سالن
       tags:
         - Auth
       requestBody:
@@ -152,6 +358,36 @@ paths:
               type: object
               required:
                 - phone
+                - salonId
+              properties:
+                phone:
+                  type: string
+                  example: "09123456789"
+                salonId:
+                  type: string
+      responses:
+        '200':
+          description: ورود موفق
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/login:
+    post:
+      summary: ورود کلاسیک (رمز عبور)
+      description: ورود با شماره موبایل و رمز عبور برای کاربران یا ادمین سیستم
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - password
                 - actorType
               properties:
                 phone:
@@ -165,22 +401,71 @@ paths:
                   type: string
       responses:
         '200':
-          description: Logged in
+          description: ورود موفق
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
 
-  /auth/me:
-    get:
-      summary: Get current user info
+  /auth/refresh:
+    post:
+      summary: نوسازی توکن
+      description: دریافت اکسس توکن جدید با استفاده از ریفرش توکن
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: توکن جدید صادر شد
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+
+  /auth/logout:
+    post:
+      summary: خروج از حساب
+      description: ابطال سشن جاری
       tags:
         - Auth
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: User info
+          description: خروج با موفقیت انجام شد
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /auth/me:
+    get:
+      summary: اطلاعات کاربر جاری
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: اطلاعات پروفایل
           content:
             application/json:
               schema:
