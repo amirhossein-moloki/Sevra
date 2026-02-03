@@ -10,6 +10,7 @@ const processPaymentWebhook = async ({
 }: {
   provider: string;
   payload: { eventId: string; paymentId: string; status: 'SUCCEEDED' | 'FAILED' | 'EXPIRED' };
+  signature?: string | null;
 }) => {
   const { eventId, paymentId, status: eventStatus } = payload;
 
@@ -42,6 +43,7 @@ const processPaymentWebhook = async ({
         key: eventId,
         scope: idempotencyScope,
         status: IdempotencyStatus.IN_PROGRESS,
+        requestHash: eventId, // In a real scenario, hash the whole payload
         // Set a reasonable expiry, e.g., 24 hours
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },

@@ -15,7 +15,7 @@ export async function upsertSiteSettings(
     where: { salonId },
     create: {
       salonId,
-      ...data,
+      ...(data as any),
     },
     update: data,
   });

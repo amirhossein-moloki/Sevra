@@ -24,8 +24,8 @@ export async function createPage(salonId: string, data: CreatePageData) {
   const { sections, ...pageData } = data;
   return prisma.salonPage.create({
     data: {
-      ...pageData,
-      salonId,
+      ...(pageData as any),
+      salon: { connect: { id: salonId } },
       sections: {
         create: mapSections(sections),
       },

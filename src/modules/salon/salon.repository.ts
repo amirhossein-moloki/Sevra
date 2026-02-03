@@ -3,8 +3,9 @@ import { CreateSalonInput, UpdateSalonInput } from "./salon.types";
 
 export const salonRepository = {
   async create(data: CreateSalonInput) {
+    const { ownerId, ...rest } = data as any;
     return prisma.salon.create({
-      data,
+      data: rest,
     });
   },
 

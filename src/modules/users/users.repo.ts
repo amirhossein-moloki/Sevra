@@ -4,8 +4,8 @@ import { CreateUserInput, UpdateUserInput } from './users.validators';
 export const createUser = async (salonId: string, data: CreateUserInput) => {
   return prisma.user.create({
     data: {
-      salonId,
-      ...data,
+      ...(data as any),
+      salon: { connect: { id: salonId } },
     },
   });
 };

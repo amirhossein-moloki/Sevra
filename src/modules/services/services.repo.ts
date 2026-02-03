@@ -10,8 +10,8 @@ import { CreateServiceInput, UpdateServiceInput } from './services.types';
 export async function createService(salonId: string, data: CreateServiceInput) {
   return prisma.service.create({
     data: {
-      ...data,
-      salonId,
+      ...(data as any),
+      salon: { connect: { id: salonId } },
     },
   });
 }

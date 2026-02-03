@@ -119,7 +119,7 @@ export const bookingsService = {
       const { customerAccount, customerProfile } = await findOrCreateCustomerProfile(
         tx,
         salonId,
-        customer
+        customer as any
       );
 
       // 2. Calculate endAt and create booking
@@ -234,7 +234,7 @@ export const bookingsService = {
           where: {
             salonId: salon.id,
             staffId: staff.id,
-            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] as any },
             startAt: { lt: endAt },
             endAt: { gt: startAt },
           },
@@ -250,7 +250,7 @@ export const bookingsService = {
         const { customerAccount, customerProfile } = await findOrCreateCustomerProfile(
           tx,
           salon.id,
-          input.customer
+          input.customer as any
         );
 
         const status = salon.settings?.onlineBookingAutoConfirm
@@ -293,7 +293,7 @@ export const bookingsService = {
   },
 
   async getBookings(salonId: string, query: ListBookingsQuery, actor: { id: string, role: UserRole }) {
-    const { page = 1, pageSize = 20, sortBy = 'startAt', sortOrder = 'asc', status, staffId, customerProfileId, dateFrom, dateTo } = query;
+    const { page = 1, pageSize = 20, sortBy = 'startAt', sortOrder = 'asc', status, staffId, customerProfileId, dateFrom, dateTo } = query as any;
     const where: Prisma.BookingWhereInput = {
       salonId,
       status,
@@ -343,7 +343,7 @@ export const bookingsService = {
           throw new AppError('Booking not found.', httpStatus.NOT_FOUND);
         }
 
-        if ([BookingStatus.CANCELED, BookingStatus.DONE, BookingStatus.NO_SHOW].includes(booking.status)) {
+        if ([BookingStatus.CANCELED, BookingStatus.DONE, BookingStatus.NO_SHOW].includes(booking.status as any)) {
           throw new AppError('Booking is in a terminal state', httpStatus.CONFLICT, {
             code: 'INVALID_TRANSITION',
           });
@@ -395,7 +395,7 @@ export const bookingsService = {
           }
         }
 
-        const updateData: Prisma.BookingUpdateInput = {};
+        const updateData: Prisma.BookingUncheckedUpdateInput = {};
 
         if (serviceChanged && effectiveService) {
           updateData.serviceId = effectiveServiceId;
@@ -458,7 +458,7 @@ export const bookingsService = {
                 salonId,
                 staffId: effectiveStaffId,
                 id: { not: booking.id },
-                status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DONE] },
+                status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DONE] as any },
                 startAt: { lt: newEndAt },
                 endAt: { gt: newStartAt },
               },
@@ -505,7 +505,7 @@ export const bookingsService = {
 
     const booking = await findAndValidateBooking(bookingId, salonId);
 
-    if (booking.status !== BookingStatus.PENDING) {
+    if (booking.status !== (BookingStatus.PENDING as any)) {
       throw new AppError('Invalid state transition: Booking cannot be confirmed.', httpStatus.CONFLICT);
     }
 
@@ -522,7 +522,7 @@ export const bookingsService = {
 
     const booking = await findAndValidateBooking(bookingId, salonId);
 
-    if (![BookingStatus.PENDING, BookingStatus.CONFIRMED].includes(booking.status)) {
+    if (![BookingStatus.PENDING, BookingStatus.CONFIRMED].includes(booking.status as any)) {
       throw new AppError('Invalid state transition: Booking cannot be canceled.', httpStatus.CONFLICT);
     }
 
@@ -544,7 +544,7 @@ export const bookingsService = {
 
     const booking = await findAndValidateBooking(bookingId, salonId);
 
-    if (booking.status !== BookingStatus.CONFIRMED) {
+    if (booking.status !== (BookingStatus.CONFIRMED as any)) {
       throw new AppError('Invalid state transition: Booking cannot be completed.', httpStatus.CONFLICT);
     }
 
@@ -564,7 +564,7 @@ export const bookingsService = {
 
     const booking = await findAndValidateBooking(bookingId, salonId);
 
-    if (booking.status !== BookingStatus.CONFIRMED) {
+    if (booking.status !== (BookingStatus.CONFIRMED as any)) {
       throw new AppError('Invalid state transition: Booking cannot be marked as no-show.', httpStatus.CONFLICT);
     }
 

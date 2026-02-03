@@ -16,6 +16,7 @@ declare global {
       salonId?: string; // salonId is added by various middlewares for panel routes
       id?: string;
       requestId?: string;
+      rawBody?: Buffer;
     }
   }
 }
@@ -26,7 +27,7 @@ export interface AppRequest extends Request {
   actor: {
     id: string;
     actorId?: string;
-    role?: UserRole;
+    role: UserRole;
     salonId?: string;
   };
   tenant: { salonId: string };

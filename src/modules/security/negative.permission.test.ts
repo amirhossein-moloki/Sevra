@@ -2,8 +2,8 @@
 import request from 'supertest';
 import app from '../../app';
 import { prisma } from '../../config/prisma';
-import { User, Salon, Service } from '@prisma/client';
-import { createTestSalon, createTestUser, createToken } from '../../../test-utils/helpers';
+import { User, Salon, Service, UserRole } from '@prisma/client';
+import { createTestSalon, createTestUser, generateToken } from '../../common/utils/test-utils';
 
 describe('Negative Permission (RBAC) E2E Tests', () => {
   let salon: Salon;
@@ -16,13 +16,13 @@ describe('Negative Permission (RBAC) E2E Tests', () => {
 
   beforeAll(async () => {
     salon = await createTestSalon();
-    manager = await createTestUser(salon.id, 'MANAGER');
-    receptionist = await createTestUser(salon.id, 'RECEPTIONIST');
-    staff = await createTestUser(salon.id, 'STAFF');
+    manager = await createTestUser({ salonId: salon.id, role: UserRole.MANAGER });
+    receptionist = await createTestUser({ salonId: salon.id, role: UserRole.RECEPTIONIST });
+    staff = await createTestUser({ salonId: salon.id, role: UserRole.STAFF });
 
-    managerToken = createToken(manager);
-    receptionistToken = createToken(receptionist);
-    staffToken = createToken(staff);
+    managerToken = generateToken({ actorId: manager.id, actorType: 'USER', role: manager.role });
+    receptionistToken = generateToken({ actorId: receptionist.id, actorType: 'USER', role: receptionist.role });
+    staffToken = generateToken({ actorId: staff.id, actorType: 'USER', role: staff.role });
   });
 
   afterAll(async () => {
@@ -45,7 +45,7 @@ describe('Negative Permission (RBAC) E2E Tests', () => {
     });
 
     it('should return 403 Forbidden for STAFF trying to delete another user', async () => {
-        const anotherStaff = await createTestUser(salon.id, 'STAFF', 'anotherstaff');
+        const anotherStaff = await createTestUser({ salonId: salon.id, role: UserRole.STAFF });
         const response = await request(app)
           .delete(`/api/v1/salons/${salon.id}/staff/${anotherStaff.id}`)
           .set('Authorization', `Bearer ${staffToken}`);
