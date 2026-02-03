@@ -1,59 +1,82 @@
-# Sevra MVP - Status & Tasks
+# Sevra Project - Development Roadmap & TODO
 
-This document tracks the progress toward a fully functional Minimum Viable Product (MVP).
+This document tracks the progress and remaining tasks for the Sevra salon management system.
 
-## 1. Completed Core Logic
+## 1. Completed Modules (MVP Core) ✅
 
-### 1.1 Timezone Support
-- [x] Implement timezone-aware calculations in `availability.service.ts`.
-- [x] Implement timezone-aware validation in `bookings.service.ts`.
-- [x] Verified usage of `salon.settings.timeZone` for availability and booking operations.
+### 1.1 Core Infrastructure
+- [x] Timezone-aware availability and booking logic.
+- [x] Multi-tenant isolation (SalonId middleware).
+- [x] Global error handling with 5xx sanitization.
+- [x] Real ZarinPal payment integration (v4).
+- [x] Idempotency middleware for critical endpoints.
 
-### 1.2 Real Payment Integration
-- [x] Real ZarinPal API (v4) integration implemented in `PaymentsService.initiatePayment`.
-- [x] Environment variables configured for sandbox/production.
-
----
-
-## 2. Completed Modules
-
-### 2.1 Customers (CRM) Module
-- [x] List with search/filter (`GET /salons/:salonId/customers`).
-- [x] Detail view (`GET /salons/:salonId/customers/:id`).
-- [x] Manual creation (`POST /salons/:salonId/customers`).
-- [x] Profile updates (`PATCH /salons/:salonId/customers/:id`).
-
-### 2.2 Reviews Module
-- [x] Public review submission (`POST /public/salons/:salonSlug/bookings/:bookingId/reviews`).
-- [x] List published reviews (`GET /public/salons/:salonSlug/reviews`).
-- [x] Review moderation (`PATCH /salons/:salonId/reviews/:id/status`).
-
-### 2.3 Settings Module
-- [x] Fetch configuration (`GET /salons/:salonId/settings`).
-- [x] Update settings (`PATCH /salons/:salonId/settings`).
-
-### 2.4 CMS & Public Site
-- [x] Public route enforcement (`salonSlug` and `isActive` checks via `resolveSalonBySlug`).
-- [x] SEO metadata support for public pages.
-- [x] Media Management: Image upload, resizing (300x300 thumbnails), and deletion.
+### 1.2 Business Modules
+- [x] **Bookings**: Create, Update, Cancel, Complete, No-show.
+- [x] **Availability**: Shift-based slot calculation.
+- [x] **Customers (CRM)**: Global account and salon-specific profiles.
+- [x] **Settings**: Salon configuration, work hours, and online booking toggles.
+- [x] **Reviews**: Public submissions and moderation.
+- [x] **CMS**: Page builder, SEO metadata, and Media management (uploads/resizing).
 
 ---
 
-## 3. Remaining Tasks (Stabilization)
+## 2. High Priority Remaining Tasks (Stabilization) 🚀
 
-### 3.1 Infrastructure & Stability
-- [x] **Fix Critical TypeScript Errors**: Resolved massive syntax issues in `admin-ui.routes.ts`.
-- [ ] **Fix Remaining TypeScript Errors**: Address strict typing and Prisma-related errors in other modules.
-- [ ] **Testing Environment**: Resolve Docker/Prisma permission issues in the CI pipeline.
-- [ ] **Test Coverage**: Achieve >80% code coverage for core business logic (currently partially tested).
+### 2.1 Audit Logging (Security & Accountability)
+- [ ] **Prisma Schema Update**: Add `AuditLog` model to track `actorId`, `action`, `entity`, `entityId`, `oldData`, `newData`.
+- [ ] **AuditService**: Implement a centralized service to record sensitive events.
+- [ ] **Instrumentation**:
+    - [ ] Log booking cancellations and manual price overrides.
+    - [ ] Log staff role changes and access modifications.
+    - [ ] Log salon settings and payment policy changes.
+- [ ] **API**: `GET /salons/:salonId/audit-logs` (Restricted to MANAGER).
 
-### 3.2 Error Handling & Logging
-- [x] **5xx Error Sanitization**: Implemented in global error handler.
-- [ ] **Audit Logging**: Implement dedicated audit logging for sensitive actions (e.g., cancellations, manual overrides).
+### 2.2 Notification Service (Real SMS)
+- [ ] **Environment Setup**: Configure `SMSIR_API_KEY` and `SMSIR_LINE_NUMBER`.
+- [ ] **SmsService Implementation**: Replace mocks with real calls to `smsir-js`.
+- [ ] **Template Management**: Define and map Template IDs for:
+    - [ ] OTP Verification.
+    - [ ] Booking Confirmation (Customer & Staff).
+    - [ ] Booking Cancellation.
+    - [ ] Appointment Reminders (scheduled tasks).
+- [ ] **Notification Orcherstration**: Create `NotificationService` to handle multi-channel logic (SMS, later WhatsApp/Email).
+
+### 2.3 Analytics & Reporting
+- [ ] **AnalyticsService**: Implement aggregation logic for business metrics.
+- [ ] **Revenue Reports**:
+    - [ ] Total revenue summary (Paid vs. Pending).
+    - [ ] Revenue by Service category.
+    - [ ] Revenue by Staff member.
+- [ ] **Performance Metrics**:
+    - [ ] Staff booking completion vs. cancellation rates.
+    - [ ] Staff average rating from reviews.
+- [ ] **Endpoints**:
+    - [ ] `GET /salons/:salonId/analytics/summary`
+    - [ ] `GET /salons/:salonId/analytics/revenue`
+    - [ ] `GET /salons/:salonId/analytics/staff`
 
 ---
 
-## 4. Phase 2 (Post-MVP)
-- [ ] **Commissions Module**: Full implementation of calculation and payout tracking (Skeleton exists).
-- [ ] **Notifications**: Real SMS/WhatsApp reminders for bookings (Mocked logic exists).
-- [ ] **Advanced Analytics**: Revenue reporting and staff performance tracking.
+## 3. Quality Assurance & Testing 🧪
+
+### 3.1 Test Coverage
+- [ ] **Unit Tests**:
+    - [ ] Increase coverage for `CommissionsService` (calculation edge cases).
+    - [ ] Add tests for `AnalyticsService` data aggregations.
+- [ ] **E2E Tests**:
+    - [ ] Full lifecycle: Public Booking -> Payment -> Webhook -> Commission -> Completion.
+    - [ ] Audit log verification for sensitive actions.
+    - [ ] Multi-tenant data leakage prevention tests.
+
+### 3.2 CI/CD Improvements
+- [ ] Resolve Docker-in-Docker permission issues for Prisma migrations in CI.
+- [ ] Implement automated code coverage reporting.
+
+---
+
+## 4. Post-MVP (Phase 2) 🛠️
+- [ ] **WhatsApp Integration**: Official API integration for richer notifications.
+- [ ] **Inventory Management**: Track salon products and stock levels.
+- [ ] **Mobile App**: PWA or Native app for staff management.
+- [ ] **Advanced SEO**: Automated sitemap generation and schema.org enhancements.
