@@ -99,7 +99,7 @@ export class AuthService {
         }
     });
 
-    await this.smsService.sendVerificationCode(phone, this.otpTemplateId, [{ name: 'CODE', value: code }]);
+    await this.smsService.sendTemplateSms(phone, this.otpTemplateId, [{ name: 'CODE', value: code }]);
 
     return { message: `OTP sent to ${phone}. It will expire in ${OTP_EXPIRATION_MINUTES} minutes.` };
   }
