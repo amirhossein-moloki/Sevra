@@ -15,4 +15,19 @@ module.exports = {
     '^cuid$': '<rootDir>/test-utils/cuid.ts',
   },
   setupFilesAfterEnv: ['./jest.setup.js'],
+  collectCoverageFrom: [
+    'src/**/*.{js,ts}',
+    '!src/**/*.test.ts',
+    '!src/**/*.e2e.test.ts',
+    '!src/docs/**',
+    '!src/types/**',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
 };
