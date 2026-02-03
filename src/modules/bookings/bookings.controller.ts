@@ -32,8 +32,7 @@ export const createPublicBooking = async (
 
   const booking = await bookingsService.createPublicBooking(
     salonSlug,
-    req.body,
-    req.id
+    req.body
   );
 
   res.status(httpStatus.CREATED).json({

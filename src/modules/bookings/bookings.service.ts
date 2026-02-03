@@ -1,13 +1,52 @@
 
 import { addMinutes, isBefore } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { Booking, BookingSource, BookingStatus, Prisma, SessionActorType, UserRole } from '@prisma/client';
+import { Booking, BookingSource, BookingStatus, Prisma, SessionActorType, UserRole, Salon, Settings } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { getZonedStartAndEnd } from '../../common/utils/date';
 import { commissionsService } from '../commissions/commissions.service';
 import { auditService } from '../audit/audit.service';
+import { SmsService } from '../notifications/sms.service';
+import { formatInTimeZone } from 'date-fns-tz';
+
+const smsService = new SmsService();
+
+type SalonWithSettings = Salon & { settings?: Settings | null };
+
+const sendBookingStatusSms = async (booking: Booking, salon: SalonWithSettings, customerPhone: string, customerName: string) => {
+  let templateIdStr: string | undefined;
+
+  if (booking.status === BookingStatus.CONFIRMED) {
+    templateIdStr = process.env.SMSIR_BOOKING_CONFIRMED_TEMPLATE_ID;
+  } else if (booking.status === BookingStatus.PENDING) {
+    templateIdStr = process.env.SMSIR_BOOKING_PENDING_TEMPLATE_ID;
+  } else if (booking.status === BookingStatus.CANCELED) {
+    templateIdStr = process.env.SMSIR_BOOKING_CANCELED_TEMPLATE_ID;
+  }
+
+  if (!templateIdStr) return;
+
+  const timeZone = salon.settings?.timeZone || 'UTC';
+  const dateStr = formatInTimeZone(booking.startAt, timeZone, 'yyyy/MM/dd');
+  const timeStr = formatInTimeZone(booking.startAt, timeZone, 'HH:mm');
+
+  const parameters = [
+    { name: 'CUSTOMER_NAME', value: customerName },
+    { name: 'SERVICE_NAME', value: booking.serviceNameSnapshot },
+    { name: 'DATE', value: dateStr },
+    { name: 'TIME', value: timeStr },
+    { name: 'SALON_NAME', value: salon.name },
+  ];
+
+  try {
+    await smsService.sendTemplateSms(customerPhone, parseInt(templateIdStr, 10), parameters);
+  } catch (error) {
+    console.error('Failed to send booking SMS:', error);
+  }
+};
+
 import {
   CancelBookingInput,
   CreateBookingInput,
@@ -88,7 +127,7 @@ const findOrCreateCustomerProfile = async (
 
 export const bookingsService = {
   async createBooking(input: CreateBookingInput & { salonId: string; createdByUserId: string; }) {
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const { salonId, serviceId, staffId, customer, startAt: startAtString, createdByUserId, note } = input;
       const startAt = new Date(startAtString);
 
@@ -124,6 +163,15 @@ export const bookingsService = {
         customer
       );
 
+      const salon = await tx.salon.findUnique({
+        where: { id: salonId },
+        include: { settings: true },
+      });
+
+      if (!salon) {
+        throw new AppError('Salon not found.', httpStatus.NOT_FOUND);
+      }
+
       // 2. Calculate endAt and create booking
       const endAt = addMinutes(startAt, service.durationMinutes);
 
@@ -148,15 +196,25 @@ export const bookingsService = {
         },
       });
 
-      return booking;
+      return { booking, salon, customerAccount };
     }, {
       isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
     });
+
+    // Send SMS notification
+    await sendBookingStatusSms(
+      result.booking,
+      result.salon,
+      result.customerAccount.phone,
+      input.customer.fullName
+    );
+
+    return result.booking;
   },
 
-  async createPublicBooking(salonSlug: string, input: CreatePublicBookingInput, _requestId: string) {
+  async createPublicBooking(salonSlug: string, input: CreatePublicBookingInput) {
     try {
-      return await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         const salon = await tx.salon.findUnique({
           where: { slug: salonSlug },
           include: { settings: true },
@@ -280,12 +338,22 @@ export const bookingsService = {
           },
         });
 
-        return booking;
+        return { booking, salon, customerAccount };
       }, {
         isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
       });
-    } catch (error: any) {
-      if (error?.code === '23P01' && error?.message?.includes('Booking_no_overlap_active')) {
+
+      // Send SMS notification
+      await sendBookingStatusSms(
+        result.booking,
+        result.salon,
+        result.customerAccount.phone,
+        input.customer.fullName
+      );
+
+      return result.booking;
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23P01' && 'message' in error && typeof error.message === 'string' && error.message.includes('Booking_no_overlap_active')) {
         throw new AppError('This time slot is already booked.', httpStatus.CONFLICT, {
           code: 'SLOT_NOT_AVAILABLE',
         });
@@ -511,8 +579,8 @@ export const bookingsService = {
       }, {
         isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
       });
-    } catch (error: any) {
-      if (error?.code === '23P01' && error?.message?.includes('Booking_no_overlap_active')) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23P01' && 'message' in error && typeof error.message === 'string' && error.message.includes('Booking_no_overlap_active')) {
         throw new AppError('Booking overlaps with another for the same staff member.', httpStatus.CONFLICT, {
           code: 'OVERLAP_CONFLICT',
         });
@@ -532,10 +600,23 @@ export const bookingsService = {
       throw new AppError('Invalid state transition: Booking cannot be confirmed.', httpStatus.CONFLICT);
     }
 
-    return prisma.booking.update({
+    const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: { status: BookingStatus.CONFIRMED },
+      include: {
+        salon: { include: { settings: true } },
+        customerAccount: true,
+      },
     });
+
+    await sendBookingStatusSms(
+      updatedBooking,
+      updatedBooking.salon,
+      updatedBooking.customerAccount.phone,
+      updatedBooking.customerAccount.fullName || ''
+    );
+
+    return updatedBooking;
   },
 
   async cancelBooking(
@@ -563,7 +644,18 @@ export const bookingsService = {
         canceledByUserId: actor.id,
         cancelReason: data.reason,
       },
+      include: {
+        salon: { include: { settings: true } },
+        customerAccount: true,
+      },
     });
+
+    await sendBookingStatusSms(
+      updatedBooking,
+      updatedBooking.salon,
+      updatedBooking.customerAccount.phone,
+      updatedBooking.customerAccount.fullName || ''
+    );
 
     await auditService.recordLog({
       salonId,
