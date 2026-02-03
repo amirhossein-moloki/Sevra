@@ -1,82 +1,113 @@
-# Sevra Project - Development Roadmap & TODO
+# Sevra Project - Development Roadmap & TODO (Comprehensive)
 
-This document tracks the progress and remaining tasks for the Sevra salon management system.
-
-## 1. Completed Modules (MVP Core) ✅
-
-### 1.1 Core Infrastructure
-- [x] Timezone-aware availability and booking logic.
-- [x] Multi-tenant isolation (SalonId middleware).
-- [x] Global error handling with 5xx sanitization.
-- [x] Real ZarinPal payment integration (v4).
-- [x] Idempotency middleware for critical endpoints.
-
-### 1.2 Business Modules
-- [x] **Bookings**: Create, Update, Cancel, Complete, No-show.
-- [x] **Availability**: Shift-based slot calculation.
-- [x] **Customers (CRM)**: Global account and salon-specific profiles.
-- [x] **Settings**: Salon configuration, work hours, and online booking toggles.
-- [x] **Reviews**: Public submissions and moderation.
-- [x] **CMS**: Page builder, SEO metadata, and Media management (uploads/resizing).
+این سند شامل ارزیابی معماری، لیست وظایف جاری و نقشه راه استراتژیک پروژه Sevra برای رسیدن به سطح **Production-Ready** است.
 
 ---
 
-## 2. High Priority Remaining Tasks (Stabilization) 🚀
+## ۱. ارزیابی کیفیت نرم‌افزار (Architectural Assessment)
 
-### 2.1 Audit Logging (Security & Accountability)
-- [ ] **Prisma Schema Update**: Add `AuditLog` model to track `actorId`, `action`, `entity`, `entityId`, `oldData`, `newData`.
-- [ ] **AuditService**: Implement a centralized service to record sensitive events.
-- [ ] **Instrumentation**:
-    - [ ] Log booking cancellations and manual price overrides.
-    - [ ] Log staff role changes and access modifications.
-    - [ ] Log salon settings and payment policy changes.
-- [ ] **API**: `GET /salons/:salonId/audit-logs` (Restricted to MANAGER).
+| شاخص | وضعیت | نمره (۱-۵) | توضیحات |
+| :--- | :--- | :---: | :--- |
+| **معماری** | MVP | ۳ | ساختار ماژولار و الگوی CSR. نیاز به یکپارچه‌سازی لایه Repository برای تست‌پذیری بالاتر. |
+| **کدنویسی** | High Quality | ۴ | استفاده از TS Strict Mode و Zod. رعایت استانداردهای Clean Code در اکثر ماژول‌ها. |
+| **تست** | Basic | ۲ | پوشش تست‌های همزمانی و رزرو عالی است، اما پوشش کلی (Coverage) برای موارد لبه نیاز به تقویت دارد. |
+| **امنیت** | Solid | ۳ | سیستم Idempotency و RBAC به خوبی پیاده شده‌اند. مدل Audit Log آماده توسعه است. |
+| **زیرساخت** | Ready for Scale | ۳ | CI/CD و لاگینگ ساختاریافته وجود دارد. نیاز به Monitoring و APM حرفه‌ای. |
 
-### 2.2 Notification Service (Real SMS)
-- [ ] **Environment Setup**: Configure `SMSIR_API_KEY` and `SMSIR_LINE_NUMBER`.
-- [ ] **SmsService Implementation**: Replace mocks with real calls to `smsir-js`.
-- [ ] **Template Management**: Define and map Template IDs for:
-    - [ ] OTP Verification.
-    - [ ] Booking Confirmation (Customer & Staff).
-    - [ ] Booking Cancellation.
-    - [ ] Appointment Reminders (scheduled tasks).
-- [ ] **Notification Orcherstration**: Create `NotificationService` to handle multi-channel logic (SMS, later WhatsApp/Email).
-
-### 2.3 Analytics & Reporting
-- [ ] **AnalyticsService**: Implement aggregation logic for business metrics.
-- [ ] **Revenue Reports**:
-    - [ ] Total revenue summary (Paid vs. Pending).
-    - [ ] Revenue by Service category.
-    - [ ] Revenue by Staff member.
-- [ ] **Performance Metrics**:
-    - [ ] Staff booking completion vs. cancellation rates.
-    - [ ] Staff average rating from reviews.
-- [ ] **Endpoints**:
-    - [ ] `GET /salons/:salonId/analytics/summary`
-    - [ ] `GET /salons/:salonId/analytics/revenue`
-    - [ ] `GET /salons/:salonId/analytics/staff`
+**سطح فعلی پروژه: Level 3 (MVP)**
 
 ---
 
-## 3. Quality Assurance & Testing 🧪
+## ۲. وضعیت ماژول‌های تکمیل شده (MVP Core) ✅
 
-### 3.1 Test Coverage
-- [ ] **Unit Tests**:
-    - [ ] Increase coverage for `CommissionsService` (calculation edge cases).
-    - [ ] Add tests for `AnalyticsService` data aggregations.
-- [ ] **E2E Tests**:
-    - [ ] Full lifecycle: Public Booking -> Payment -> Webhook -> Commission -> Completion.
-    - [ ] Audit log verification for sensitive actions.
-    - [ ] Multi-tenant data leakage prevention tests.
+### ۲.۱ زیرساخت و هسته
+- [x] **Timezone Management**: منطق رزرو و درگاه زمانی دقیق برای ایران.
+- [x] **Multi-tenancy**: جداسازی کامل داده‌های سالن‌ها (SalonId middleware).
+- [x] **Global Error Handling**: مدیریت خطای سراسری و پاکسازی داده‌های حساس (PII) در لاگ‌ها.
+- [x] **Online Payments**: اتصال به درگاه زرین‌پال (v4).
+- [x] **Idempotency**: میان‌افزار جلوگیری از درخواست‌های تکراری در تراکنش‌های حساس.
 
-### 3.2 CI/CD Improvements
-- [ ] Resolve Docker-in-Docker permission issues for Prisma migrations in CI.
-- [ ] Implement automated code coverage reporting.
+### ۲.۲ ماژول‌های بیزینسی (Business Modules)
+- [x] **Bookings**: مدیریت کامل چرخه حیات رزرو (ایجاد، ویرایش، لغو، اتمام).
+- [x] **Availability**: محاسبه خودکار اسلات‌های خالی بر اساس شیفت‌های کاری.
+- [x] **Customers (CRM)**: مدیریت پروفایل‌های اختصاصی سالن و حساب‌های سراسری مشتری.
+- [x] **Settings**: تنظیمات اختصاصی سالن، ساعات کاری و کنترل رزرو آنلاین.
+- [x] **Reviews**: سیستم ثبت نظر عمومی و مدیریت نظرات.
+- [x] **CMS**: سازنده صفحات پویا، مدیریت محتوا و آپلود هوشمند تصاویر (Resizing).
 
 ---
 
-## 4. Post-MVP (Phase 2) 🛠️
-- [ ] **WhatsApp Integration**: Official API integration for richer notifications.
-- [ ] **Inventory Management**: Track salon products and stock levels.
-- [ ] **Mobile App**: PWA or Native app for staff management.
-- [ ] **Advanced SEO**: Automated sitemap generation and schema.org enhancements.
+## ۳. لیست وظایف با توضیحات اجرایی (Remaining Tasks) 🚀
+
+در این بخش، هر مورد بر اساس اهمیت، تاثیر بر کیفیت، زمان تقریبی و پیچیدگی تشریح شده است.
+
+### ۳.۱ امنیت و شفافیت (Security & Audit) 🔐
+
+#### **تکمیل سیستم Audit Logging**
+- **چرا مهم است؟** برای ردیابی هرگونه تغییر حساس (مانند لغو رزرو یا تغییر قیمت دستی) و جلوگیری از سوءاستافاده‌های احتمالی.
+- **تاثیر بر کیفیت:** افزایش شفافیت (Accountability) و امنیت عملیاتی.
+- **پیچیدگی:** متوسط | **زمان تقریبی:** ۳ روز کاری
+- **موارد اجرایی:**
+    - [x] بروزرسانی اسکیما (AuditLog model).
+    - [ ] پیاده‌سازی `AuditService` برای ثبت وقایع.
+    - [ ] لاگ کردن عملیات لغو رزرو، تغییر نقش‌ها و تغییرات مالی.
+    - [ ] طراحی اندپوینت گزارش‌گیری برای مدیران سالن.
+
+### ۳.۲ اطلاع‌رسانی و پیامک (Notifications) 📱
+
+#### **یکپارچه‌سازی سرویس پیامک واقعی (Real SMS)**
+- **چرا مهم است؟** بدون پیامک واقعی، سیستم احراز هویت (OTP) و اطلاع‌رسانی رزروها عملاً کار نمی‌کند.
+- **تاثیر بر کیفیت:** افزایش اعتماد مشتری و کاهش نرخ غیبت (No-show).
+- **پیچیدگی:** کم | **زمان تقریبی:** ۱ روز کاری
+- **موارد اجرایی:**
+    - [ ] تنظیم `SMSIR_API_KEY` و `SMSIR_LINE_NUMBER`.
+    - [ ] جایگزینی کدهای Mock با وب‌سرویس واقعی `smsir-js`.
+    - [ ] مدیریت قالب‌های پیامکی (Template IDs).
+
+### ۳.۳ معماری و ساختار کد (Architecture) 🏗️
+
+#### **یکپارچه‌سازی لایه Repository**
+- **چرا مهم است؟** برای جدا کردن منطق دیتابیس از منطق تجاری و امکان نوشتن تست‌های واحد بدون نیاز به دیتابیس واقعی.
+- **تاثیر بر کیفیت:** افزایش نگهداری‌پذیری (Maintainability) و تست‌پذیری.
+- **پیچیدگی:** بالا (به دلیل حجم کد) | **زمان تقریبی:** ۵ روز کاری
+- **موارد اجرایی:**
+    - [ ] انتقال کوئری‌های Prisma از سرویس‌ها به فایل‌های `.repo.ts`.
+
+#### **تکمیل مستندات OpenAPI/Swagger**
+- **چرا مهم است؟** برای تعامل صحیح و سریع تیم‌های فرانت‌هند و موبایل با API.
+- **تاثیر بر کیفیت:** کاهش خطاهای ارتباطی و افزایش سرعت توسعه.
+- **پیچیدگی:** متوسط | **زمان تقریبی:** ۲ روز کاری
+
+### ۳.۴ گزارش‌گیری و تحلیل (Analytics) 📊
+
+#### **پیاده‌سازی سرویس تحلیل درآمد و عملکرد**
+- **چرا مهم است؟** مدیران سالن برای تصمیم‌گیری نیاز به گزارش‌های دقیق مالی و عملکرد پرسنل دارند.
+- **تاثیر بر کیفیت:** تبدیل سیستم از یک ابزار رزرو ساده به یک ابزار مدیریتی هوشمند.
+- **پیچیدگی:** متوسط | **زمان تقریبی:** ۴ روز کاری
+
+### ۳.۵ تست و زیرساخت (QA & Infrastructure) 🧪
+
+#### **افزایش پوشش تست و پایداری CI/CD**
+- **چرا مهم است؟** اطمینان از صحت کد در هر Commit و جلوگیری از Regression.
+- **تاثیر بر کیفیت:** پایداری بلندمدت و کاهش باگ‌های Production.
+- **پیچیدگی:** متوسط | **زمان تقریبی:** مداوم
+- **موارد اجرایی:**
+    - [ ] افزایش پوشش تست (Coverage) به بالای ۸۰٪.
+    - [ ] حل مشکل دسترسی Docker-in-Docker برای میگریشن‌های Prisma در CI.
+    - [ ] مانیتورینگ و Sentry (برای آگاهی سریع از خطاهای محیط واقعی).
+
+---
+
+## ۴. فاز ۲ و توسعه آتی (Post-MVP) 🛠️
+- [ ] **WhatsApp Integration**: ارسال پیام‌های غنی (تصویر و لوکیشن) برای مشتریان.
+- [ ] **Inventory Management**: انبارداری و فروش محصولات جانبی در سالن.
+- [ ] **Mobile App**: اپلیکیشن اختصاصی برای پرسنل جهت مدیریت نوبت‌ها.
+
+---
+
+## ۵. خلاصه نهایی اولویت‌های بحرانی
+
+*   **درصد تقریبی تکمیل برای Production-Ready:** ۷۵٪
+*   **اولویت ۱ (Audit & SMS):** حیاتی برای امنیت و کارکرد پایه سیستم.
+*   **اولویت ۲ (Architecture & Docs):** حیاتی برای مقیاس‌پذیری تیم و کد.
+*   **اولویت ۳ (Analytics):** ارزش افزوده اصلی برای مدیران سالن.
