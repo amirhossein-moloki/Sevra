@@ -30,6 +30,7 @@ import {
   publicReviewsRouter,
 } from '../modules/reviews/reviews.routes';
 import { settingsRouter } from '../modules/settings/settings.routes';
+import { commissionsRoutes } from '../modules/commissions/commissions.routes';
 import { resolveSalonBySlug } from '../common/middleware/resolveSalonBySlug';
 
 const router = Router();
@@ -76,6 +77,9 @@ router.use('/public/salons/:salonSlug', publicReviewsRouter);
 
 // --- Settings Module Routes ---
 router.use('/salons/:salonId/settings', settingsRouter);
+
+// --- Commissions Module Routes ---
+router.use('/salons/:salonId/commissions', commissionsRoutes);
 
 // --- Payments Module Routes ---
 router.use('/salons/:salonId/bookings', paymentsRoutes); // This will be scoped within the booking
