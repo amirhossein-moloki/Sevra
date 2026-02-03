@@ -48,8 +48,7 @@
 
 ## Known Gaps / TODO
 
-- Several feature route files exist but are not mounted in `src/routes/index.ts` (e.g., customers, reviews, commissions). If they are intended to be public, they should be mounted and documented once integrated.
-- Some modules return non-standard response shapes (e.g., availability uses `res.status(200).json(slots)` instead of the shared `res.ok` envelope).
+- Some modules return non-standard response shapes (e.g., availability uses `res.status(200).json({ success: true, data: slots })` instead of the shared `res.ok` envelope).
 
 ## Source of Truth
 
