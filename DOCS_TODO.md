@@ -7,7 +7,7 @@
 ## ۱. وضعیت فعلی
 
 * **فایل اصلی:** `src/docs/openapi.yaml`
-* **میزان تکمیل:** ~۲۰–۲۵٪ (فایل حاوی ساختار پایه، مدل‌ها و ماژول Health و بخشی از Auth است)
+* **میزان تکمیل:** ~۹۰-۹۵٪ (اکثر اندپوینت‌های اصلی مستند شده‌اند)
 * **آدرس دسترسی:** `/api-docs`
 
 ---
@@ -21,11 +21,11 @@
 * [x] تعریف مدل‌های داده‌ای مشترک (Common Schemas):
 
   * [x] `ErrorResponse`
-  * [ ] `Pagination`
-  * [ ] `Salon`
+  * [x] `Pagination`
+  * [x] `Salon`
   * [x] `User`
-  * [ ] `Booking`
-  * [ ] `Service`
+  * [x] `Booking`
+  * [x] `Service`
 
 ---
 
@@ -35,62 +35,62 @@
 
 * [x] `POST /auth/user/otp/request` - درخواست کد تایید
 * [x] `POST /auth/user/otp/verify` - تایید کد و دریافت توکن
-* [ ] `POST /auth/user/login/otp` - ورود با کد یکبار مصرف
+* [x] `POST /auth/user/login/otp` - ورود با کد یکبار مصرف
 * [x] `POST /auth/login` - ورود کلاسیک (ایمیل/پسورد)
-* [ ] `POST /auth/refresh` - نوسازی توکن
-* [ ] `POST /auth/logout` - خروج
+* [x] `POST /auth/refresh` - نوسازی توکن
+* [x] `POST /auth/logout` - خروج
 * [x] `GET /auth/me` - اطلاعات کاربر جاری
 
 ### ۳.۲ ماژول سالن‌ها (Salons)
 
-* [ ] `GET /salons` - لیست سالن‌ها (ادمین سیستم)
-* [ ] `POST /salons` - ایجاد سالن جدید
-* [ ] `GET /salons/:id` - جزئیات سالن
-* [ ] `PATCH /salons/:id` - ویرایش سالن
-* [ ] `DELETE /salons/:id` - حذف سالن
+* [x] `GET /salons` - لیست سالن‌ها (ادمین سیستم)
+* [x] `POST /salons` - ایجاد سالن جدید
+* [x] `GET /salons/:id` - جزئیات سالن
+* [x] `PATCH /salons/:id` - ویرایش سالن
+* [x] `DELETE /salons/:id` - حذف سالن
 
 ### ۳.۳ ماژول خدمات (Services)
 
-* [ ] `GET /salons/:salonId/services` - لیست خدمات (پنل مدیریت)
-* [ ] `POST /salons/:salonId/services` - ایجاد خدمت
-* [ ] `GET /public/salons/:salonSlug/services` - لیست خدمات (عمومی)
+* [x] `GET /salons/:salonId/services` - لیست خدمات (پنل مدیریت)
+* [x] `POST /salons/:salonId/services` - ایجاد خدمت
+* [x] `GET /public/salons/:salonSlug/services` - لیست خدمات (عمومی)
 
 ### ۳.۴ ماژول پرسنل و شیفت‌ها (Staff & Shifts)
 
-* [ ] `GET /salons/:salonId/staff` - لیست پرسنل
-* [ ] `POST /salons/:salonId/staff` - افزودن پرسنل
-* [ ] `GET /salons/:salonId/staff/:userId/shifts` - مدیریت شیفت‌ها
+* [x] `GET /salons/:salonId/staff` - لیست پرسنل
+* [x] `POST /salons/:salonId/staff` - افزودن پرسنل
+* [x] `GET /salons/:salonId/staff/:userId/shifts` - مدیریت شیفت‌ها
 
 ### ۳.۵ ماژول رزرو (Bookings)
 
-* [ ] `POST /public/salons/:salonSlug/bookings` - ثبت رزرو عمومی
-* [ ] `GET /salons/:salonId/bookings` - لیست رزروها (مدیریت)
-* [ ] `PATCH /salons/:salonId/bookings/:bookingId` - تغییر وضعیت رزرو
-* [ ] `POST /salons/:salonId/bookings/:bookingId/confirm` - تایید دستی
+* [x] `POST /public/salons/:salonSlug/bookings` - ثبت رزرو عمومی
+* [x] `GET /salons/:salonId/bookings` - لیست رزروها (مدیریت)
+* [x] `PATCH /salons/:salonId/bookings/:bookingId` - تغییر وضعیت رزرو
+* [x] `POST /salons/:salonId/bookings/:bookingId/confirm` - تایید دستی
 
 ### ۳.۶ ماژول مشتریان (Customers/CRM)
 
-* [ ] `GET /salons/:salonId/customers` - لیست مشتریان سالن
-* [ ] `POST /salons/:salonId/customers` - ایجاد پروفایل مشتری
+* [x] `GET /salons/:salonId/customers` - لیست مشتریان سالن
+* [x] `POST /salons/:salonId/customers` - ایجاد پروفایل مشتری
 
 ### ۳.۷ ماژول تنظیمات و کمیسیون (Settings & Commissions)
 
-* [ ] `GET /salons/:salonId/settings` - دریافت تنظیمات سالن
-* [ ] `PUT /salons/:salonId/settings` - بروزرسانی تنظیمات
-* [ ] `GET /salons/:salonId/commissions` - گزارشات مالی و کمیسیون
+* [x] `GET /salons/:salonId/settings` - دریافت تنظیمات سالن
+* [x] `PUT /salons/:salonId/settings` - بروزرسانی تنظیمات
+* [x] `GET /salons/:salonId/commissions` - گزارشات مالی و کمیسیون
 
 ### ۳.۸ ماژول محتوا (CMS)
 
-* [ ] `GET /public/salons/:salonSlug/pages` - صفحات پویا
-* [ ] `POST /salons/:salonId/media/upload` - آپلود تصویر
+* [x] `GET /public/salons/:salonSlug/pages/:pageSlug` - صفحات پویا
+* [x] `POST /salons/:salonId/media/upload` - آپلود تصویر
 
 ---
 
 ## ۴. اولویت‌بندی اجرا
 
-1. **اولویت بالا:** Auth، Public Bookings، Availability (برای تیم فرانت‌اند موبایل و وب‌سایت عمومی)
-2. **اولویت متوسط:** Salon Management، Services، Staff (برای پنل مدیریت)
-3. **اولویت پایین:** Audit Logs، CMS، Webhooks
+1. **اولویت بالا:** Auth، Public Bookings، Availability (انجام شد)
+2. **اولویت متوسط:** Salon Management، Services، Staff (انجام شد)
+3. **اولویت پایین:** Audit Logs، CMS، Webhooks (بخشی انجام شد)
 
 ---
 

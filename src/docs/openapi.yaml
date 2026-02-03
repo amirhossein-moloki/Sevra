@@ -63,13 +63,185 @@ components:
           type: string
         phone:
           type: string
-        firstName:
-          type: string
-        lastName:
+        fullName:
           type: string
         role:
           type: string
-          enum: [ADMIN, MANAGER, STAFF, CUSTOMER]
+          enum: [MANAGER, RECEPTIONIST, STAFF]
+        isActive:
+          type: boolean
+
+    Salon:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        isActive:
+          type: boolean
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Service:
+      type: object
+      properties:
+        id:
+          type: string
+        salonId:
+          type: string
+        name:
+          type: string
+        durationMinutes:
+          type: integer
+        price:
+          type: integer
+        currency:
+          type: string
+        isActive:
+          type: boolean
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+        salonId:
+          type: string
+        serviceId:
+          type: string
+        staffId:
+          type: string
+        customerAccountId:
+          type: string
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, DONE, CANCELED, NO_SHOW]
+        paymentState:
+          type: string
+          enum: [UNPAID, PENDING, PARTIALLY_PAID, PAID, REFUNDED, OVERPAID, FAILED, CANCELED]
+        serviceNameSnapshot:
+          type: string
+        servicePriceSnapshot:
+          type: integer
+        currencySnapshot:
+          type: string
+
+    Staff:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            isPublic:
+              type: boolean
+            publicName:
+              type: string
+            bio:
+              type: string
+            avatarUrl:
+              type: string
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+        phone:
+          type: string
+        fullName:
+          type: string
+        phoneVerifiedAt:
+          type: string
+          format: date-time
+
+    Meta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    Pagination:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            type: object
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    Settings:
+      type: object
+      properties:
+        id:
+          type: string
+        salonId:
+          type: string
+        timeZone:
+          type: string
+        workStartTime:
+          type: string
+        workEndTime:
+          type: string
+        allowOnlineBooking:
+          type: boolean
+        onlineBookingAutoConfirm:
+          type: boolean
+
+    Commission:
+      type: object
+      properties:
+        id:
+          type: string
+        bookingId:
+          type: string
+        salonId:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACCRUED, CHARGED, WAIVED, REFUNDED]
+        commissionAmount:
+          type: integer
+        currency:
+          type: string
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+        salonId:
+          type: string
+        bookingId:
+          type: string
+        rating:
+          type: integer
+        comment:
+          type: string
+        status:
+          type: string
+          enum: [PUBLISHED, HIDDEN, DELETED]
 
 paths:
   /health:
@@ -80,6 +252,872 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/settings:
+    get:
+      summary: Get salon settings
+      tags:
+        - Settings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Salon settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+    put:
+      summary: Update salon settings
+      tags:
+        - Settings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                timeZone:
+                  type: string
+                workStartTime:
+                  type: string
+                workEndTime:
+                  type: string
+                allowOnlineBooking:
+                  type: boolean
+                onlineBookingAutoConfirm:
+                  type: boolean
+                preventOverlaps:
+                  type: boolean
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/commissions:
+    get:
+      summary: List booking commissions
+      tags:
+        - Commissions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, ACCRUED, CHARGED, WAIVED, REFUNDED]
+      responses:
+        '200':
+          description: List of commissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pagination'
+
+  /public/salons/{salonSlug}/pages/{pageSlug}:
+    get:
+      summary: Get a public page by slug
+      tags:
+        - CMS
+      parameters:
+        - name: salonSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pageSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Page details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/media/upload:
+    post:
+      summary: Upload an image
+      tags:
+        - CMS
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                purpose:
+                  type: string
+                  enum: [COVER, GALLERY, BEFORE_AFTER, LOGO]
+                altText:
+                  type: string
+      responses:
+        '201':
+          description: Image uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/customers:
+    get:
+      summary: List customers for a salon
+      tags:
+        - Customers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pagination'
+    post:
+      summary: Create or link a customer
+      tags:
+        - Customers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+              properties:
+                phone:
+                  type: string
+                fullName:
+                  type: string
+                displayName:
+                  type: string
+                note:
+                  type: string
+      responses:
+        '201':
+          description: Customer created or linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /public/salons/{salonSlug}/bookings:
+    post:
+      summary: Create an online booking
+      tags:
+        - Bookings
+      parameters:
+        - name: salonSlug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: idempotency-key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - serviceId
+                - staffId
+                - startAt
+                - customer
+              properties:
+                serviceId:
+                  type: string
+                staffId:
+                  type: string
+                startAt:
+                  type: string
+                  format: date-time
+                customer:
+                  type: object
+                  required:
+                    - fullName
+                    - phone
+                  properties:
+                    fullName:
+                      type: string
+                    phone:
+                      type: string
+                    email:
+                      type: string
+                note:
+                  type: string
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/bookings:
+    get:
+      summary: List bookings for a salon
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, CONFIRMED, DONE, CANCELED, NO_SHOW]
+      responses:
+        '200':
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pagination'
+    post:
+      summary: Create a booking (Panel)
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - serviceId
+                - staffId
+                - startAt
+                - customer
+              properties:
+                serviceId:
+                  type: string
+                staffId:
+                  type: string
+                startAt:
+                  type: string
+                  format: date-time
+                customer:
+                  type: object
+                  required:
+                    - fullName
+                    - phone
+                  properties:
+                    fullName:
+                      type: string
+                    phone:
+                      type: string
+                note:
+                  type: string
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/bookings/{bookingId}:
+    get:
+      summary: Get booking by ID
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+    patch:
+      summary: Update booking details
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                serviceId:
+                  type: string
+                staffId:
+                  type: string
+                startAt:
+                  type: string
+                  format: date-time
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Booking updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/bookings/{bookingId}/confirm:
+    post:
+      summary: Confirm a booking
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/bookings/{bookingId}/cancel:
+    post:
+      summary: Cancel a booking
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Booking canceled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/bookings/{bookingId}/complete:
+    post:
+      summary: Complete a booking
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/bookings/{bookingId}/no-show:
+    post:
+      summary: Mark booking as no-show
+      tags:
+        - Bookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Marked as no-show
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/staff:
+    get:
+      summary: List staff for a salon
+      tags:
+        - Staff
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of staff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+    post:
+      summary: Add new staff member
+      tags:
+        - Staff
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullName
+                - phone
+                - role
+              properties:
+                fullName:
+                  type: string
+                phone:
+                  type: string
+                role:
+                  type: string
+                  enum: [MANAGER, RECEPTIONIST, STAFF]
+                isPublic:
+                  type: boolean
+                publicName:
+                  type: string
+                bio:
+                  type: string
+                avatarUrl:
+                  type: string
+      responses:
+        '201':
+          description: Staff member added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/staff/{userId}/shifts:
+    get:
+      summary: List shifts for a staff member
+      tags:
+        - Shifts
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of shifts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+    post:
+      summary: Upsert shifts for a staff member
+      tags:
+        - Shifts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - dayOfWeek
+                  - startTime
+                  - endTime
+                  - isActive
+                properties:
+                  dayOfWeek:
+                    type: integer
+                  startTime:
+                    type: string
+                  endTime:
+                    type: string
+                  isActive:
+                    type: boolean
+      responses:
+        '200':
+          description: Shifts updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{salonId}/services:
+    get:
+      summary: List services for a salon
+      tags:
+        - Services
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of services
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+    post:
+      summary: Create a new service
+      tags:
+        - Services
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - durationMinutes
+                - price
+                - currency
+              properties:
+                name:
+                  type: string
+                durationMinutes:
+                  type: integer
+                price:
+                  type: integer
+                currency:
+                  type: string
+                isActive:
+                  type: boolean
+      responses:
+        '201':
+          description: Service created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /public/salons/{salonSlug}/services:
+    get:
+      summary: List public services for a salon
+      tags:
+        - Services
+      parameters:
+        - name: salonSlug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of public services
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons:
+    get:
+      summary: List all salons
+      tags:
+        - Salons
+      responses:
+        '200':
+          description: List of salons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pagination'
+    post:
+      summary: Create a new salon
+      tags:
+        - Salons
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+                - ownerId
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                ownerId:
+                  type: string
+      responses:
+        '201':
+          description: Salon created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
+  /salons/{id}:
+    get:
+      summary: Get salon by ID
+      tags:
+        - Salons
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Salon details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+    patch:
+      summary: Update salon
+      tags:
+        - Salons
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Salon updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+    delete:
+      summary: Delete salon
+      tags:
+        - Salons
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Salon deleted
           content:
             application/json:
               schema:
@@ -170,6 +1208,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+
+  /auth/user/login/otp:
+    post:
+      summary: Login with OTP
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - salonId
+              properties:
+                phone:
+                  type: string
+                  example: "09123456789"
+                salonId:
+                  type: string
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/refresh:
+    post:
+      summary: Refresh Token
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      summary: Logout
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
 
   /auth/me:
     get:
