@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
 import { v4 as uuidv4 } from 'uuid';
 import routes from './routes';
 import { errorHandler } from './common/errors/errorHandler';
@@ -31,6 +34,10 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 app.use(responseMiddleware);
+
+// Swagger Documentation
+const swaggerDocument = YAML.load(path.join(__dirname, 'docs/openapi.yaml'));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use('/api/v1', routes);
 
