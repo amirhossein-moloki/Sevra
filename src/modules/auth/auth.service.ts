@@ -4,7 +4,6 @@ import { AuthRepository } from './auth.repository';
 import { generateAccessToken } from './auth.tokens';
 import { OtpPurpose, SessionActorType } from '@prisma/client';
 import createHttpError from 'http-errors';
-import { prisma } from '../../config/prisma';
 import { SmsService } from '../notifications/sms.service';
 
 const hashToken = (token: string) => {
@@ -81,8 +80,8 @@ export class AuthService {
   }
 
   async requestUserOtp(phone: string) {
-    const userExists = await prisma.user.findFirst({ where: { phone } });
-    if (!userExists) {
+    const users = await this.authRepository.findUsersWithSalons(phone);
+    if (users.length === 0) {
         throw createHttpError(404, 'No user found with this phone number.');
     }
 
@@ -90,13 +89,11 @@ export class AuthService {
     const codeHash = await argon2.hash(code);
     const expiresAt = new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000);
 
-    await prisma.phoneOtp.create({
-        data: {
-            phone,
-            purpose: OtpPurpose.LOGIN,
-            codeHash,
-            expiresAt,
-        }
+    await this.authRepository.createOtp({
+        phone,
+        purpose: OtpPurpose.LOGIN,
+        codeHash,
+        expiresAt,
     });
 
     await this.smsService.sendTemplateSms(phone, this.otpTemplateId, [{ name: 'CODE', value: code }]);
@@ -105,15 +102,7 @@ export class AuthService {
   }
 
   async verifyUserOtp(phone: string, code: string) {
-    const otp = await prisma.phoneOtp.findFirst({
-        where: {
-            phone,
-            purpose: OtpPurpose.LOGIN,
-            consumedAt: null,
-            expiresAt: { gt: new Date() },
-        },
-        orderBy: { createdAt: 'desc' },
-    });
+    const otp = await this.authRepository.findRecentOtp(phone, OtpPurpose.LOGIN);
 
     if (!otp) {
         throw createHttpError(401, 'Invalid or expired OTP.');
@@ -126,15 +115,9 @@ export class AuthService {
         throw createHttpError(401, 'Invalid or expired OTP.');
     }
 
-    await prisma.phoneOtp.update({
-        where: { id: otp.id },
-        data: { consumedAt: new Date() },
-    });
+    await this.authRepository.consumeOtp(otp.id);
 
-    const users = await prisma.user.findMany({
-        where: { phone },
-        include: { salon: true },
-    });
+    const users = await this.authRepository.findUsersWithSalons(phone);
 
     const salons = users.map(user => ({
         id: user.salon.id,
@@ -147,16 +130,7 @@ export class AuthService {
   async loginUserWithOtp(phone: string, salonId: string) {
     const verificationWindow = new Date(Date.now() - OTP_POST_VERIFICATION_WINDOW_MINUTES * 60 * 1000);
 
-    const recentVerifiedOtp = await prisma.phoneOtp.findFirst({
-        where: {
-            phone,
-            purpose: OtpPurpose.LOGIN,
-            consumedAt: { gte: verificationWindow },
-        },
-        orderBy: {
-            consumedAt: 'desc'
-        }
-    });
+    const recentVerifiedOtp = await this.authRepository.findRecentConsumedOtp(phone, OtpPurpose.LOGIN, verificationWindow);
 
     if (!recentVerifiedOtp) {
         throw createHttpError(401, 'No recent OTP verification found. Please verify again.');
@@ -181,7 +155,7 @@ export class AuthService {
     // For now, we'll create a customer if they don't exist.
     // In a real scenario, this would be part of a signup/OTP flow.
     if (!customer) {
-        customer = await prisma.customerAccount.create({ data: { phone }});
+        customer = await this.authRepository.createCustomer(phone);
     }
 
     const { accessToken, refreshToken } = await this.createAndSaveSession(customer.id, 'CUSTOMER');

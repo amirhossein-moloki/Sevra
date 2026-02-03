@@ -118,4 +118,5 @@ export const PaymentsRepo = {
   handleSuccessfulPayment,
   handleFailedPayment,
   updatePayment,
+  transaction: <T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) => prisma.$transaction(fn),
 };

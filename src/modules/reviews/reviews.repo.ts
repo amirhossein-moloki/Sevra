@@ -54,3 +54,12 @@ export async function findReviewById(reviewId: string, salonId: string) {
         where: { id: reviewId, salonId }
     });
 }
+
+export async function findBookingForReview(bookingId: string, salonSlug: string) {
+  return prisma.booking.findFirst({
+    where: {
+      id: bookingId,
+      salon: { slug: salonSlug },
+    },
+  });
+}

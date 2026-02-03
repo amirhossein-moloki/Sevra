@@ -4,8 +4,9 @@ import { prisma } from '../../config/prisma';
 
 export const CommissionsRepo = {
   // Policy operations
-  async findPolicyBySalonId(salonId: string) {
-    return prisma.salonCommissionPolicy.findUnique({
+  async findPolicyBySalonId(salonId: string, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.salonCommissionPolicy.findUnique({
       where: { salonId },
     });
   },
@@ -19,20 +20,23 @@ export const CommissionsRepo = {
   },
 
   // Booking Commission operations
-  async findBookingCommission(bookingId: string) {
-    return prisma.bookingCommission.findUnique({
+  async findBookingCommission(bookingId: string, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.bookingCommission.findUnique({
       where: { bookingId },
     });
   },
 
-  async createBookingCommission(data: Prisma.BookingCommissionCreateInput) {
-    return prisma.bookingCommission.create({
+  async createBookingCommission(data: Prisma.BookingCommissionUncheckedCreateInput, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.bookingCommission.create({
       data,
     });
   },
 
-  async updateBookingCommission(id: string, data: Prisma.BookingCommissionUpdateInput) {
-    return prisma.bookingCommission.update({
+  async updateBookingCommission(id: string, data: Prisma.BookingCommissionUpdateInput, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.bookingCommission.update({
       where: { id },
       data,
     });
@@ -67,9 +71,17 @@ export const CommissionsRepo = {
   },
 
   // Commission Payment operations
-  async createCommissionPayment(data: Prisma.CommissionPaymentCreateInput) {
-    return prisma.commissionPayment.create({
+  async createCommissionPayment(data: Prisma.CommissionPaymentUncheckedCreateInput, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.commissionPayment.create({
       data,
+    });
+  },
+
+  async findCommissionPayments(commissionId: string, status?: any, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.commissionPayment.findMany({
+      where: { commissionId, status },
     });
   },
 
@@ -78,5 +90,24 @@ export const CommissionsRepo = {
       where: { id },
       include: { payments: true },
     });
+  },
+
+  async findBookingForCommission(bookingId: string, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.booking.findUnique({
+      where: { id: bookingId },
+      include: { commission: true },
+    });
+  },
+
+  async findCommissionById(id: string, salonId: string, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.bookingCommission.findFirst({
+      where: { id, salonId },
+    });
+  },
+
+  async transaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
+    return prisma.$transaction(fn);
   }
 };

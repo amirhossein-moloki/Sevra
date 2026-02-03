@@ -1,6 +1,6 @@
 
 import { SessionActorType } from '@prisma/client';
-import { prisma } from '../../config/prisma';
+import { AuditRepo } from './audit.repo';
 
 export interface RecordLogInput {
   salonId: string;
@@ -22,19 +22,17 @@ export const auditService = {
    */
   async recordLog(data: RecordLogInput) {
     try {
-      return await prisma.auditLog.create({
-        data: {
-          salonId: data.salonId,
-          actorId: data.actorId,
-          actorType: data.actorType,
-          action: data.action,
-          entity: data.entity,
-          entityId: data.entityId,
-          oldData: data.oldData ?? undefined,
-          newData: data.newData ?? undefined,
-          ipAddress: data.ipAddress,
-          userAgent: data.userAgent,
-        },
+      return await AuditRepo.createLog({
+        salonId: data.salonId,
+        actorId: data.actorId,
+        actorType: data.actorType,
+        action: data.action,
+        entity: data.entity,
+        entityId: data.entityId,
+        oldData: data.oldData ?? undefined,
+        newData: data.newData ?? undefined,
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent,
       });
     } catch (error) {
       // We don't want to fail the main transaction if audit logging fails,
@@ -65,15 +63,11 @@ export const auditService = {
       actorId,
     };
 
-    const [logs, totalItems] = await prisma.$transaction([
-      prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-      }),
-      prisma.auditLog.count({ where }),
-    ]);
+    const [logs, totalItems] = await AuditRepo.transaction(async (tx) => {
+      const l = await AuditRepo.findManyLogs(where, skip, pageSize);
+      const c = await AuditRepo.countLogs(where);
+      return [l, c] as const;
+    });
 
     return {
       data: logs,
