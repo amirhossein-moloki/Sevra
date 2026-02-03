@@ -1,9 +1,10 @@
-import { Prisma, Payment, BookingPaymentState, PaymentStatus } from '@prisma/client';
+import { Prisma, BookingPaymentState, PaymentStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { PrismaClient } from '@prisma/client/extension';
 import { validateBookingTransition, validatePaymentTransition } from './payments.state';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
+import { commissionsService } from '../commissions/commissions.service';
 
 type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
@@ -59,6 +60,12 @@ const handleSuccessfulPayment = async (tx: Tx, paymentId: string) => {
   await tx.booking.update({
     where: { id: payment.bookingId },
     data: { paymentState: BookingPaymentState.PAID },
+  });
+
+  // Trigger commission calculation (async, non-blocking for the transaction)
+  // We use the bookingId from the payment record
+  commissionsService.calculateCommission(payment.bookingId).catch((err) => {
+    console.error('Failed to calculate commission for booking after payment:', payment.bookingId, err);
   });
 };
 

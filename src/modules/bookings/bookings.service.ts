@@ -6,6 +6,7 @@ import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { getZonedStartAndEnd } from '../../common/utils/date';
+import { commissionsService } from '../commissions/commissions.service';
 import {
   CancelBookingInput,
   CreateBookingInput,
@@ -548,13 +549,20 @@ export const bookingsService = {
       throw new AppError('Invalid state transition: Booking cannot be completed.', httpStatus.CONFLICT);
     }
 
-    return prisma.booking.update({
+    const updatedBooking = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: BookingStatus.DONE,
         completedAt: new Date(),
       },
     });
+
+    // Trigger commission calculation
+    await commissionsService.calculateCommission(bookingId).catch((err) => {
+      console.error('Failed to calculate commission for booking:', bookingId, err);
+    });
+
+    return updatedBooking;
   },
 
   async markAsNoShow(bookingId: string, salonId: string, actor: { id: string, role: UserRole }) {
