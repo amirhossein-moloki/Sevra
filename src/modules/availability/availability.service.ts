@@ -1,5 +1,5 @@
 import { GetAvailabilityQuery } from './availability.validators';
-import { prisma } from '../../config/prisma';
+import { AvailabilityRepo } from './availability.repo';
 import createHttpError from 'http-errors';
 import { add, isBefore, isEqual, startOfDay } from 'date-fns';
 import { format as formatTz, toZonedTime } from 'date-fns-tz';
@@ -21,19 +21,7 @@ export const getAvailableSlots = async (
   const { salonSlug, serviceId, staffId, startDate, endDate } = query;
 
   // 1. Fetch Service and Salon info
-  const service = await prisma.service.findFirst({
-    where: {
-      id: serviceId,
-      salon: { slug: salonSlug },
-    },
-    include: {
-        salon: {
-          include: {
-            settings: true
-          }
-        },
-    }
-  });
+  const service = await AvailabilityRepo.findServiceWithSalon(serviceId, salonSlug);
 
   if (!service) {
     throw createHttpError(404, 'Service not found in this salon.');
@@ -44,17 +32,11 @@ export const getAvailableSlots = async (
   // 2. Determine which staff members to check
   let staffToCheck = [];
   if (staffId) {
-    // Corrected filter using userServices
-    const staff = await prisma.user.findFirst({
-      where: { id: staffId, salonId, userServices: { some: { serviceId: serviceId } } },
-    });
+    const staff = await AvailabilityRepo.findStaff(staffId, salonId, serviceId);
     if (!staff) throw createHttpError(404, 'Staff member not found or does not perform this service.');
     staffToCheck.push(staff);
   } else {
-    // Corrected filter using userServices
-    staffToCheck = await prisma.user.findMany({
-      where: { salonId, userServices: { some: { serviceId: serviceId } }, isActive: true },
-    });
+    staffToCheck = await AvailabilityRepo.findStaffList(salonId, serviceId);
   }
 
   if (staffToCheck.length === 0) {
@@ -64,18 +46,8 @@ export const getAvailableSlots = async (
   const staffIds = staffToCheck.map(s => s.id);
 
   // 3. Fetch all relevant shifts and bookings in one go
-  const shifts = await prisma.shift.findMany({
-    where: { userId: { in: staffIds }, isActive: true },
-  });
-
-  const bookings = await prisma.booking.findMany({
-    where: {
-      staffId: { in: staffIds },
-      status: { notIn: ['CANCELED', 'NO_SHOW'] },
-      startAt: { gte: startDate },
-      endAt: { lte: endDate },
-    },
-  });
+  const shifts = await AvailabilityRepo.findShifts(staffIds);
+  const bookings = await AvailabilityRepo.findBookings(staffIds, startDate, endDate);
 
   // --- Core Logic: Generate and Filter Slots ---
   const availableSlots: TimeSlot[] = [];

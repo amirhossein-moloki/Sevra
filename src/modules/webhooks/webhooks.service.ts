@@ -1,7 +1,7 @@
 import { PaymentStatus, IdempotencyStatus, Prisma } from '@prisma/client';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
-import { prisma } from '../../config/prisma';
+import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
 import { PaymentsRepo } from '../payments/payments.repo';
 
 const processPaymentWebhook = async ({
@@ -20,9 +20,7 @@ const processPaymentWebhook = async ({
   const idempotencyScope = `payment-webhook:${provider}`;
 
   // 1. Check if this event has been processed before
-  const existingKey = await prisma.idempotencyKey.findUnique({
-    where: { scope_key: { scope: idempotencyScope, key: eventId } },
-  });
+  const existingKey = await IdempotencyRepo.findKey(idempotencyScope, eventId);
 
   if (existingKey) {
     // If it's completed, we're done. Acknowledge receipt.
@@ -37,20 +35,17 @@ const processPaymentWebhook = async ({
 
   // 2. Create the idempotency key before processing
   try {
-    await prisma.idempotencyKey.create({
-      data: {
-        key: eventId,
-        scope: idempotencyScope,
-        status: IdempotencyStatus.IN_PROGRESS,
-        // Set a reasonable expiry, e.g., 24 hours
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      },
+    await IdempotencyRepo.createKey({
+      key: eventId,
+      scope: idempotencyScope,
+      requestHash: '', // Webhooks use eventId for idempotency, no payload hashing needed here
+      status: IdempotencyStatus.IN_PROGRESS,
+      // Set a reasonable expiry, e.g., 24 hours
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      const racedKey = await prisma.idempotencyKey.findUnique({
-        where: { scope_key: { scope: idempotencyScope, key: eventId } },
-      });
+      const racedKey = await IdempotencyRepo.findKey(idempotencyScope, eventId);
 
       if (racedKey) {
         if (racedKey.status === IdempotencyStatus.IN_PROGRESS) {
@@ -64,7 +59,10 @@ const processPaymentWebhook = async ({
 
   // 3. Process the event in a transaction
   try {
-    await prisma.$transaction(async (tx) => {
+    // We use PaymentsRepo's access to prisma transaction or just use prisma directly if no other choice,
+    // but better to have a repo method or use the common pattern.
+    // Since WebhooksService is cross-cutting, we might use prisma transaction here but use repos inside.
+    await PaymentsRepo.transaction(async (tx) => {
       // Find the payment record
       const payment = await tx.payment.findUnique({
         where: { id: paymentId },
@@ -94,17 +92,11 @@ const processPaymentWebhook = async ({
       }
 
       // Mark the idempotency key as completed
-      await tx.idempotencyKey.update({
-        where: { scope_key: { scope: idempotencyScope, key: eventId } },
-        data: { status: IdempotencyStatus.COMPLETED },
-      });
+      await IdempotencyRepo.updateKey(idempotencyScope, eventId, { status: IdempotencyStatus.COMPLETED }, tx);
     });
   } catch (error) {
     // If anything goes wrong, mark the key as failed to allow for potential retries
-    await prisma.idempotencyKey.update({
-      where: { scope_key: { scope: idempotencyScope, key: eventId } },
-      data: { status: IdempotencyStatus.FAILED },
-    });
+    await IdempotencyRepo.updateKey(idempotencyScope, eventId, { status: IdempotencyStatus.FAILED });
     // Re-throw the original error
     throw error;
   }

@@ -1,7 +1,6 @@
 
 import { BookingSource, CommissionStatus, CommissionType, CommissionPaymentStatus, Prisma, SessionActorType } from '@prisma/client';
 import { CommissionsRepo } from './commissions.repo';
-import { prisma } from '../../config/prisma';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { ListCommissionsQuery, RecordCommissionPaymentInput, UpsertPolicyInput } from './commissions.validators';
@@ -54,20 +53,15 @@ export const commissionsService = {
   },
 
   async calculateCommission(bookingId: string) {
-    return prisma.$transaction(async (tx) => {
+    return CommissionsRepo.transaction(async (tx) => {
       // 1. Fetch booking
-      const booking = await tx.booking.findUnique({
-        where: { id: bookingId },
-        include: { commission: true }
-      });
+      const booking = await CommissionsRepo.findBookingForCommission(bookingId, tx);
 
       if (!booking) return null;
       if (booking.commission) return booking.commission; // Already calculated
 
       // 2. Fetch policy
-      const policy = await tx.salonCommissionPolicy.findUnique({
-        where: { salonId: booking.salonId }
-      });
+      const policy = await CommissionsRepo.findPolicyBySalonId(booking.salonId, tx);
 
       if (!policy || !policy.isActive) return null;
 
@@ -98,20 +92,18 @@ export const commissionsService = {
       }
 
       // 5. Create BookingCommission record
-      return tx.bookingCommission.create({
-        data: {
-          booking: { connect: { id: booking.id } },
-          salon: { connect: { id: booking.salonId } },
-          status: CommissionStatus.PENDING,
-          baseAmount: booking.amountDueSnapshot,
-          currency: commissionCurrency,
-          type: policy.type,
-          percentBps: policy.percentBps,
-          fixedAmount: policy.fixedAmount,
-          commissionAmount: commissionAmount,
-          calculatedAt: new Date(),
-        }
-      });
+      return CommissionsRepo.createBookingCommission({
+        bookingId: booking.id,
+        salonId: booking.salonId,
+        status: CommissionStatus.PENDING,
+        baseAmount: booking.amountDueSnapshot,
+        currency: commissionCurrency,
+        type: policy.type,
+        percentBps: policy.percentBps,
+        fixedAmount: policy.fixedAmount,
+        commissionAmount: commissionAmount,
+        calculatedAt: new Date(),
+      }, tx);
     });
   },
 
@@ -148,26 +140,22 @@ export const commissionsService = {
     actor: { id: string; actorType: SessionActorType },
     context?: { ip?: string; userAgent?: string }
   ) {
-    return prisma.$transaction(async (tx) => {
-      const commission = await tx.bookingCommission.findFirst({
-        where: { id: commissionId, salonId }
-      });
+    return CommissionsRepo.transaction(async (tx) => {
+      const commission = await CommissionsRepo.findCommissionById(commissionId, salonId, tx);
 
       if (!commission) {
         throw new AppError('Commission record not found.', httpStatus.NOT_FOUND);
       }
 
-      const payment = await tx.commissionPayment.create({
-        data: {
-          commission: { connect: { id: commissionId } },
-          amount: input.amount,
-          currency: input.currency,
-          status: input.status,
-          method: input.method,
-          referenceCode: input.referenceCode,
-          paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
-        }
-      });
+      const payment = await CommissionsRepo.createCommissionPayment({
+        commissionId: commissionId,
+        amount: input.amount,
+        currency: input.currency,
+        status: input.status,
+        method: input.method,
+        referenceCode: input.referenceCode,
+        paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
+      }, tx);
 
       await auditService.recordLog({
         salonId,
@@ -183,20 +171,15 @@ export const commissionsService = {
 
       // If fully paid, update commission status
       // For MVP, we might just assume one payment covers it or sum them up
-      const allPayments = await tx.commissionPayment.findMany({
-        where: { commissionId, status: CommissionPaymentStatus.PAID }
-      });
+      const allPayments = await CommissionsRepo.findCommissionPayments(commissionId, CommissionPaymentStatus.PAID, tx);
 
       const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
 
       if (totalPaid >= commission.commissionAmount) {
-        await tx.bookingCommission.update({
-          where: { id: commissionId },
-          data: {
-            status: CommissionStatus.CHARGED, // or ACCRUED then CHARGED. Let's use CHARGED for paid.
-            chargedAt: new Date()
-          }
-        });
+        await CommissionsRepo.updateBookingCommission(commissionId, {
+          status: CommissionStatus.CHARGED, // or ACCRUED then CHARGED. Let's use CHARGED for paid.
+          chargedAt: new Date()
+        }, tx);
       }
 
       return payment;

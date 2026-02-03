@@ -10,6 +10,51 @@ export class AuthRepository {
     return prisma.customerAccount.findFirst({ where: { phone } });
   }
 
+  async createCustomer(phone: string) {
+    return prisma.customerAccount.create({ data: { phone } });
+  }
+
+  async createOtp(data: { phone: string; purpose: any; codeHash: string; expiresAt: Date }) {
+    return prisma.phoneOtp.create({ data });
+  }
+
+  async findRecentOtp(phone: string, purpose: any) {
+    return prisma.phoneOtp.findFirst({
+      where: {
+        phone,
+        purpose,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findRecentConsumedOtp(phone: string, purpose: any, window: Date) {
+    return prisma.phoneOtp.findFirst({
+      where: {
+        phone,
+        purpose,
+        consumedAt: { gte: window },
+      },
+      orderBy: { consumedAt: 'desc' },
+    });
+  }
+
+  async consumeOtp(id: string) {
+    return prisma.phoneOtp.update({
+      where: { id },
+      data: { consumedAt: new Date() },
+    });
+  }
+
+  async findUsersWithSalons(phone: string) {
+    return prisma.user.findMany({
+      where: { phone },
+      include: { salon: true },
+    });
+  }
+
   async createSession(actorId: string, actorType: SessionActorType, tokenHash: string, expiresAt: Date) {
     return prisma.session.create({
       data: {

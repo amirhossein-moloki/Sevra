@@ -1,17 +1,11 @@
 import createHttpError from 'http-errors';
-import { prisma } from '../../config/prisma';
 import * as reviewsRepo from './reviews.repo';
 import { SubmitReviewInput } from './reviews.types';
 import { ReviewStatus, BookingStatus } from '@prisma/client';
 
 export async function submitReview(salonSlug: string, input: SubmitReviewInput) {
   // 1. Verify booking exists and belongs to the salon (by slug)
-  const booking = await prisma.booking.findFirst({
-    where: {
-      id: input.bookingId,
-      salon: { slug: salonSlug },
-    },
-  });
+  const booking = await reviewsRepo.findBookingForReview(input.bookingId, salonSlug);
 
   if (!booking) {
     throw createHttpError(404, 'Booking not found');

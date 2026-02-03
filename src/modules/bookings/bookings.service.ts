@@ -2,7 +2,7 @@
 import { addMinutes, isBefore } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { Booking, BookingSource, BookingStatus, Prisma, SessionActorType, UserRole, Salon, Settings } from '@prisma/client';
-import { prisma } from '../../config/prisma';
+import { BookingsRepo } from './bookings.repo';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { getZonedStartAndEnd } from '../../common/utils/date';
@@ -80,7 +80,7 @@ const findAndValidateBooking = async (
   bookingId: string,
   salonId: string
 ): Promise<Booking> => {
-  const booking = await prisma.booking.findFirst({ where: { id: bookingId, salonId: salonId } });
+  const booking = await BookingsRepo.findBookingById(bookingId, salonId);
   if (!booking) {
     throw new AppError('Booking not found.', httpStatus.NOT_FOUND);
   }
@@ -93,33 +93,26 @@ const findOrCreateCustomerProfile = async (
   customer: { fullName: string; phone: string; email?: string }
 ) => {
   const normalizedPhone = normalizePhone(customer.phone);
-  let customerAccount = await tx.customerAccount.findUnique({
-    where: { phone: normalizedPhone },
-  });
+  let customerAccount = await BookingsRepo.findCustomerAccountByPhone(normalizedPhone, tx);
 
   if (!customerAccount) {
-    customerAccount = await tx.customerAccount.create({
-      data: { phone: normalizedPhone, fullName: customer.fullName },
-    });
+    customerAccount = await BookingsRepo.createCustomerAccount(
+      { phone: normalizedPhone, fullName: customer.fullName },
+      tx
+    );
   }
 
-  let customerProfile = await tx.salonCustomerProfile.findUnique({
-    where: {
-      salonId_customerAccountId: {
-        salonId,
-        customerAccountId: customerAccount.id,
-      },
-    },
-  });
+  let customerProfile = await BookingsRepo.findCustomerProfile(salonId, customerAccount.id, tx);
 
   if (!customerProfile) {
-    customerProfile = await tx.salonCustomerProfile.create({
-      data: {
+    customerProfile = await BookingsRepo.createCustomerProfile(
+      {
         salonId,
         customerAccountId: customerAccount.id,
         displayName: customer.fullName,
       },
-    });
+      tx
+    );
   }
 
   return { customerAccount, customerProfile };
@@ -127,28 +120,18 @@ const findOrCreateCustomerProfile = async (
 
 export const bookingsService = {
   async createBooking(input: CreateBookingInput & { salonId: string; createdByUserId: string; }) {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await BookingsRepo.transaction(async (tx) => {
       const { salonId, serviceId, staffId, customer, startAt: startAtString, createdByUserId, note } = input;
       const startAt = new Date(startAtString);
 
       // 1. Fetch Service and Customer Profile details
-      const service = await tx.service.findFirst({
-        where: { id: serviceId, salonId: salonId, isActive: true },
-      });
+      const service = await BookingsRepo.findService(serviceId, salonId, true, tx);
 
       if (!service) {
         throw new AppError('Service not found or is not active.', httpStatus.NOT_FOUND);
       }
 
-      const staff = await tx.user.findFirst({
-        where: {
-          id: staffId,
-          salonId,
-          isActive: true,
-          userServices: { some: { serviceId } },
-        },
-        select: { id: true },
-      });
+      const staff = await BookingsRepo.findStaff(staffId, salonId, serviceId, undefined, tx);
 
       if (!staff) {
         throw new AppError(
@@ -160,13 +143,10 @@ export const bookingsService = {
       const { customerAccount, customerProfile } = await findOrCreateCustomerProfile(
         tx,
         salonId,
-        customer
+        customer as { fullName: string; phone: string; email?: string }
       );
 
-      const salon = await tx.salon.findUnique({
-        where: { id: salonId },
-        include: { settings: true },
-      });
+      const salon = await BookingsRepo.findSalonWithSettings(salonId, tx);
 
       if (!salon) {
         throw new AppError('Salon not found.', httpStatus.NOT_FOUND);
@@ -175,26 +155,24 @@ export const bookingsService = {
       // 2. Calculate endAt and create booking
       const endAt = addMinutes(startAt, service.durationMinutes);
 
-      const booking = await tx.booking.create({
-        data: {
-          salonId,
-          serviceId,
-          staffId,
-          customerProfileId: customerProfile.id,
-          customerAccountId: customerAccount.id,
-          createdByUserId,
-          startAt,
-          endAt,
-          note,
-          status: BookingStatus.CONFIRMED,
-          // Snapshots
-          serviceNameSnapshot: service.name,
-          serviceDurationSnapshot: service.durationMinutes,
-          servicePriceSnapshot: service.price,
-          currencySnapshot: service.currency,
-          amountDueSnapshot: service.price,
-        },
-      });
+      const booking = await BookingsRepo.createBooking({
+        salonId,
+        serviceId,
+        staffId,
+        customerProfileId: customerProfile.id,
+        customerAccountId: customerAccount.id,
+        createdByUserId,
+        startAt,
+        endAt,
+        note,
+        status: BookingStatus.CONFIRMED,
+        // Snapshots
+        serviceNameSnapshot: service.name,
+        serviceDurationSnapshot: service.durationMinutes,
+        servicePriceSnapshot: service.price,
+        currencySnapshot: service.currency,
+        amountDueSnapshot: service.price,
+      }, tx);
 
       return { booking, salon, customerAccount };
     }, {
@@ -214,11 +192,8 @@ export const bookingsService = {
 
   async createPublicBooking(salonSlug: string, input: CreatePublicBookingInput) {
     try {
-      const result = await prisma.$transaction(async (tx) => {
-        const salon = await tx.salon.findUnique({
-          where: { slug: salonSlug },
-          include: { settings: true },
-        });
+      const result = await BookingsRepo.transaction(async (tx) => {
+        const salon = await BookingsRepo.findSalonBySlugWithSettings(salonSlug, tx);
 
         if (!salon) {
           throw new AppError('Salon not found.', httpStatus.NOT_FOUND);
@@ -237,23 +212,13 @@ export const bookingsService = {
           });
         }
 
-        const service = await tx.service.findFirst({
-          where: { id: input.serviceId, salonId: salon.id, isActive: true },
-        });
+        const service = await BookingsRepo.findService(input.serviceId, salon.id, true, tx);
 
         if (!service) {
           throw new AppError('Service not found or is not active.', httpStatus.NOT_FOUND);
         }
 
-        const staff = await tx.user.findFirst({
-          where: {
-            id: input.staffId,
-            salonId: salon.id,
-            isActive: true,
-            isPublic: true,
-            userServices: { some: { serviceId: input.serviceId } },
-          },
-        });
+        const staff = await BookingsRepo.findStaff(input.staffId, salon.id, input.serviceId, true, tx);
 
         if (!staff) {
           throw new AppError(
@@ -266,14 +231,7 @@ export const bookingsService = {
         const timeZone = salon.settings?.timeZone || 'UTC';
         const zonedStartAt = toZonedTime(startAt, timeZone);
 
-        const shift = await tx.shift.findFirst({
-          where: {
-            salonId: salon.id,
-            userId: staff.id,
-            dayOfWeek: zonedStartAt.getDay(),
-            isActive: true,
-          },
-        });
+        const shift = await BookingsRepo.findShift(salon.id, staff.id, zonedStartAt.getDay(), tx);
 
         if (!shift) {
           throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
@@ -290,16 +248,7 @@ export const bookingsService = {
           });
         }
 
-        const overlappingBooking = await tx.booking.findFirst({
-          where: {
-            salonId: salon.id,
-            staffId: staff.id,
-            status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
-            startAt: { lt: endAt },
-            endAt: { gt: startAt },
-          },
-          select: { id: true },
-        });
+        const overlappingBooking = await BookingsRepo.findOverlappingBooking(salon.id, staff.id, startAt, endAt, undefined, tx);
 
         if (overlappingBooking) {
           throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
@@ -310,33 +259,31 @@ export const bookingsService = {
         const { customerAccount, customerProfile } = await findOrCreateCustomerProfile(
           tx,
           salon.id,
-          input.customer
+          input.customer as { fullName: string; phone: string; email?: string }
         );
 
         const status = salon.settings?.onlineBookingAutoConfirm
           ? BookingStatus.CONFIRMED
           : BookingStatus.PENDING;
 
-        const booking = await tx.booking.create({
-          data: {
-            salonId: salon.id,
-            serviceId: service.id,
-            staffId: staff.id,
-            customerProfileId: customerProfile.id,
-            customerAccountId: customerAccount.id,
-            createdByUserId: staff.id,
-            startAt,
-            endAt,
-            note: input.note,
-            status,
-            source: BookingSource.ONLINE,
-            serviceNameSnapshot: service.name,
-            serviceDurationSnapshot: service.durationMinutes,
-            servicePriceSnapshot: service.price,
-            currencySnapshot: service.currency,
-            amountDueSnapshot: service.price,
-          },
-        });
+        const booking = await BookingsRepo.createBooking({
+          salonId: salon.id,
+          serviceId: service.id,
+          staffId: staff.id,
+          customerProfileId: customerProfile.id,
+          customerAccountId: customerAccount.id,
+          createdByUserId: staff.id,
+          startAt,
+          endAt,
+          note: input.note,
+          status,
+          source: BookingSource.ONLINE,
+          serviceNameSnapshot: service.name,
+          serviceDurationSnapshot: service.durationMinutes,
+          servicePriceSnapshot: service.price,
+          currencySnapshot: service.currency,
+          amountDueSnapshot: service.price,
+        }, tx);
 
         return { booking, salon, customerAccount };
       }, {
@@ -379,15 +326,16 @@ export const bookingsService = {
       where.staffId = actor.id;
     }
 
-    const [bookings, totalItems] = await prisma.$transaction([
-      prisma.booking.findMany({
+    const [bookings, totalItems] = await BookingsRepo.transaction(async (tx) => {
+      const b = await BookingsRepo.findManyBookings(
         where,
-        orderBy: { [sortBy]: sortOrder },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      prisma.booking.count({ where }),
-    ]);
+        (page - 1) * pageSize,
+        pageSize,
+        { [sortBy]: sortOrder }
+      );
+      const c = await BookingsRepo.countBookings(where);
+      return [b, c] as const;
+    });
 
     return {
       data: bookings,
@@ -413,13 +361,13 @@ export const bookingsService = {
     context?: { ip?: string; userAgent?: string }
   ) {
     try {
-      return await prisma.$transaction(async (tx) => {
-        const booking = await tx.booking.findFirst({ where: { id: bookingId, salonId } });
+      return await BookingsRepo.transaction(async (tx) => {
+        const booking = await BookingsRepo.findBookingById(bookingId, salonId, tx);
         if (!booking) {
           throw new AppError('Booking not found.', httpStatus.NOT_FOUND);
         }
 
-        if ([BookingStatus.CANCELED, BookingStatus.DONE, BookingStatus.NO_SHOW].includes(booking.status)) {
+        if (([BookingStatus.CANCELED, BookingStatus.DONE, BookingStatus.NO_SHOW] as BookingStatus[]).includes(booking.status)) {
           throw new AppError('Booking is in a terminal state', httpStatus.CONFLICT, {
             code: 'INVALID_TRANSITION',
           });
@@ -435,17 +383,13 @@ export const bookingsService = {
 
         let effectiveService = null;
         if (serviceChanged) {
-          effectiveService = await tx.service.findFirst({
-            where: { id: effectiveServiceId, salonId, isActive: true },
-          });
+          effectiveService = await BookingsRepo.findService(effectiveServiceId, salonId, true, tx);
 
           if (!effectiveService) {
             throw new AppError('Service not found or is not active.', httpStatus.NOT_FOUND);
           }
         } else if (hasTimeChange) {
-          effectiveService = await tx.service.findFirst({
-            where: { id: effectiveServiceId, salonId },
-          });
+          effectiveService = await BookingsRepo.findService(effectiveServiceId, salonId, undefined, tx);
 
           if (!effectiveService) {
             throw new AppError('Service not found.', httpStatus.NOT_FOUND);
@@ -453,15 +397,7 @@ export const bookingsService = {
         }
 
         if (staffChanged || serviceChanged) {
-          const staff = await tx.user.findFirst({
-            where: {
-              id: effectiveStaffId,
-              salonId,
-              isActive: true,
-              userServices: { some: { serviceId: effectiveServiceId } },
-            },
-            select: { id: true },
-          });
+          const staff = await BookingsRepo.findStaff(effectiveStaffId, salonId, effectiveServiceId, undefined, tx);
 
           if (!staff) {
             throw new AppError(
@@ -471,7 +407,7 @@ export const bookingsService = {
           }
         }
 
-        const updateData: Prisma.BookingUpdateInput = {};
+        const updateData: Prisma.BookingUncheckedUpdateInput = {};
 
         if (serviceChanged && effectiveService) {
           updateData.serviceId = effectiveServiceId;
@@ -491,9 +427,7 @@ export const bookingsService = {
         }
 
         if (hasTimeChange) {
-          const settings = await tx.settings.findUnique({
-            where: { salonId },
-          });
+          const settings = await BookingsRepo.findSettings(salonId, tx);
           const timeZone = settings?.timeZone || 'UTC';
 
           const newStartAt = data.startAt ? new Date(data.startAt) : booking.startAt;
@@ -503,14 +437,7 @@ export const bookingsService = {
           const newEndAt = addMinutes(newStartAt, serviceDurationMinutes);
           const zonedNewStartAt = toZonedTime(newStartAt, timeZone);
 
-          const shift = await tx.shift.findFirst({
-            where: {
-              salonId,
-              userId: effectiveStaffId,
-              dayOfWeek: zonedNewStartAt.getDay(),
-              isActive: true,
-            },
-          });
+          const shift = await BookingsRepo.findShift(salonId, effectiveStaffId, zonedNewStartAt.getDay(), tx);
 
           if (!shift) {
             throw new AppError('Selected time is not available.', httpStatus.CONFLICT, {
@@ -529,17 +456,14 @@ export const bookingsService = {
 
           const preventOverlaps = settings?.preventOverlaps ?? true;
           if (preventOverlaps) {
-            const overlappingBooking = await tx.booking.findFirst({
-              where: {
-                salonId,
-                staffId: effectiveStaffId,
-                id: { not: booking.id },
-                status: { in: [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.DONE] },
-                startAt: { lt: newEndAt },
-                endAt: { gt: newStartAt },
-              },
-              select: { id: true },
-            });
+            const overlappingBooking = await BookingsRepo.findOverlappingBooking(
+              salonId,
+              effectiveStaffId,
+              newStartAt,
+              newEndAt,
+              booking.id,
+              tx
+            );
 
             if (overlappingBooking) {
               throw new AppError('Booking overlaps with another for the same staff member.', httpStatus.CONFLICT, {
@@ -557,10 +481,7 @@ export const bookingsService = {
           }
         }
 
-        const updatedBooking = await tx.booking.update({
-          where: { id: bookingId },
-          data: updateData,
-        });
+        const updatedBooking = await BookingsRepo.updateBooking(bookingId, updateData, tx);
 
         await auditService.recordLog({
           salonId,
@@ -600,14 +521,14 @@ export const bookingsService = {
       throw new AppError('Invalid state transition: Booking cannot be confirmed.', httpStatus.CONFLICT);
     }
 
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: BookingStatus.CONFIRMED },
-      include: {
+    const updatedBooking = await BookingsRepo.updateBookingWithInclude(
+      bookingId,
+      { status: BookingStatus.CONFIRMED },
+      {
         salon: { include: { settings: true } },
         customerAccount: true,
-      },
-    });
+      }
+    );
 
     await sendBookingStatusSms(
       updatedBooking,
@@ -632,23 +553,23 @@ export const bookingsService = {
 
     const booking = await findAndValidateBooking(bookingId, salonId);
 
-    if (![BookingStatus.PENDING, BookingStatus.CONFIRMED].includes(booking.status)) {
+    if (!([BookingStatus.PENDING, BookingStatus.CONFIRMED] as BookingStatus[]).includes(booking.status)) {
       throw new AppError('Invalid state transition: Booking cannot be canceled.', httpStatus.CONFLICT);
     }
 
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
+    const updatedBooking = await BookingsRepo.updateBookingWithInclude(
+      bookingId,
+      {
         status: BookingStatus.CANCELED,
         canceledAt: new Date(),
         canceledByUserId: actor.id,
         cancelReason: data.reason,
       },
-      include: {
+      {
         salon: { include: { settings: true } },
         customerAccount: true,
-      },
-    });
+      }
+    );
 
     await sendBookingStatusSms(
       updatedBooking,
@@ -689,12 +610,9 @@ export const bookingsService = {
       throw new AppError('Invalid state transition: Booking cannot be completed.', httpStatus.CONFLICT);
     }
 
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        status: BookingStatus.DONE,
-        completedAt: new Date(),
-      },
+    const updatedBooking = await BookingsRepo.updateBooking(bookingId, {
+      status: BookingStatus.DONE,
+      completedAt: new Date(),
     });
 
     await auditService.recordLog({
@@ -734,12 +652,9 @@ export const bookingsService = {
       throw new AppError('Invalid state transition: Booking cannot be marked as no-show.', httpStatus.CONFLICT);
     }
 
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        status: BookingStatus.NO_SHOW,
-        noShowAt: new Date(),
-      },
+    const updatedBooking = await BookingsRepo.updateBooking(bookingId, {
+      status: BookingStatus.NO_SHOW,
+      noShowAt: new Date(),
     });
 
     await auditService.recordLog({

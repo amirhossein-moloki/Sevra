@@ -6,7 +6,7 @@ import httpStatus from 'http-status';
 import { IdempotencyStatus, Prisma } from '@prisma/client';
 
 import { AppRequest } from '../../types/express';
-import { prisma } from '../../config/prisma';
+import { IdempotencyRepo } from '../repositories/idempotency.repo';
 import AppError from '../errors/AppError';
 import logger from '../../config/logger';
 
@@ -69,9 +69,7 @@ export const idempotencyMiddleware = async (
   const requestHash = getRequestHash(req.body);
 
   // 3. Check for an existing idempotency record
-  let existingRecord = await prisma.idempotencyKey.findUnique({
-    where: { scope_key: { scope, key: idempotencyKey } },
-  });
+  let existingRecord = await IdempotencyRepo.findKey(scope, idempotencyKey);
 
   if (existingRecord) {
     // 4. Handle existing record based on its status
@@ -109,21 +107,19 @@ export const idempotencyMiddleware = async (
       case IdempotencyStatus.FAILED:
         // If a previous attempt failed, allow a new attempt by deleting the old key.
         // This will allow the flow to proceed to the 'create' step.
-        await prisma.idempotencyKey.delete({ where: { id: existingRecord.id } });
+        await IdempotencyRepo.deleteKey(existingRecord.id);
         break;
     }
   }
 
   // 5. Create a new idempotency record for the new request
   try {
-    await prisma.idempotencyKey.create({
-      data: {
-        key: idempotencyKey,
-        scope,
-        requestHash,
-        status: IdempotencyStatus.IN_PROGRESS,
-        expiresAt: add(new Date(), TTL),
-      },
+    await IdempotencyRepo.createKey({
+      key: idempotencyKey,
+      scope,
+      requestHash,
+      status: IdempotencyStatus.IN_PROGRESS,
+      expiresAt: add(new Date(), TTL),
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -181,13 +177,10 @@ export const idempotencyMiddleware = async (
     }
 
     try {
-      await prisma.idempotencyKey.update({
-        where: { scope_key: { scope, key: idempotencyKey } },
-        data: {
-          status: finalStatus,
-          responseBody: responseBody || null,
-          responseStatusCode: finalStatusCode,
-        },
+      await IdempotencyRepo.updateKey(scope, idempotencyKey, {
+        status: finalStatus,
+        responseBody: responseBody || null,
+        responseStatusCode: finalStatusCode,
       });
       logger.info({ event, key: idempotencyKey, scope, statusCode: finalStatusCode });
     } catch (dbError) {
