@@ -10,7 +10,8 @@
     "test": "cross-env NODE_ENV=test dotenv -e .env.test -- bash -c 'sudo docker compose up -d db && sleep 2 && sudo -E npx prisma migrate reset --force && jest --runInBand --detectOpenHandles'",
     "test:unit": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --testPathIgnorePatterns=e2e",
     "test:e2e": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --testPathPattern=e2e --runInBand",
-    "test:coverage": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --coverage --runInBand"
+    "test:coverage": "cross-env NODE_ENV=test dotenv -e .env.test -- jest --coverage --runInBand",
+    "backfill:analytics": "node --import tsx --require dotenv/config ./scripts/backfill-analytics.ts"
   },
   "dependencies": {
     "@sentry/node": "^10.38.0",

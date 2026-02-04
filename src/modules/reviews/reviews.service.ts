@@ -2,6 +2,7 @@ import createHttpError from 'http-errors';
 import * as reviewsRepo from './reviews.repo';
 import { SubmitReviewInput } from './reviews.types';
 import { ReviewStatus, BookingStatus } from '@prisma/client';
+import { AnalyticsRepo } from '../analytics/analytics.repo';
 
 export async function submitReview(salonSlug: string, input: SubmitReviewInput) {
   // 1. Verify booking exists and belongs to the salon (by slug)
@@ -18,7 +19,12 @@ export async function submitReview(salonSlug: string, input: SubmitReviewInput) 
 
   // 3. Create the review
   // Use the customerAccountId from the booking
-  return reviewsRepo.createReview(booking.salonId, booking.customerAccountId, input);
+  const review = await reviewsRepo.createReview(booking.salonId, booking.customerAccountId, input);
+
+  // Sync analytics
+  AnalyticsRepo.syncAllStatsForReview(review.id).catch(console.error);
+
+  return review;
 }
 
 export async function getPublishedReviews(salonSlug: string) {
@@ -31,5 +37,10 @@ export async function moderateReview(salonId: string, reviewId: string, status: 
     throw createHttpError(404, 'Review not found');
   }
 
-  return reviewsRepo.updateReviewStatus(reviewId, salonId, status);
+  const updatedReview = await reviewsRepo.updateReviewStatus(reviewId, salonId, status);
+
+  // Sync analytics
+  AnalyticsRepo.syncAllStatsForReview(reviewId).catch(console.error);
+
+  return updatedReview;
 }

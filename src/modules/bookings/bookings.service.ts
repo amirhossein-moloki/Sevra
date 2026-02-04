@@ -10,6 +10,7 @@ import { commissionsService } from '../commissions/commissions.service';
 import { auditService } from '../audit/audit.service';
 import { SmsService } from '../notifications/sms.service';
 import { formatInTimeZone } from 'date-fns-tz';
+import { AnalyticsRepo } from '../analytics/analytics.repo';
 
 const smsService = new SmsService();
 
@@ -179,6 +180,9 @@ export const bookingsService = {
       isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
     });
 
+    // Sync analytics
+    AnalyticsRepo.syncAllStatsForBooking(result.booking.id).catch(console.error);
+
     // Send SMS notification
     await sendBookingStatusSms(
       result.booking,
@@ -289,6 +293,9 @@ export const bookingsService = {
       }, {
         isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
       });
+
+      // Sync analytics
+      AnalyticsRepo.syncAllStatsForBooking(result.booking.id).catch(console.error);
 
       // Send SMS notification
       await sendBookingStatusSms(
@@ -496,9 +503,26 @@ export const bookingsService = {
           userAgent: context?.userAgent,
         });
 
-        return updatedBooking;
+        return { updatedBooking, oldBooking: booking };
       }, {
         isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+      }).then(({ updatedBooking, oldBooking }) => {
+        // Sync analytics for both old and new dates/staff/services
+        AnalyticsRepo.syncSpecificStats(
+          oldBooking.salonId,
+          oldBooking.startAt,
+          oldBooking.staffId,
+          oldBooking.serviceId
+        ).catch(console.error);
+
+        AnalyticsRepo.syncSpecificStats(
+          updatedBooking.salonId,
+          updatedBooking.startAt,
+          updatedBooking.staffId,
+          updatedBooking.serviceId
+        ).catch(console.error);
+
+        return updatedBooking;
       });
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === '23P01' && 'message' in error && typeof error.message === 'string' && error.message.includes('Booking_no_overlap_active')) {
@@ -536,6 +560,8 @@ export const bookingsService = {
       updatedBooking.customerAccount.phone,
       updatedBooking.customerAccount.fullName || ''
     );
+
+    AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
 
     return updatedBooking;
   },
@@ -591,6 +617,8 @@ export const bookingsService = {
       userAgent: context?.userAgent,
     });
 
+    AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
+
     return updatedBooking;
   },
 
@@ -627,6 +655,8 @@ export const bookingsService = {
       ipAddress: context?.ip,
       userAgent: context?.userAgent,
     });
+
+    AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
 
     // Trigger commission calculation
     await commissionsService.calculateCommission(bookingId).catch((err) => {
@@ -669,6 +699,8 @@ export const bookingsService = {
       ipAddress: context?.ip,
       userAgent: context?.userAgent,
     });
+
+    AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
 
     return updatedBooking;
   },
