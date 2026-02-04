@@ -13,10 +13,7 @@ export async function getCustomers(req: Request, res: Response, next: NextFuncti
       limit: limit ? parseInt(limit as string, 10) : undefined,
     });
 
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
+    res.ok(result);
   } catch (error) {
     next(error);
   }
@@ -27,10 +24,7 @@ export async function getCustomerById(req: Request, res: Response, next: NextFun
     const { salonId, customerId } = req.params;
     const customer = await customerService.getCustomerDetail(salonId, customerId);
 
-    res.status(200).json({
-      success: true,
-      data: customer,
-    });
+    res.ok(customer);
   } catch (error) {
     next(error);
   }
@@ -43,10 +37,7 @@ export async function createCustomer(req: Request, res: Response, next: NextFunc
 
     const customer = await customerService.createCustomer(salonId, input);
 
-    res.status(201).json({
-      success: true,
-      data: customer,
-    });
+    res.created(customer);
   } catch (error) {
     next(error);
   }
@@ -59,10 +50,7 @@ export async function updateCustomer(req: Request, res: Response, next: NextFunc
 
     const customer = await customerService.updateCustomer(salonId, customerId, input);
 
-    res.status(200).json({
-      success: true,
-      data: customer,
-    });
+    res.ok(customer);
   } catch (error) {
     next(error);
   }
@@ -72,7 +60,7 @@ export async function deleteCustomer(req: Request, res: Response, next: NextFunc
     try {
         const { salonId, customerId } = req.params;
         await customerService.deleteCustomer(salonId, customerId);
-        res.status(204).send();
+        res.noContent();
     } catch (error) {
         next(error);
     }

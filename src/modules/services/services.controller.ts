@@ -20,7 +20,7 @@ export async function createService(
   try {
     const { salonId } = req.params;
     const newService = await serviceLogic.createService(salonId, req.body);
-    res.status(201).json({ success: true, data: newService });
+    res.created(newService);
   } catch (error) {
     next(error);
   }
@@ -47,7 +47,7 @@ export async function getServices(
       targetSalonId,
       isActive === 'true'
     );
-    res.status(200).json({ success: true, data: services });
+    res.ok(services);
   } catch (error) {
     next(error);
   }
@@ -64,7 +64,7 @@ export async function getServiceById(
   try {
     const { salonId, serviceId } = req.params;
     const service = await serviceLogic.getServiceById(serviceId, salonId);
-    res.status(200).json({ success: true, data: service });
+    res.ok(service);
   } catch (error) {
     next(error);
   }
@@ -81,7 +81,7 @@ export async function updateService(
   try {
     const { salonId, serviceId } = req.params;
     const updatedService = await serviceLogic.updateService(serviceId, salonId, req.body);
-    res.status(200).json({ success: true, data: updatedService });
+    res.ok(updatedService);
   } catch (error) {
     next(error);
   }
@@ -98,7 +98,7 @@ export async function deleteService(
   try {
     const { salonId, serviceId } = req.params;
     await serviceLogic.deactivateService(serviceId, salonId);
-    res.status(204).send();
+    res.noContent();
   } catch (error) {
     next(error);
   }

@@ -27,7 +27,7 @@ export async function uploadMedia(
       thumbUrl,
     });
 
-    res.status(201).json({ success: true, data: media });
+    res.created(media);
   } catch (error) {
     next(error);
   }

@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../../common/middleware/asyncHandler';
 import { WebhooksService } from './webhooks.service';
-import httpStatus from 'http-status';
 
 const handlePaymentWebhook = asyncHandler(async (req: Request, res: Response) => {
   const { provider } = req.params;
@@ -14,10 +13,7 @@ const handlePaymentWebhook = asyncHandler(async (req: Request, res: Response) =>
     signature: signature ?? null,
   });
 
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: { message: 'Webhook received and processed.' },
-  });
+  res.ok({ message: 'Webhook received and processed.' });
 });
 
 export const WebhooksController = {

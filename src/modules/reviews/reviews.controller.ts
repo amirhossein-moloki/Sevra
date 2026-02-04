@@ -5,7 +5,7 @@ export async function submitReview(req: Request, res: Response, next: NextFuncti
   try {
     const { salonSlug } = req.params;
     const review = await reviewsService.submitReview(salonSlug, req.body);
-    res.status(201).json({ success: true, data: review });
+    res.created(review);
   } catch (error) {
     next(error);
   }
@@ -15,7 +15,7 @@ export async function getReviews(req: Request, res: Response, next: NextFunction
   try {
     const { salonSlug } = req.params;
     const reviews = await reviewsService.getPublishedReviews(salonSlug);
-    res.status(200).json({ success: true, data: reviews });
+    res.ok(reviews);
   } catch (error) {
     next(error);
   }
@@ -26,7 +26,7 @@ export async function moderateReview(req: Request, res: Response, next: NextFunc
     const { salonId, id } = req.params;
     const { status } = req.body;
     const review = await reviewsService.moderateReview(salonId, id, status);
-    res.status(200).json({ success: true, data: review });
+    res.ok(review);
   } catch (error) {
     next(error);
   }

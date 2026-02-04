@@ -1,6 +1,5 @@
 
 import { Response, NextFunction } from 'express';
-import httpStatus from 'http-status';
 import { auditService } from './audit.service';
 import { ListAuditLogsQuery } from './audit.validators';
 import { AppRequest } from '../../types/express';
@@ -16,7 +15,13 @@ export const getAuditLogs = async (
 
     const result = await auditService.getLogs(salonId, query);
 
-    res.status(httpStatus.OK).json(result);
+    res.ok(result.data, {
+      pagination: {
+        page: result.meta.page,
+        pageSize: result.meta.pageSize,
+        total: result.meta.totalItems,
+      },
+    });
   } catch (error) {
     next(error);
   }

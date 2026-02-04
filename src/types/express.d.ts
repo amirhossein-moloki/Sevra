@@ -1,7 +1,8 @@
 
 // src/types/express.d.ts
 import { SessionActorType, UserRole } from '@prisma/client';
-import { Request } from 'express';
+import { Request, Response } from 'express';
+import { ApiMeta } from '../common/utils/response';
 
 // Extend the Express Request interface to include our custom properties
 declare global {
@@ -17,6 +18,19 @@ declare global {
       salonId?: string; // salonId is added by various middlewares for panel routes
       id?: string;
       requestId?: string;
+    }
+
+    export interface Response {
+      ok<T>(data: T, meta?: Omit<ApiMeta, 'requestId'>): Response;
+      created<T>(data: T, meta?: Omit<ApiMeta, 'requestId'>): Response;
+      noContent(): Response;
+      fail(
+        code: string,
+        message: string,
+        status?: number,
+        details?: unknown,
+        meta?: Omit<ApiMeta, 'requestId'>
+      ): Response;
     }
   }
 }

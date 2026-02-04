@@ -9,7 +9,7 @@ export async function createPage(
 ) {
   const { salonId } = req.params;
   const page = await PagesService.createPage(salonId, req.body);
-  res.status(201).json({ success: true, data: page });
+  res.created(page);
 }
 
 export async function listPages(req: Request<{ salonId: string }>, res: Response) {
@@ -25,13 +25,11 @@ export async function listPages(req: Request<{ salonId: string }>, res: Response
     offset,
   });
 
-  res.status(200).json({
-    success: true,
-    data: pages,
-    meta: {
+  res.ok(pages, {
+    pagination: {
       total,
-      limit,
-      offset,
+      pageSize: limit,
+      page: Math.floor(offset / limit) + 1,
     },
   });
 }
@@ -42,7 +40,7 @@ export async function updatePage(
 ) {
   const { salonId, pageId } = req.params;
   const page = await PagesService.updatePage(salonId, pageId, req.body);
-  res.status(200).json({ success: true, data: page });
+  res.ok(page);
 }
 
 export async function getPage(
@@ -51,5 +49,5 @@ export async function getPage(
 ) {
   const { salonId, pageId } = req.params;
   const page = await PagesService.getPage(salonId, pageId);
-  res.status(200).json({ success: true, data: page });
+  res.ok(page);
 }

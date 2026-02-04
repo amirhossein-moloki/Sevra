@@ -2,7 +2,6 @@
 import { NextFunction, Response } from 'express';
 import { AppRequest } from '../../types/express';
 import { bookingsService } from './bookings.service';
-import httpStatus from 'http-status';
 
 export const createBooking = async (
   req: AppRequest,
@@ -16,11 +15,7 @@ export const createBooking = async (
     requestId: req.id,
   };
   const booking = await bookingsService.createBooking(data);
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    data: booking,
-    meta: null,
-  });
+  res.created(booking);
 };
 
 export const createPublicBooking = async (
@@ -35,11 +30,7 @@ export const createPublicBooking = async (
     req.body
   );
 
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    data: booking,
-    meta: null,
-  });
+  res.created(booking);
 };
 
 export const getBookings = async (
@@ -48,11 +39,7 @@ export const getBookings = async (
   next: NextFunction
 ) => {
   const result = await bookingsService.getBookings(req.tenant.salonId, req.query, req.actor);
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: result.data,
-    meta: result.meta,
-  });
+  res.ok(result.data, { pagination: result.meta });
 };
 
 export const getBookingById = async (
@@ -65,11 +52,7 @@ export const getBookingById = async (
     req.tenant.salonId,
     req.actor
   );
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: booking,
-    meta: null,
-  });
+  res.ok(booking);
 };
 
 export const updateBooking = async (
@@ -84,11 +67,7 @@ export const updateBooking = async (
     req.actor,
     { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: booking,
-    meta: null,
-  });
+  res.ok(booking);
 };
 
 export const confirmBooking = async (
@@ -101,11 +80,7 @@ export const confirmBooking = async (
     req.tenant.salonId,
     req.actor
   );
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: booking,
-    meta: null,
-  });
+  res.ok(booking);
 };
 
 export const cancelBooking = async (
@@ -120,11 +95,7 @@ export const cancelBooking = async (
     req.body,
     { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: booking,
-    meta: null,
-  });
+  res.ok(booking);
 };
 
 export const completeBooking = async (
@@ -138,11 +109,7 @@ export const completeBooking = async (
     req.actor,
     { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: booking,
-    meta: null,
-  });
+  res.ok(booking);
 };
 
 export const markAsNoShow = async (
@@ -156,9 +123,5 @@ export const markAsNoShow = async (
     req.actor,
     { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
-  res.status(httpStatus.OK).json({
-    success: true,
-    data: booking,
-    meta: null,
-  });
+  res.ok(booking);
 };
