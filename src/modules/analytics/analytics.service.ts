@@ -7,19 +7,15 @@ import { prisma } from '../../config/prisma';
 
 export const AnalyticsService = {
   async getSummary(salonId: string, startDate: Date, endDate: Date) {
-    const [bookings, paymentsSum, newCustomers] = await Promise.all([
-      AnalyticsRepo.getBookingsData(salonId, startDate, endDate),
-      AnalyticsRepo.getPaidPaymentsSum(salonId, startDate, endDate),
+    const [stats, newCustomers] = await Promise.all([
+      AnalyticsRepo.getSummaryStats(salonId, startDate, endDate),
       AnalyticsRepo.getNewCustomersCount(salonId, startDate, endDate),
     ]);
 
-    const totalBookings = bookings.length;
-    const completedBookings = bookings.filter((b) => b.status === BookingStatus.DONE).length;
-    const canceledBookings = bookings.filter((b) => b.status === BookingStatus.CANCELED).length;
-
-    const totalRevenue = bookings
-      .filter((b) => b.status === BookingStatus.DONE)
-      .reduce((sum, b) => sum + b.amountDueSnapshot, 0);
+    const totalBookings = stats.totalBookings || 0;
+    const completedBookings = stats.completedBookings || 0;
+    const canceledBookings = stats.canceledBookings || 0;
+    const totalRevenue = stats.revenue || 0;
 
     const completionRate =
       totalBookings > 0
@@ -30,7 +26,7 @@ export const AnalyticsService = {
 
     return {
       totalRevenue,
-      realizedCash: paymentsSum._sum.amount || 0,
+      realizedCash: stats.realizedCash || 0,
       totalBookings,
       completedBookings,
       canceledBookings,
@@ -41,31 +37,24 @@ export const AnalyticsService = {
   },
 
   async getStaffPerformance(salonId: string, startDate: Date, endDate: Date) {
-    const [bookings, staffList, bookingsWithReviews] = await Promise.all([
-      AnalyticsRepo.getBookingsData(salonId, startDate, endDate),
+    const [staffStats, staffList] = await Promise.all([
+      AnalyticsRepo.getStaffPerformanceStats(salonId, startDate, endDate),
       AnalyticsRepo.getStaffDetails(salonId),
-      AnalyticsRepo.getBookingsWithReviews(salonId, startDate, endDate),
     ]);
 
     const performance = staffList.map((staff) => {
-      const staffBookings = bookings.filter(
-        (b) => b.staffId === staff.id && b.status === BookingStatus.DONE
-      );
-      const revenue = staffBookings.reduce((sum, b) => sum + b.amountDueSnapshot, 0);
-
-      const staffReviews = bookingsWithReviews.filter((b) => b.staffId === staff.id);
-      const totalRating = staffReviews.reduce(
-        (sum, b) => sum + b.reviews.reduce((s, r) => s + r.rating, 0),
-        0
-      );
-      const reviewsCount = staffReviews.reduce((sum, b) => sum + b.reviews.length, 0);
+      const stats = staffStats.find((s) => s.staffId === staff.id);
+      const revenue = stats?._sum?.revenue || 0;
+      const completedBookings = stats?._sum?.completedBookings || 0;
+      const totalRating = stats?._sum?.totalRating || 0;
+      const ratingCount = stats?._sum?.ratingCount || 0;
 
       return {
         staffId: staff.id,
         staffName: staff.fullName,
-        bookingsCount: staffBookings.length,
+        bookingsCount: completedBookings,
         revenue,
-        averageRating: reviewsCount > 0 ? Math.round((totalRating / reviewsCount) * 10) / 10 : 0,
+        averageRating: ratingCount > 0 ? Math.round((totalRating / ratingCount) * 10) / 10 : 0,
       };
     });
 
@@ -73,21 +62,20 @@ export const AnalyticsService = {
   },
 
   async getServicePerformance(salonId: string, startDate: Date, endDate: Date) {
-    const [bookings, servicesList] = await Promise.all([
-      AnalyticsRepo.getBookingsData(salonId, startDate, endDate),
+    const [serviceStats, servicesList] = await Promise.all([
+      AnalyticsRepo.getServicePerformanceStats(salonId, startDate, endDate),
       AnalyticsRepo.getServiceDetails(salonId),
     ]);
 
     const performance = servicesList.map((service) => {
-      const serviceBookings = bookings.filter(
-        (b) => b.serviceId === service.id && b.status === BookingStatus.DONE
-      );
-      const revenue = serviceBookings.reduce((sum, b) => sum + b.amountDueSnapshot, 0);
+      const stats = serviceStats.find((s) => s.serviceId === service.id);
+      const revenue = stats?._sum?.revenue || 0;
+      const completedBookings = stats?._sum?.completedBookings || 0;
 
       return {
         serviceId: service.id,
         serviceName: service.name,
-        bookingsCount: serviceBookings.length,
+        bookingsCount: completedBookings,
         revenue,
       };
     });
@@ -96,24 +84,11 @@ export const AnalyticsService = {
   },
 
   async getRevenueChart(salonId: string, startDate: Date, endDate: Date) {
-    const settings = await prisma.settings.findUnique({ where: { salonId } });
-    const timeZone = settings?.timeZone || 'UTC';
+    const dailyStats = await AnalyticsRepo.getDailyRevenue(salonId, startDate, endDate);
 
-    const bookings = await AnalyticsRepo.getBookingsData(salonId, startDate, endDate);
-    const doneBookings = bookings.filter((b) => b.status === BookingStatus.DONE);
-
-    const revenueByDate: Record<string, number> = {};
-
-    doneBookings.forEach((b) => {
-      const dateStr = formatInTimeZone(b.startAt, timeZone, 'yyyy-MM-dd');
-      revenueByDate[dateStr] = (revenueByDate[dateStr] || 0) + b.amountDueSnapshot;
-    });
-
-    const sortedDates = Object.keys(revenueByDate).sort();
-
-    return sortedDates.map((date) => ({
-      date,
-      revenue: revenueByDate[date],
+    return dailyStats.map((s) => ({
+      date: format(s.date, 'yyyy-MM-dd'),
+      revenue: s.revenue,
     }));
   },
 };

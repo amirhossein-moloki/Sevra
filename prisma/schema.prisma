@@ -383,6 +383,7 @@ model SalonCustomerProfile {
   @@unique([salonId, customerAccountId])
   @@index([salonId, displayName])
   @@index([customerAccountId])
+  @@index([salonId, createdAt])
 }
 
 // -----------------------
@@ -554,6 +555,7 @@ model Payment {
   @@unique(fields: [salonId, idempotencyKey], name: "idempotency_key")
   @@index([bookingId, paidAt])
   @@index([status, paidAt])
+  @@index([salonId, status, paidAt])
 }
 
 // =====================================================
@@ -872,6 +874,59 @@ model SalonPageSlugHistory {
 
   @@index([pageId, createdAt])
   @@index([oldSlug])
+}
+
+// =====================================================
+// Analytics Summary Tables
+// =====================================================
+
+model SalonAnalytics {
+  salonId String
+  date    DateTime @db.Date
+
+  totalBookings     Int @default(0)
+  completedBookings Int @default(0)
+  canceledBookings  Int @default(0)
+  revenue           Int @default(0)
+  realizedCash      Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([salonId, date])
+  @@index([salonId, date])
+}
+
+model StaffAnalytics {
+  salonId String
+  staffId String
+  date    DateTime @db.Date
+
+  completedBookings Int @default(0)
+  revenue           Int @default(0)
+  totalRating       Int @default(0)
+  ratingCount       Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([salonId, staffId, date])
+  @@index([salonId, staffId, date])
+}
+
+model ServiceAnalytics {
+  salonId   String
+  serviceId String
+  date      DateTime @db.Date
+
+  completedBookings Int @default(0)
+  revenue           Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([salonId, serviceId, date])
+  @@index([salonId, serviceId, date])
 }
 
 // =====================================================
