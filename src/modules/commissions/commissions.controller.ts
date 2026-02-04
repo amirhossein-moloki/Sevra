@@ -48,12 +48,12 @@ export const listCommissions = async (
   });
 };
 
-export const recordPayment = async (
+export const payCommission = async (
   req: AppRequest,
   res: Response,
   _next: NextFunction
 ) => {
-  const payment = await commissionsService.recordPayment(
+  const payment = await commissionsService.payCommission(
     req.params.commissionId,
     req.tenant.salonId,
     req.body,

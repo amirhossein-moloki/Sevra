@@ -133,7 +133,7 @@ export const commissionsService = {
     };
   },
 
-  async recordPayment(
+  async payCommission(
     commissionId: string,
     salonId: string,
     input: RecordCommissionPaymentInput,
@@ -170,14 +170,13 @@ export const commissionsService = {
       });
 
       // If fully paid, update commission status
-      // For MVP, we might just assume one payment covers it or sum them up
       const allPayments = await CommissionsRepo.findCommissionPayments(commissionId, CommissionPaymentStatus.PAID, tx);
 
       const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
 
       if (totalPaid >= commission.commissionAmount) {
         await CommissionsRepo.updateBookingCommission(commissionId, {
-          status: CommissionStatus.CHARGED, // or ACCRUED then CHARGED. Let's use CHARGED for paid.
+          status: CommissionStatus.CHARGED,
           chargedAt: new Date()
         }, tx);
       }

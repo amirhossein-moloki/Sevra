@@ -40,10 +40,10 @@ router.get(
 );
 
 router.post(
-  '/:commissionId/payments',
+  '/:commissionId/pay',
   requireRole([UserRole.MANAGER]),
   validate(recordCommissionPaymentSchema),
-  asyncHandler(commissionsController.recordPayment)
+  asyncHandler(commissionsController.payCommission)
 );
 
 export const commissionsRoutes = router;
