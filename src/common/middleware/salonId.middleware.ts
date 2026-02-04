@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { cuid } from 'cuid';
+import cuid from 'cuid';
 import AppError from '../errors/AppError';
 import httpStatus from 'http-status';
 

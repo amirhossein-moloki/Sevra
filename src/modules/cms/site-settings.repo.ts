@@ -16,7 +16,7 @@ export async function upsertSiteSettings(
     create: {
       salonId,
       ...data,
-    },
+    } as Prisma.SalonSiteSettingsUncheckedCreateInput,
     update: data,
   });
 }

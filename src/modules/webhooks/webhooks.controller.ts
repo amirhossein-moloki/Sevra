@@ -10,7 +10,6 @@ const handlePaymentWebhook = asyncHandler(async (req: Request, res: Response) =>
   await WebhooksService.processPaymentWebhook({
     provider,
     payload,
-    signature: signature ?? null,
   });
 
   res.ok({ message: 'Webhook received and processed.' });

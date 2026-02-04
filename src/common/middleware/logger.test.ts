@@ -98,7 +98,7 @@ describe('Logger Middleware', () => {
     // End the response to trigger the logging logic in a real scenario
     res.end(() => {
       expect(mockLogger.info).toHaveBeenCalledTimes(1);
-      const loggedData = mockLogger.info.mock.calls[0][0];
+      const loggedData = mockLogger.info.mock.calls[0][0] as any;
 
       // 1. Check for custom context
       expect(loggedData).toHaveProperty('requestId');

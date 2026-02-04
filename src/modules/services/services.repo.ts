@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { CreateServiceInput, UpdateServiceInput } from './services.types';
 
@@ -12,7 +13,7 @@ export async function createService(salonId: string, data: CreateServiceInput) {
     data: {
       ...data,
       salonId,
-    },
+    } as Prisma.ServiceUncheckedCreateInput,
   });
 }
 
@@ -57,7 +58,7 @@ export async function updateService(serviceId: string, salonId: string, data: Up
   // Use updateMany to ensure we are only updating a service belonging to the correct salon.
   await prisma.service.updateMany({
     where: { id: serviceId, salonId },
-    data,
+    data: data as Prisma.ServiceUncheckedUpdateInput,
   });
 
   // Return the updated service record.

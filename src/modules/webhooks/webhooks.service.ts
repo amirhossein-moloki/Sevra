@@ -1,4 +1,5 @@
-import { PaymentStatus, IdempotencyStatus } from '@prisma/client';
+import { PaymentStatus } from '@prisma/client';
+import { IdempotencyStatus } from '../../types/idempotency';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';

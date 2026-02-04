@@ -73,7 +73,7 @@ describe('UserService', () => {
     it('should create a staff member and record audit log', async () => {
       const salonId = 'salon-1';
       const data = { fullName: 'John Doe', phone: '123456789', role: UserRole.STAFF };
-      const actor = { id: 'actor-1', actorType: SessionActorType.MANAGER };
+      const actor = { id: 'actor-1', actorType: SessionActorType.USER };
       const mockUser = { id: 'user-1', ...data, salonId, isActive: true, createdAt: new Date(), updatedAt: new Date(), passwordHash: 'hash', phoneVerifiedAt: null, isPublic: false, publicName: null, bio: null, avatarUrl: null };
 
       mockedUserRepo.createUser.mockResolvedValue(mockUser as any);
@@ -107,7 +107,7 @@ describe('UserService', () => {
       const salonId = 'salon-1';
       const userId = 'user-1';
       const data = { fullName: 'Updated Name' };
-      const actor = { id: 'actor-1', actorType: SessionActorType.MANAGER };
+      const actor = { id: 'actor-1', actorType: SessionActorType.USER };
       const existingUser = { id: userId, fullName: 'Old Name', salonId };
       const updatedUser = { id: userId, fullName: 'Updated Name', salonId };
 
@@ -126,7 +126,7 @@ describe('UserService', () => {
 
     it('should throw if user not found for update', async () => {
       mockedUserRepo.findUserById.mockResolvedValue(null);
-      await expect(userService.updateStaffMember('s1', 'u1', {}, {id: 'a1', actorType: SessionActorType.MANAGER}))
+      await expect(userService.updateStaffMember('s1', 'u1', {}, {id: 'a1', actorType: SessionActorType.USER}))
         .rejects.toThrow(new AppError('Staff member not found', 404));
     });
   });
@@ -135,7 +135,7 @@ describe('UserService', () => {
     it('should soft delete a staff member and record audit log', async () => {
       const salonId = 'salon-1';
       const userId = 'user-1';
-      const actor = { id: 'actor-1', actorType: SessionActorType.MANAGER };
+      const actor = { id: 'actor-1', actorType: SessionActorType.USER };
       const existingUser = { id: userId, fullName: 'User 1', salonId };
 
       mockedUserRepo.findUserById.mockResolvedValue(existingUser as any);
@@ -152,7 +152,7 @@ describe('UserService', () => {
 
     it('should throw if user not found for delete', async () => {
       mockedUserRepo.findUserById.mockResolvedValue(null);
-      await expect(userService.deleteStaffMember('s1', 'u1', {id: 'a1', actorType: SessionActorType.MANAGER}))
+      await expect(userService.deleteStaffMember('s1', 'u1', {id: 'a1', actorType: SessionActorType.USER}))
         .rejects.toThrow(new AppError('Staff member not found', 404));
     });
   });

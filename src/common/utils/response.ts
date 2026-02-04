@@ -3,7 +3,9 @@ import { Response } from 'express';
 export type PaginationMeta = {
   page: number;
   pageSize: number;
-  total: number;
+  total?: number;
+  totalItems?: number;
+  totalPages?: number;
 };
 
 export type ApiMeta = {

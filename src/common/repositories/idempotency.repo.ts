@@ -1,4 +1,4 @@
-import { IdempotencyStatus } from '@prisma/client';
+import { IdempotencyStatus } from '../../types/idempotency';
 import redis from '../../config/redis';
 import { differenceInSeconds } from 'date-fns';
 

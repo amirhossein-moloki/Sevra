@@ -3,7 +3,7 @@ import { NextFunction, Response } from 'express';
 import { createHash } from 'crypto';
 import { add } from 'date-fns';
 import httpStatus from 'http-status';
-import { IdempotencyStatus } from '@prisma/client';
+import { IdempotencyStatus } from '../../types/idempotency';
 
 import { AppRequest } from '../../types/express';
 import { IdempotencyRepo } from '../repositories/idempotency.repo';

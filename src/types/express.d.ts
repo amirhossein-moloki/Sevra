@@ -18,6 +18,7 @@ declare global {
       salonId?: string; // salonId is added by various middlewares for panel routes
       id?: string;
       requestId?: string;
+      rawBody?: Buffer;
     }
 
     export interface Response {

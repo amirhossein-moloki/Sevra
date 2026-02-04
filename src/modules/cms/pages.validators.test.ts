@@ -73,8 +73,8 @@ describe('CMS pages validators', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         const issue = result.error.issues.find(
-          (item) => item.params?.type === PageSectionType.SERVICES_GRID,
-        );
+          (item: any) => item.params?.type === PageSectionType.SERVICES_GRID,
+        ) as any;
         expect(issue?.params).toEqual(
           expect.objectContaining({ index: 0, type: PageSectionType.SERVICES_GRID }),
         );
@@ -161,7 +161,7 @@ describe('CMS pages validators', () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         const issue = result.error.issues.find(
-          (item) => item.params?.type === PageSectionType.SERVICES_GRID,
+          (item: any) => item.params?.type === PageSectionType.SERVICES_GRID,
         );
         expect(issue?.path.slice(-3)).toEqual([0, 'dataJson', 'showPrices']);
       }

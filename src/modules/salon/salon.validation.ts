@@ -9,7 +9,6 @@ export const createSalonSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug can only contain lowercase letters, numbers, and hyphens",
     ),
-  ownerId: z.string().min(1, "Owner ID is required"),
 });
 
 export const updateSalonSchema = z.object({

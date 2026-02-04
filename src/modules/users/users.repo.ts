@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { CreateUserInput, UpdateUserInput } from './users.validators';
 
@@ -6,7 +7,7 @@ export const createUser = async (salonId: string, data: CreateUserInput) => {
     data: {
       salonId,
       ...data,
-    },
+    } as Prisma.UserUncheckedCreateInput,
   });
 };
 
@@ -53,6 +54,6 @@ export const updateUser = async (
       id: userId,
       salonId,
     },
-    data,
+    data: data as Prisma.UserUncheckedUpdateInput,
   });
 };

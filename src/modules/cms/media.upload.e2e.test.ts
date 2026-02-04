@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { PrismaClient, UserRole } from '@prisma/client';
 import app from '../../app';
-import { generateToken } from '../../common/utils/jwt';
+import { generateToken } from '../../common/utils/test-utils';
 import path from 'path';
 import fs from 'fs';
 
@@ -43,7 +43,7 @@ describe('Media Upload E2E', () => {
     });
 
     token = generateToken({
-      userId: manager.id,
+      id: manager.id,
       salonId: salon.id,
       role: UserRole.MANAGER,
     });
