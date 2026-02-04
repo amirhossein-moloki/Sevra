@@ -1,5 +1,5 @@
 
-import { BookingSource, CommissionStatus, CommissionType, CommissionPaymentStatus, Prisma, SessionActorType } from '@prisma/client';
+import { BookingSource, CommissionStatus, CommissionType, CommissionPaymentStatus, Prisma, SessionActorType, BookingPaymentState, CommissionPaymentMethod, PaymentProvider } from '@prisma/client';
 import { CommissionsRepo } from './commissions.repo';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
@@ -66,7 +66,9 @@ export const commissionsService = {
       if (!policy || !policy.isActive) return null;
 
       // 3. Apply filters
-      if (policy.applyToOnlineOnly && booking.source !== BookingSource.ONLINE) {
+      // We only take commission for ONLINE bookings.
+      // In-person bookings are not charged as the platform did not provide the booking service.
+      if (booking.source !== BookingSource.ONLINE) {
         return null;
       }
 
@@ -91,11 +93,18 @@ export const commissionsService = {
         commissionAmount = policy.minimumFeeAmount;
       }
 
-      // 5. Create BookingCommission record
-      return CommissionsRepo.createBookingCommission({
+      // 5. Determine if it should be automatically settled
+      // If the booking is already PAID and it was paid via an online provider,
+      // we assume the platform has collected the money and thus the commission.
+      const hasOnlinePayment = booking.payments?.some(p => p.provider !== PaymentProvider.MANUAL);
+      const shouldAutoSettle = booking.paymentState === BookingPaymentState.PAID && hasOnlinePayment;
+      const status = shouldAutoSettle ? CommissionStatus.CHARGED : CommissionStatus.PENDING;
+
+      // 6. Create BookingCommission record
+      const commission = await CommissionsRepo.createBookingCommission({
         bookingId: booking.id,
         salonId: booking.salonId,
-        status: CommissionStatus.PENDING,
+        status,
         baseAmount: booking.amountDueSnapshot,
         currency: commissionCurrency,
         type: policy.type,
@@ -103,7 +112,23 @@ export const commissionsService = {
         fixedAmount: policy.fixedAmount,
         commissionAmount: commissionAmount,
         calculatedAt: new Date(),
+        chargedAt: shouldAutoSettle ? new Date() : null,
       }, tx);
+
+      // 7. If auto-settled, record the payment
+      if (shouldAutoSettle) {
+        await CommissionsRepo.createCommissionPayment({
+          commissionId: commission.id,
+          amount: commissionAmount,
+          currency: commissionCurrency,
+          status: CommissionPaymentStatus.PAID,
+          method: CommissionPaymentMethod.ONLINE,
+          paidAt: new Date(),
+          referenceCode: `AUTO_SETTLE_${booking.id}`,
+        }, tx);
+      }
+
+      return commission;
     });
   },
 
