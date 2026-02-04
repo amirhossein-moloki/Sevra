@@ -473,6 +473,58 @@ paths:
               schema:
                 $ref: '#/components/schemas/Pagination'
 
+  /salons/{salonId}/commissions/{commissionId}/pay:
+    post:
+      summary: Pay a commission (record payment)
+      tags:
+        - Commissions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: salonId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commissionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - currency
+              properties:
+                amount:
+                  type: integer
+                currency:
+                  type: string
+                status:
+                  type: string
+                  enum: [PENDING, PAID, VOID, REFUNDED]
+                  default: PAID
+                method:
+                  type: string
+                  enum: [CASH, CARD, ONLINE, TRANSFER]
+                referenceCode:
+                  type: string
+                paidAt:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Commission payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+
   /public/salons/{salonSlug}/pages/{pageSlug}:
     get:
       summary: Get a public page by slug
