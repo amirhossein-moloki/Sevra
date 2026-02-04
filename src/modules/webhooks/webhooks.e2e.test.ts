@@ -4,6 +4,7 @@ import app from '../../app';
 import { createTestSalon, createTestService, createTestBooking, createTestPayment, createTestUser } from '../../common/utils/test-utils';
 import { BookingPaymentState, PaymentStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
+import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
 import { env } from '../../config/env';
 
 // Helper to generate a valid signature
@@ -19,7 +20,8 @@ describe('Webhooks E2E', () => {
 
   beforeEach(async () => {
     // Reset DB
-    await prisma.$executeRaw`TRUNCATE "Salon", "User", "Service", "Booking", "Payment", "CustomerAccount", "SalonCustomerProfile", "IdempotencyKey" RESTART IDENTITY CASCADE;`;
+    await prisma.$executeRaw`TRUNCATE "Salon", "User", "Service", "Booking", "Payment", "CustomerAccount", "SalonCustomerProfile" RESTART IDENTITY CASCADE;`;
+    await IdempotencyRepo.clearAll();
 
     const salon = await createTestSalon();
     salonId = salon.id;
@@ -93,9 +95,9 @@ describe('Webhooks E2E', () => {
 
         // We expect the idempotency key to be found, and the request to be acknowledged without processing.
         // No easy way to assert "not re-processed" other than ensuring it doesn't fail.
-        // We can check that the idempotency key count is still 1.
-        const keyCount = await prisma.idempotencyKey.count({ where: { key: payload.eventId } });
-        expect(keyCount).toBe(1);
+        // We can check that the idempotency key exists in Redis.
+        const existingKey = await IdempotencyRepo.findKey(`payment-webhook:${provider}`, payload.eventId);
+        expect(existingKey).not.toBeNull();
       });
     });
 

@@ -225,12 +225,6 @@ erDiagram
 - Relation: `page` (onDelete: Cascade)
 - Indexes: `@@index([pageId, createdAt])`, `@@index([oldSlug])`
 
-### IdempotencyKey
-
-- Fields: `key`, `scope`, `requestHash`, `status`, `responseBody`, `responseStatusCode`, `expiresAt`, timestamps
-- Unique: `@@unique([scope, key])`
-- Indexes: `@@index([expiresAt])`
-
 ## Domain Notes
 
 ### OTP

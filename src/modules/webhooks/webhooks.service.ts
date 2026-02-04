@@ -1,4 +1,4 @@
-import { PaymentStatus, IdempotencyStatus, Prisma } from '@prisma/client';
+import { PaymentStatus, IdempotencyStatus } from '@prisma/client';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
@@ -43,8 +43,8 @@ const processPaymentWebhook = async ({
       // Set a reasonable expiry, e.g., 24 hours
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+  } catch (error: any) {
+    if (error.code === 'P2002') {
       const racedKey = await IdempotencyRepo.findKey(idempotencyScope, eventId);
 
       if (racedKey) {
@@ -91,9 +91,9 @@ const processPaymentWebhook = async ({
           throw new AppError(`Unknown event status: ${eventStatus}`, httpStatus.BAD_REQUEST);
       }
 
-      // Mark the idempotency key as completed
-      await IdempotencyRepo.updateKey(idempotencyScope, eventId, { status: IdempotencyStatus.COMPLETED }, tx);
     });
+    // Mark the idempotency key as completed outside the DB transaction
+    await IdempotencyRepo.updateKey(idempotencyScope, eventId, { status: IdempotencyStatus.COMPLETED });
   } catch (error) {
     // If anything goes wrong, mark the key as failed to allow for potential retries
     await IdempotencyRepo.updateKey(idempotencyScope, eventId, { status: IdempotencyStatus.FAILED });

@@ -3,7 +3,7 @@ import { NextFunction, Response } from 'express';
 import { createHash } from 'crypto';
 import { add } from 'date-fns';
 import httpStatus from 'http-status';
-import { IdempotencyStatus, Prisma } from '@prisma/client';
+import { IdempotencyStatus } from '@prisma/client';
 
 import { AppRequest } from '../../types/express';
 import { IdempotencyRepo } from '../repositories/idempotency.repo';
@@ -121,8 +121,8 @@ export const idempotencyMiddleware = async (
       status: IdempotencyStatus.IN_PROGRESS,
       expiresAt: add(new Date(), TTL),
     });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+  } catch (error: any) {
+    if (error.code === 'P2002') {
       // Race condition: another request created the key just now.
       // Re-fetch and treat as an in-flight request.
       logger.warn({

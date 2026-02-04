@@ -902,34 +902,3 @@ model AuditLog {
   @@index([salonId, entity, entityId])
 }
 
-// =====================================================
-// Idempotency
-// =====================================================
-model IdempotencyKey {
-  id String @id @default(cuid())
-
-  // The business key
-  key   String
-  // The scope of the key (e.g., endpoint + salonId)
-  scope String
-
-  // To detect if the same key is used with a different payload
-  requestHash String
-
-  // State machine
-  status IdempotencyStatus @default(IN_PROGRESS)
-
-  // Cached response
-  responseBody       Json?
-  responseStatusCode Int?
-
-  // TTL
-  expiresAt DateTime
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // An idempotency key is unique for a given scope
-  @@unique([scope, key])
-  @@index([expiresAt])
-}
