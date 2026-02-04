@@ -18,6 +18,38 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
   schemas:
     Error:
       type: object
@@ -26,11 +58,41 @@ components:
           type: boolean
           example: false
         error:
-          type: string
-          example: "Detailed error message"
-        code:
-          type: string
-          example: "VALIDATION_ERROR"
+          type: object
+          properties:
+            code:
+              type: string
+              description: Unique error code for machine handling
+              enum:
+                - INTERNAL_ERROR
+                - APP_ERROR
+                - VALIDATION_ERROR
+                - DB_REQUEST_FAILED
+                - NOT_FOUND
+                - CONFLICT
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - SLOT_NOT_AVAILABLE
+                - BOOKING_OVERLAP
+                - OVERLAP_CONFLICT
+                - BOOKING_START_TIME_IN_PAST
+                - INVALID_TRANSITION
+                - ONLINE_BOOKING_DISABLED
+                - IDEMPOTENCY_KEY_REQUIRED
+                - IDEMPOTENCY_KEY_INVALID_LENGTH
+                - IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD
+                - IDEMPOTENCY_REQUEST_IN_PROGRESS
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "Invalid request payload."
+            details:
+              type: object
+              description: Optional additional error details (e.g., validation issues)
+              nullable: true
+        meta:
+          $ref: '#/components/schemas/Meta'
 
     Success:
       type: object
@@ -40,6 +102,8 @@ components:
           example: true
         data:
           type: object
+        meta:
+          $ref: '#/components/schemas/Meta'
 
     AuthResponse:
       type: object
@@ -169,14 +233,24 @@ components:
     Meta:
       type: object
       properties:
-        total:
-          type: integer
-        page:
-          type: integer
-        limit:
-          type: integer
-        totalPages:
-          type: integer
+        requestId:
+          type: string
+          example: "ckv1abc..."
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            totalItems:
+              type: integer
+            page:
+              type: integer
+            pageSize:
+              type: integer
+            limit:
+              type: integer
+            totalPages:
+              type: integer
 
     Pagination:
       type: object
@@ -287,6 +361,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /salons/{salonId}/analytics/staff:
     get:
@@ -712,6 +788,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+        '400':
+          description: Bad Request (e.g. Booking in the past)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden (e.g. Online booking disabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Conflict (e.g. Slot not available)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /salons/{salonId}/bookings:
     get:
@@ -746,6 +842,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
     post:
       summary: Create a booking (Panel)
       tags:
@@ -796,6 +894,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Conflict (e.g. Slot not available)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /salons/{salonId}/bookings/{bookingId}:
     get:
@@ -887,6 +997,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Conflict (e.g. Invalid state transition)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /salons/{salonId}/bookings/{bookingId}/cancel:
     post:
@@ -921,6 +1041,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Conflict (e.g. Invalid state transition)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /salons/{salonId}/bookings/{bookingId}/complete:
     post:
@@ -1352,6 +1482,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/login:
     post:
