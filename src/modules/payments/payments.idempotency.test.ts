@@ -4,6 +4,7 @@ import app from '../../app';
 import { prisma } from '../../config/prisma';
 import { UserRole } from '@prisma/client';
 import { createTestSalon, createTestUser, createTestService, createTestBooking, generateToken } from '../../common/utils/test-utils';
+import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
 
 describe('Payments Idempotency E2E', () => {
   let salonId: string;
@@ -18,7 +19,7 @@ describe('Payments Idempotency E2E', () => {
     await prisma.service.deleteMany();
     await prisma.user.deleteMany();
     await prisma.salon.deleteMany();
-    await prisma.idempotencyKey.deleteMany();
+    await IdempotencyRepo.clearAll();
 
     const salon = await createTestSalon();
     salonId = salon.id;

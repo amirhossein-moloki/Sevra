@@ -4,6 +4,7 @@ import { prisma } from '../../config/prisma';
 import { createTestSalon, createTestUser, createTestService, createTestShift } from '../../common/utils/test-utils';
 import { add, set } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
 
 describe('POST /api/v1/public/salons/:salonSlug/bookings', () => {
   let salon: any;
@@ -12,7 +13,7 @@ describe('POST /api/v1/public/salons/:salonSlug/bookings', () => {
 
   beforeAll(async () => {
     await prisma.booking.deleteMany({});
-    await prisma.idempotencyKey.deleteMany({});
+    await IdempotencyRepo.clearAll();
     await prisma.userService.deleteMany({});
     await prisma.service.deleteMany({});
     await prisma.shift.deleteMany({});
@@ -47,7 +48,7 @@ describe('POST /api/v1/public/salons/:salonSlug/bookings', () => {
 
   afterAll(async () => {
     await prisma.booking.deleteMany({});
-    await prisma.idempotencyKey.deleteMany({});
+    await IdempotencyRepo.clearAll();
     await prisma.userService.deleteMany({});
     await prisma.service.deleteMany({});
     await prisma.shift.deleteMany({});

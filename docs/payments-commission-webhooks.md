@@ -14,7 +14,7 @@
 Route: `POST /api/v1/salons/:salonId/bookings/:bookingId/payments/init`
 
 1. Auth + role checks are enforced (`MANAGER`, `RECEPTIONIST`, `STAFF`).
-2. `idempotencyMiddleware` requires `Idempotency-Key` header and stores request status in `IdempotencyKey`.
+2. `idempotencyMiddleware` requires `Idempotency-Key` header and stores request status in Redis.
 3. `PaymentsService.initiatePayment`:
    - Ensures the booking exists.
    - Rejects if `Booking.paymentState` is `PAID`.
@@ -59,7 +59,7 @@ Route: `POST /api/v1/webhooks/payments/:provider`
 - Uses `express.json({ verify })` to capture the raw request body for signature verification.
 - Requires `X-Signature` header.
 - Signature verification uses HMAC SHA-256 with `PAYMENT_PROVIDER_WEBHOOK_SECRET`.
-- Uses `IdempotencyKey` to ensure each webhook event is processed exactly once.
+- Uses Redis for idempotency to ensure each webhook event is processed exactly once.
 - On success, updates the `Payment` and `Booking` statuses atomically within a transaction.
 
 ### Fixes
