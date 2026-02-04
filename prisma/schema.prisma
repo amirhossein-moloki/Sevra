@@ -141,6 +141,7 @@ enum CommissionStatus {
   PENDING
   ACCRUED
   CHARGED
+  PAID
   WAIVED
   REFUNDED
 }
@@ -648,7 +649,7 @@ model BookingCommission {
   commissionAmount Int
 
   calculatedAt DateTime? @db.Timestamptz(6)
-  chargedAt    DateTime? @db.Timestamptz(6)
+  paidAt       DateTime? @db.Timestamptz(6)
 
   note String?
 
@@ -658,7 +659,7 @@ model BookingCommission {
   updatedAt DateTime @updatedAt
 
   @@index([salonId, status, createdAt])
-  @@index([chargedAt])
+  @@index([paidAt])
 }
 
 model CommissionPayment {

@@ -21,11 +21,12 @@ describe('Commissions Service', () => {
       jest.clearAllMocks();
     });
 
-    it('should successfully record a commission payment and update commission status to CHARGED when fully paid', async () => {
+    it('should successfully record a commission payment and update commission status to PAID when fully paid', async () => {
       const mockCommission = {
         id: commissionId,
         salonId,
         commissionAmount: 1000,
+        currency: 'USD',
         status: CommissionStatus.PENDING,
       };
 
@@ -47,11 +48,27 @@ describe('Commissions Service', () => {
 
       expect(CommissionsRepo.updateBookingCommission).toHaveBeenCalledWith(
         commissionId,
-        expect.objectContaining({ status: CommissionStatus.CHARGED }),
+        expect.objectContaining({ status: CommissionStatus.PAID }),
         expect.anything()
       );
 
       expect(result.id).toBe('pay-1');
+    });
+
+    it('should throw error if currency mismatch', async () => {
+      const mockCommission = {
+        id: commissionId,
+        salonId,
+        commissionAmount: 1000,
+        currency: 'IRR', // Mismatch
+        status: CommissionStatus.PENDING,
+      };
+
+      (CommissionsRepo.findCommissionById as jest.Mock).mockResolvedValue(mockCommission);
+      (CommissionsRepo.transaction as jest.Mock).mockImplementation((cb) => cb({}));
+
+      await expect(commissionsService.payCommission(commissionId, salonId, input, actor))
+        .rejects.toThrow('Currency mismatch.');
     });
 
     it('should throw error if commission is not found', async () => {

@@ -220,11 +220,14 @@ components:
           type: string
         status:
           type: string
-          enum: [PENDING, ACCRUED, CHARGED, WAIVED, REFUNDED]
+          enum: [PENDING, ACCRUED, CHARGED, PAID, WAIVED, REFUNDED]
         commissionAmount:
           type: integer
         currency:
           type: string
+        paidAt:
+          type: string
+          format: date-time
 
     Review:
       type: object
@@ -464,7 +467,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [PENDING, ACCRUED, CHARGED, WAIVED, REFUNDED]
+            enum: [PENDING, ACCRUED, CHARGED, PAID, WAIVED, REFUNDED]
       responses:
         '200':
           description: List of commissions

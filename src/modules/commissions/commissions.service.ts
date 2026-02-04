@@ -147,6 +147,13 @@ export const commissionsService = {
         throw new AppError('Commission record not found.', httpStatus.NOT_FOUND);
       }
 
+      if (input.currency !== commission.currency) {
+        throw new AppError(
+          `Currency mismatch. Expected ${commission.currency}, but got ${input.currency}.`,
+          httpStatus.BAD_REQUEST
+        );
+      }
+
       const payment = await CommissionsRepo.createCommissionPayment({
         commissionId: commissionId,
         amount: input.amount,
@@ -176,8 +183,8 @@ export const commissionsService = {
 
       if (totalPaid >= commission.commissionAmount) {
         await CommissionsRepo.updateBookingCommission(commissionId, {
-          status: CommissionStatus.CHARGED,
-          chargedAt: new Date()
+          status: CommissionStatus.PAID,
+          paidAt: new Date()
         }, tx);
       }
 
