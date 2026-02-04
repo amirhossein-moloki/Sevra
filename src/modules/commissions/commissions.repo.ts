@@ -96,7 +96,12 @@ export const CommissionsRepo = {
     const client = tx || prisma;
     return client.booking.findUnique({
       where: { id: bookingId },
-      include: { commission: true },
+      include: {
+        commission: true,
+        payments: {
+          where: { status: 'PAID' }
+        }
+      },
     });
   },
 
