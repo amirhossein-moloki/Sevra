@@ -19,7 +19,7 @@ export const getAvailability = async (
 
     const slots = await getAvailableSlots({ ...query, salonSlug });
 
-    res.status(200).json({ success: true, data: slots });
+    res.ok(slots);
   } catch (error) {
     next(error); // Pass errors to the global error handler
   }

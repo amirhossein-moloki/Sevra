@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../../common/middleware/asyncHandler';
 import { PaymentsService } from './payments.service';
-import httpStatus from 'http-status';
 
 const initiatePayment = asyncHandler(async (req: Request, res: Response) => {
   const { salonId, bookingId } = req.params;
@@ -13,10 +12,7 @@ const initiatePayment = asyncHandler(async (req: Request, res: Response) => {
     idempotencyKey: idempotencyKey ?? null,
   });
 
-  res.status(httpStatus.CREATED).json({
-    success: true,
-    data: result,
-  });
+  res.created(result);
 });
 
 export const PaymentsController = {

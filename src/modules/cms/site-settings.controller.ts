@@ -8,7 +8,7 @@ export async function getSiteSettings(
 ) {
   const { salonId } = req.params;
   const settings = await SiteSettingsService.getSiteSettings(salonId);
-  res.status(200).json({ success: true, data: settings });
+  res.ok(settings);
 }
 
 export async function upsertSiteSettings(
@@ -20,5 +20,5 @@ export async function upsertSiteSettings(
     salonId,
     req.body
   );
-  res.status(200).json({ success: true, data: settings });
+  res.ok(settings);
 }

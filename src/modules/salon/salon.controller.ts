@@ -7,8 +7,7 @@ export const salonController = {
     try {
       const validatedData = createSalonSchema.parse(req.body);
       const salon = await salonService.createSalon(validatedData);
-      // Assuming res.created is available from a custom middleware
-      (res as any).created(salon);
+      res.created(salon);
     } catch (error) {
       next(error);
     }
@@ -18,8 +17,7 @@ export const salonController = {
     try {
       const { id } = req.params;
       const salon = await salonService.getSalonById(id);
-      // Assuming res.ok is available from a custom middleware
-      (res as any).ok(salon);
+      res.ok(salon);
     } catch (error) {
       next(error);
     }
@@ -28,7 +26,7 @@ export const salonController = {
   async getAllSalons(req: Request, res: Response, next: NextFunction) {
     try {
       const salons = await salonService.getAllSalons();
-      (res as any).ok(salons);
+      res.ok(salons);
     } catch (error) {
       next(error);
     }
@@ -39,7 +37,7 @@ export const salonController = {
       const { id } = req.params;
       const validatedData = updateSalonSchema.parse(req.body);
       const updatedSalon = await salonService.updateSalon(id, validatedData);
-      (res as any).ok(updatedSalon);
+      res.ok(updatedSalon);
     } catch (error) {
       next(error);
     }
@@ -49,7 +47,7 @@ export const salonController = {
     try {
       const { id } = req.params;
       await salonService.deleteSalon(id);
-      (res as any).ok({ message: "Salon deleted successfully" });
+      res.noContent();
     } catch (error) {
       next(error);
     }

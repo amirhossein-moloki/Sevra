@@ -16,7 +16,7 @@ export const createUserController = async (
       req.actor,
       { ip: req.ip, userAgent: req.headers['user-agent'] }
     );
-    res.status(201).json({ success: true, data: newUser });
+    res.created(newUser);
   } catch (error) {
     next(error);
   }
@@ -35,7 +35,7 @@ export const deleteUserController = async (
       req.actor,
       { ip: req.ip, userAgent: req.headers['user-agent'] }
     );
-    res.status(204).send();
+    res.noContent();
   } catch (error) {
     next(error);
   }
@@ -49,7 +49,7 @@ export const getUsersController = async (
   try {
     const { salonId } = req.params;
     const staff = await userService.getStaffList(salonId);
-    res.status(200).json({ success: true, data: staff });
+    res.ok(staff);
   } catch (error) {
     next(error);
   }
@@ -63,7 +63,7 @@ export const getUserController = async (
   try {
     const { salonId, userId } = req.params;
     const user = await userService.getStaffMember(salonId, userId);
-    res.status(200).json({ success: true, data: user });
+    res.ok(user);
   } catch (error) {
     next(error);
   }
@@ -83,7 +83,7 @@ export const updateUserController = async (
       req.actor,
       { ip: req.ip, userAgent: req.headers['user-agent'] }
     );
-    res.status(200).json({ success: true, data: updatedUser });
+    res.ok(updatedUser);
   } catch (error) {
     next(error);
   }

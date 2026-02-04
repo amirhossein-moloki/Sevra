@@ -15,5 +15,5 @@ export async function getPublicMedia(req: PublicSalonRequest, res: Response) {
 
   const media = await PublicMediaService.getPublicMediaBySalon(salonId);
   res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=300');
-  res.status(200).json({ success: true, data: media });
+  res.ok(media);
 }

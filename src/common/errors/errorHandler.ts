@@ -2,6 +2,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { Prisma } from '@prisma/client';
 import httpStatus from 'http-status';
+import { ApiFailure } from "../utils/response";
 
 // We can now safely import AppError
 import AppError from "./AppError";
@@ -118,8 +119,8 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
   const isServerError = normalized.status >= 500;
   const includeDetails = !isServerError || process.env.NODE_ENV !== "production";
 
-  const body = {
-    success: false as const,
+  const body: ApiFailure = {
+    success: false,
     error: {
       code: normalized.code,
       message: normalized.message,
