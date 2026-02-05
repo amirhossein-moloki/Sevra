@@ -1,9 +1,10 @@
 
 import { SessionActorType, UserRole } from '@prisma/client';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { ApiMeta } from '../common/utils/response';
 
 declare global {
+  /* eslint-disable @typescript-eslint/no-namespace */
   namespace Express {
     export interface Request {
       actor?: {

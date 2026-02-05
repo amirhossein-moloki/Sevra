@@ -28,7 +28,7 @@ export class S3StorageAdapter implements StorageAdapter {
     const uploadUrl = buildUploadUrl(input.key);
     const response = await fetch(uploadUrl, {
       method: 'PUT',
-      body: input.body as any,
+      body: input.body as any, // eslint-disable-line @typescript-eslint/no-explicit-any
       headers: {
         'Content-Type': input.contentType ?? 'application/octet-stream',
         ...(input.cacheControl ? { 'Cache-Control': input.cacheControl } : {}),

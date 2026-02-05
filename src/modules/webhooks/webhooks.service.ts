@@ -9,7 +9,6 @@ import { AnalyticsRepo } from '../analytics/analytics.repo';
 const processPaymentWebhook = async ({
   provider,
   payload,
-  signature,
 }: {
   provider: string;
   payload: { eventId: string; paymentId: string; status: 'SUCCEEDED' | 'FAILED' | 'EXPIRED' };

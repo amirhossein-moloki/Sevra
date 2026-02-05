@@ -5,10 +5,10 @@ import { Prisma } from '@prisma/client';
 export const createUser = async (salonId: string, data: CreateUserInput) => {
   const createInput: Prisma.UserUncheckedCreateInput = {
     salonId,
-    ...(data as any),
+    ...(data as any), // eslint-disable-line @typescript-eslint/no-explicit-any
   };
   return prisma.user.create({
-    data: createInput as any,
+    data: createInput as any, // eslint-disable-line @typescript-eslint/no-explicit-any
   });
 };
 

@@ -23,14 +23,14 @@ const mapSections = (sections: PageSectionInput[]) =>
 export async function createPage(salonId: string, data: CreatePageData) {
   const { sections, ...pageData } = data;
   const createInput: Prisma.SalonPageUncheckedCreateInput = {
-    ...(pageData as any),
+    ...(pageData as any), // eslint-disable-line @typescript-eslint/no-explicit-any
     salonId,
     sections: {
       create: mapSections(sections),
     },
   };
   return prisma.salonPage.create({
-    data: createInput as any,
+    data: createInput as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     include: {
       sections: { orderBy: { sortOrder: 'asc' } },
     },
