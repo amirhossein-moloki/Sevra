@@ -1123,6 +1123,7 @@ async function main() {
         for (const p of paymentsPlan) {
           await prisma.payment.create({
             data: {
+              salonId: salon.id,
               bookingId: booking.id,
               amount: p.amount,
               currency: 'IRT',
