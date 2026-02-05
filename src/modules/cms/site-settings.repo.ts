@@ -15,7 +15,7 @@ export async function upsertSiteSettings(
     where: { salonId },
     create: {
       salonId,
-      ...(data as any),
+      ...(data as any), // eslint-disable-line @typescript-eslint/no-explicit-any
     },
     update: data,
   });

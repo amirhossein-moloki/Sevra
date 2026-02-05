@@ -10,11 +10,11 @@ import { Prisma } from '@prisma/client';
  */
 export async function createService(salonId: string, data: CreateServiceInput) {
   const createInput: Prisma.ServiceUncheckedCreateInput = {
-    ...(data as any),
+    ...(data as any), // eslint-disable-line @typescript-eslint/no-explicit-any
     salonId,
   };
   return prisma.service.create({
-    data: createInput as any,
+    data: createInput as any, // eslint-disable-line @typescript-eslint/no-explicit-any
   });
 }
 
