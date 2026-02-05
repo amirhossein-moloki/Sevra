@@ -18,18 +18,18 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
   let user;
   if (payload.actorType === 'USER') {
-      user = await prisma.user.findUnique({ where: { id: payload.actorId } });
+    user = await prisma.user.findUnique({ where: { id: payload.actorId } });
   } else {
-        if (!payload.actorId) {
-            return next(createHttpError(401, 'Invalid token: actorId is missing.'));
-        }
-      user = await prisma.customerAccount.findUnique({ where: { id: payload.actorId } });
+    if (!payload.actorId) {
+      return next(createHttpError(401, 'Invalid token: actorId is missing.'));
+    }
+    user = await prisma.customerAccount.findUnique({ where: { id: payload.actorId } });
   }
 
   if (!user) {
     return next(createHttpError(401, 'User not found'));
   }
 
-  (req as any).actor = { ...user, ...payload };
+  (req as any).actor = { ...user, ...payload }; // eslint-disable-line @typescript-eslint/no-explicit-any
   next();
 };

@@ -5,7 +5,7 @@ import { asyncHandler } from '../../common/middleware/asyncHandler';
 import { AnalyticsService } from './analytics.service';
 import { subDays } from 'date-fns';
 
-const getDates = (query: any) => {
+const getDates = (query: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
   const startDate = query.startDate ? new Date(query.startDate as string) : subDays(new Date(), 30);
   const endDate = query.endDate ? new Date(query.endDate as string) : new Date();
   return { startDate, endDate };

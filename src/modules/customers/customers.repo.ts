@@ -1,11 +1,12 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
-import { CustomerFilters, CreateCustomerInput, UpdateCustomerInput } from './customers.types';
+import { CustomerFilters, UpdateCustomerInput } from './customers.types';
 
 export async function findManyProfiles(salonId: string, filters: CustomerFilters) {
   const { search, page = 1, limit = 10 } = filters;
   const skip = (page - 1) * limit;
 
-  const where: any = {
+  const where: Prisma.SalonCustomerProfileWhereInput = {
     salonId,
   };
 
@@ -100,14 +101,14 @@ export async function updateProfile(
 }
 
 export async function deleteProfile(profileId: string, salonId: string) {
-    // Ensuring it belongs to the salon
-    const profile = await prisma.salonCustomerProfile.findFirst({
-        where: { id: profileId, salonId }
-    });
+  // Ensuring it belongs to the salon
+  const profile = await prisma.salonCustomerProfile.findFirst({
+    where: { id: profileId, salonId }
+  });
 
-    if (!profile) return null;
+  if (!profile) return null;
 
-    return prisma.salonCustomerProfile.delete({
-        where: { id: profileId }
-    });
+  return prisma.salonCustomerProfile.delete({
+    where: { id: profileId }
+  });
 }

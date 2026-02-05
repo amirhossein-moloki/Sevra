@@ -48,9 +48,9 @@ export async function updateCustomer(
 }
 
 export async function deleteCustomer(salonId: string, customerId: string) {
-    const deleted = await customerRepo.deleteProfile(customerId, salonId);
-    if (!deleted) {
-        throw createHttpError(404, 'Customer not found');
-    }
-    return deleted;
+  const deleted = await customerRepo.deleteProfile(customerId, salonId);
+  if (!deleted) {
+    throw createHttpError(404, 'Customer not found');
+  }
+  return deleted;
 }

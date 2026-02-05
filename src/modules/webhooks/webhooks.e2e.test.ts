@@ -82,11 +82,11 @@ describe('Webhooks E2E', () => {
           .expect(200);
 
         // Verify the state change
-        let updatedBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
+        const updatedBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
         expect(updatedBooking?.paymentState).toBe(BookingPaymentState.PAID);
 
         // Second request (replay) - should also return 200 but not re-process
-        const res = await request(app)
+        await request(app)
           .post(webhookUrl)
           .set('X-Signature', signature)
           .set('Content-Type', 'application/json')

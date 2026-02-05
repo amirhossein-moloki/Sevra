@@ -49,7 +49,7 @@ describe('Users API Endpoints', () => {
       data: {
         salonId,
         fullName: 'Test Manager',
-        phone: `+10000000001`,
+        phone: '+10000000001',
         role: UserRole.MANAGER,
         isActive: true,
       },
@@ -60,7 +60,7 @@ describe('Users API Endpoints', () => {
       data: {
         salonId,
         fullName: 'Test Staff',
-        phone: `+10000000002`,
+        phone: '+10000000002',
         role: UserRole.STAFF,
         isActive: true,
       },
@@ -119,7 +119,7 @@ describe('Users API Endpoints', () => {
         data: {
           salonId,
           fullName: 'To Be Deleted',
-          phone: `+10000000003`,
+          phone: '+10000000003',
           role: UserRole.STAFF,
         },
       });

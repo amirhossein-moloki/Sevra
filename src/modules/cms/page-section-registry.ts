@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { z } from 'zod';
 import { PageSectionType } from '@prisma/client';
 
@@ -31,7 +32,7 @@ const sanitizeTagAttributes = (attributes: string) => {
   while ((match = attributeRegex.exec(attributes)) !== null) {
     const name = match[1].toLowerCase();
     let value = match[2].trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith('\'') && value.endsWith('\''))) {
       value = value.slice(1, -1);
     }
     sanitized[name] = value;
@@ -239,15 +240,15 @@ const renderHighlights = (data: Record<string, any>) => {
       <h2>${title}</h2>
       <div class="grid three">
         ${items
-          .map(
-            (item: Record<string, any>) => `
+    .map(
+      (item: Record<string, any>) => `
             <div class="card-block">
               <h3>${escapeHtml(String(item?.title ?? ''))}</h3>
               <p>${escapeHtml(String(item?.text ?? ''))}</p>
             </div>
           `,
-          )
-          .join('')}
+    )
+    .join('')}
       </div>
     </section>
   `;
@@ -265,15 +266,15 @@ const renderServicesGrid = (data: Record<string, any>) => {
       <h2>${title}</h2>
       <div class="grid three">
         ${placeholders
-          .map(
-            (item) => `
+    .map(
+      (item) => `
             <div class="card-block">
               <h3>${escapeHtml(item.name)}</h3>
               <p>${item.price ? escapeHtml(item.price) : 'Popular choice'}</p>
             </div>
           `,
-          )
-          .join('')}
+    )
+    .join('')}
       </div>
     </section>
   `;
@@ -290,12 +291,12 @@ const renderGalleryGrid = (data: Record<string, any>) => {
       </div>
       <div class="grid three">
         ${Array.from({ length: 6 })
-          .map(
-            (_item, index) => `
+    .map(
+      (_item, index) => `
             <div class="image-card">Image ${index + 1}</div>
           `,
-          )
-          .join('')}
+    )
+    .join('')}
       </div>
     </section>
   `;
@@ -309,15 +310,15 @@ const renderTestimonials = (data: Record<string, any>) => {
       <h2>${title}</h2>
       <div class="grid three">
         ${Array.from({ length: Math.min(limit, 3) })
-          .map(
-            (_item, index) => `
+    .map(
+      (_item, index) => `
             <div class="card-block">
               <p>“Great experience ${index + 1}."</p>
               <span>Happy client</span>
             </div>
           `,
-          )
-          .join('')}
+    )
+    .join('')}
       </div>
     </section>
   `;
@@ -331,15 +332,15 @@ const renderFaq = (data: Record<string, any>) => {
       <h2>${title}</h2>
       <div class="stack">
         ${items
-          .map(
-            (item: Record<string, any>) => `
+    .map(
+      (item: Record<string, any>) => `
             <div class="card-block">
               <h3>${escapeHtml(String(item?.q ?? ''))}</h3>
               <p>${escapeHtml(String(item?.a ?? ''))}</p>
             </div>
           `,
-          )
-          .join('')}
+    )
+    .join('')}
       </div>
     </section>
   `;
@@ -396,14 +397,14 @@ const renderRichText = (data: Record<string, any>) => {
       ${title ? `<h2>${title}</h2>` : ''}
       <div class="stack">
         ${blocks
-          .map((block: Record<string, any>) => {
-            const text = block?.text ?? '';
-            if (block?.allowHtml) {
-              return `<p>${text}</p>`;
-            }
-            return `<p>${escapeHtml(String(text))}</p>`;
-          })
-          .join('')}
+    .map((block: Record<string, any>) => {
+      const text = block?.text ?? '';
+      if (block?.allowHtml) {
+        return `<p>${text}</p>`;
+      }
+      return `<p>${escapeHtml(String(text))}</p>`;
+    })
+    .join('')}
       </div>
     </section>
   `;
@@ -416,15 +417,15 @@ const renderStaffGrid = (data: Record<string, any>) => {
       <h2>${title}</h2>
       <div class="grid three">
         ${Array.from({ length: 3 })
-          .map(
-            (_item, index) => `
+    .map(
+      (_item, index) => `
             <div class="card-block">
               <h3>Team member ${index + 1}</h3>
               <p>Stylist</p>
             </div>
           `,
-          )
-          .join('')}
+    )
+    .join('')}
       </div>
     </section>
   `;

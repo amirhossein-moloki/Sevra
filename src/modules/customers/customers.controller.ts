@@ -57,11 +57,11 @@ export async function updateCustomer(req: Request, res: Response, next: NextFunc
 }
 
 export async function deleteCustomer(req: Request, res: Response, next: NextFunction) {
-    try {
-        const { salonId, customerId } = req.params;
-        await customerService.deleteCustomer(salonId, customerId);
-        res.noContent();
-    } catch (error) {
-        next(error);
-    }
+  try {
+    const { salonId, customerId } = req.params;
+    await customerService.deleteCustomer(salonId, customerId);
+    res.noContent();
+  } catch (error) {
+    next(error);
+  }
 }

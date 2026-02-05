@@ -10,17 +10,17 @@ const logger = pino({
   },
   transport: isProduction
     ? {
-        target: 'pino/file',
-        options: { destination: './app.log' },
-      }
+      target: 'pino/file',
+      options: { destination: './app.log' },
+    }
     : {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          ignore: 'pid,hostname',
-          translateTime: 'SYS:standard',
-        },
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        ignore: 'pid,hostname',
+        translateTime: 'SYS:standard',
       },
+    },
 });
 
 export default logger;

@@ -1,4 +1,4 @@
-import { Prisma, BookingStatus, BookingSource } from '@prisma/client';
+import { Prisma, BookingStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 
 export const BookingsRepo = {
@@ -107,8 +107,9 @@ export const BookingsRepo = {
     });
   },
 
-  async findManyBookings(where: Prisma.BookingWhereInput, skip: number, take: number, orderBy: any) {
-    return prisma.booking.findMany({
+  async findManyBookings(where: Prisma.BookingWhereInput, skip: number, take: number, orderBy: any, tx?: Prisma.TransactionClient) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const client = tx || prisma;
+    return client.booking.findMany({
       where,
       skip,
       take,
@@ -116,8 +117,9 @@ export const BookingsRepo = {
     });
   },
 
-  async countBookings(where: Prisma.BookingWhereInput) {
-    return prisma.booking.count({ where });
+  async countBookings(where: Prisma.BookingWhereInput, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.booking.count({ where });
   },
 
   async updateBooking(id: string, data: Prisma.BookingUncheckedUpdateInput, tx?: Prisma.TransactionClient) {

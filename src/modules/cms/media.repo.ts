@@ -4,7 +4,7 @@ import { CreateMediaData, UpdateMediaData } from './media.types';
 export async function createMedia(salonId: string, data: CreateMediaData) {
   return prisma.salonMedia.create({
     data: {
-      ...(data as any),
+      ...(data as any), // eslint-disable-line @typescript-eslint/no-explicit-any
       salonId,
     },
   });

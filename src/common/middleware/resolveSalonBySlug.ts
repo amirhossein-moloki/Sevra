@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import createHttpError from "http-errors";
-import { prisma } from "../../config/prisma";
+import { Request, Response, NextFunction } from 'express';
+import createHttpError from 'http-errors';
+import { prisma } from '../../config/prisma';
 
 /**
  * Middleware to resolve a salon from a public slug and attach its tenant
@@ -20,19 +20,19 @@ export const resolveSalonBySlug = async (
 
   if (!salonSlug) {
     // This indicates a routing configuration error.
-    return next(createHttpError(400, "Salon slug is missing from the request params."));
+    return next(createHttpError(400, 'Salon slug is missing from the request params.'));
   }
 
   const salon = await prisma.salon.findUnique({
     where: { slug: salonSlug, isActive: true },
   });
   if (!salon) {
-    return next(createHttpError(404, "Salon not found"));
+    return next(createHttpError(404, 'Salon not found'));
   }
 
   // Attach a standardized tenant context to the request.
-  (req as any).tenant = { salonId: salon.id, salonSlug: salon.slug };
-  (req as any).salonId = salon.id;
+  (req as any).tenant = { salonId: salon.id, salonSlug: salon.slug }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  (req as any).salonId = salon.id; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   next();
 };

@@ -1,6 +1,5 @@
 import { Response, NextFunction } from 'express';
 import * as userService from './users.service';
-import { CreateUserInput, UpdateUserInput } from './users.validators';
 import { AppRequest } from '../../types/express';
 
 export const createUserController = async (

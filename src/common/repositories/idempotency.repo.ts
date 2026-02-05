@@ -10,7 +10,7 @@ export interface IdempotencyRecord {
   scope: string;
   requestHash: string;
   status: IdempotencyStatus;
-  responseBody: any;
+  responseBody: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   responseStatusCode: number | null;
   expiresAt: Date;
   createdAt: Date;
@@ -66,7 +66,7 @@ export const IdempotencyRepo = {
     if (!result) {
       // Redis SET NX returns null if key already exists, mimicking Prisma unique constraint error
       const error = new Error('Unique constraint failed on the fields: (`scope`,`key`)');
-      (error as any).code = 'P2002'; // Mimic Prisma error code
+      (error as any).code = 'P2002'; // eslint-disable-line @typescript-eslint/no-explicit-any
       throw error;
     }
 

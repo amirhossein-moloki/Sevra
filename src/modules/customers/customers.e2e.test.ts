@@ -35,8 +35,8 @@ describe('Customer Routes', () => {
   });
 
   afterEach(async () => {
-      await prisma.salonCustomerProfile.deleteMany({});
-      await prisma.customerAccount.deleteMany({});
+    await prisma.salonCustomerProfile.deleteMany({});
+    await prisma.customerAccount.deleteMany({});
   });
 
 
@@ -79,68 +79,66 @@ describe('Customer Routes', () => {
       expect(res.status).toBe(httpStatus.CONFLICT);
     });
 
-     it('should return 400 for invalid data', async () => {
-        const res = await request(app)
+    it('should return 400 for invalid data', async () => {
+      const res = await request(app)
         .post(`/api/v1/salons/${salon.id}/customers`)
         .set('Authorization', `Bearer ${managerToken}`)
         .send({ fullName: 'Only Name' });
 
-        expect(res.status).toBe(httpStatus.BAD_REQUEST);
-     });
+      expect(res.status).toBe(httpStatus.BAD_REQUEST);
+    });
 
-     it('should return 403 if user is not a manager or receptionist', async () => {
-        const newCustomer = {
-            phone: '09121234569',
-            fullName: 'Forbidden Customer',
-        };
-        const res = await request(app)
-            .post(`/api/v1/salons/${salon.id}/customers`)
-            .set('Authorization', `Bearer ${staffToken}`)
-            .send(newCustomer);
+    it('should return 403 if user is not a manager or receptionist', async () => {
+      const newCustomer = {
+        phone: '09121234569',
+        fullName: 'Forbidden Customer',
+      };
+      const res = await request(app)
+        .post(`/api/v1/salons/${salon.id}/customers`)
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send(newCustomer);
 
-        expect(res.status).toBe(httpStatus.FORBIDDEN);
+      expect(res.status).toBe(httpStatus.FORBIDDEN);
     });
   });
 
   describe('GET /api/v1/salons/:salonId/customers', () => {
-      let customer1: any;
-      let customer2: any;
+    let customer1: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-      beforeEach(async () => {
-        const res1 = await request(app)
-          .post(`/api/v1/salons/${salon.id}/customers`)
-          .set('Authorization', `Bearer ${receptionistToken}`)
-          .send({ phone: '09100000001', fullName: 'Alice' });
-        customer1 = res1.body.data;
+    beforeEach(async () => {
+      const res1 = await request(app)
+        .post(`/api/v1/salons/${salon.id}/customers`)
+        .set('Authorization', `Bearer ${receptionistToken}`)
+        .send({ phone: '09100000001', fullName: 'Alice' });
+      customer1 = res1.body.data;
 
-        const res2 = await request(app)
-          .post(`/api/v1/salons/${salon.id}/customers`)
-          .set('Authorization', `Bearer ${receptionistToken}`)
-          .send({ phone: '09100000002', fullName: 'Bob' });
-        customer2 = res2.body.data;
-      });
+      await request(app)
+        .post(`/api/v1/salons/${salon.id}/customers`)
+        .set('Authorization', `Bearer ${receptionistToken}`)
+        .send({ phone: '09100000002', fullName: 'Bob' });
+    });
 
-      it('should return a list of customers', async () => {
-        const res = await request(app)
-            .get(`/api/v1/salons/${salon.id}/customers`)
-            .set('Authorization', `Bearer ${staffToken}`);
+    it('should return a list of customers', async () => {
+      const res = await request(app)
+        .get(`/api/v1/salons/${salon.id}/customers`)
+        .set('Authorization', `Bearer ${staffToken}`);
 
-        expect(res.status).toBe(httpStatus.OK);
-        expect(res.body.success).toBe(true);
-        expect(res.body.data.customers).toHaveLength(2);
-        expect(res.body.data.total).toBe(2);
-      });
+      expect(res.status).toBe(httpStatus.OK);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.customers).toHaveLength(2);
+      expect(res.body.data.total).toBe(2);
+    });
 
-      it('should filter customers by search query', async () => {
-        const res = await request(app)
-            .get(`/api/v1/salons/${salon.id}/customers?search=Alice`)
-            .set('Authorization', `Bearer ${staffToken}`);
+    it('should filter customers by search query', async () => {
+      const res = await request(app)
+        .get(`/api/v1/salons/${salon.id}/customers?search=Alice`)
+        .set('Authorization', `Bearer ${staffToken}`);
 
-        expect(res.status).toBe(httpStatus.OK);
-        expect(res.body.success).toBe(true);
-        expect(res.body.data.customers).toHaveLength(1);
-        expect(res.body.data.customers[0].id).toBe(customer1.id);
-      });
+      expect(res.status).toBe(httpStatus.OK);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.customers).toHaveLength(1);
+      expect(res.body.data.customers[0].id).toBe(customer1.id);
+    });
   });
 
   describe('GET /api/v1/salons/:salonId/customers/:customerId', () => {
@@ -165,18 +163,18 @@ describe('Customer Routes', () => {
     });
 
     it('should return 404 for a non-existent customer', async () => {
-        const nonExistentId = cuid();
-        const res = await request(app)
-            .get(`/api/v1/salons/${salon.id}/customers/${nonExistentId}`)
-            .set('Authorization', `Bearer ${staffToken}`);
+      const nonExistentId = cuid();
+      const res = await request(app)
+        .get(`/api/v1/salons/${salon.id}/customers/${nonExistentId}`)
+        .set('Authorization', `Bearer ${staffToken}`);
 
-        expect(res.status).toBe(httpStatus.NOT_FOUND);
+      expect(res.status).toBe(httpStatus.NOT_FOUND);
     });
   });
 
   describe('PATCH /api/v1/salons/:salonId/customers/:customerId', () => {
     it('should update a customer and return 200', async () => {
-       const newCustomer = {
+      const newCustomer = {
         phone: '09351112233',
         fullName: 'Update Me',
       };
@@ -187,8 +185,8 @@ describe('Customer Routes', () => {
       const customerId = creationRes.body.data.id;
 
       const updatePayload = {
-          displayName: "I'm Updated",
-          note: "This is a note."
+        displayName: 'I\'m Updated',
+        note: 'This is a note.'
       };
 
       const res = await request(app)
@@ -205,7 +203,7 @@ describe('Customer Routes', () => {
 
   describe('DELETE /api/v1/salons/:salonId/customers/:customerId', () => {
     it('should delete a customer and return 204', async () => {
-       const newCustomer = {
+      const newCustomer = {
         phone: '09361112233',
         fullName: 'Delete Me',
       };
@@ -222,7 +220,7 @@ describe('Customer Routes', () => {
       expect(res.status).toBe(httpStatus.NO_CONTENT);
 
       // Verify it's gone
-       const getRes = await request(app)
+      const getRes = await request(app)
         .get(`/api/v1/salons/${salon.id}/customers/${customerId}`)
         .set('Authorization', `Bearer ${managerToken}`);
       expect(getRes.status).toBe(httpStatus.NOT_FOUND);

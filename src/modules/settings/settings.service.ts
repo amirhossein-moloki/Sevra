@@ -1,4 +1,3 @@
-import createHttpError from 'http-errors';
 import * as settingsRepo from './settings.repo';
 import { UpdateSettingsInput } from './settings.types';
 
@@ -7,10 +6,10 @@ export async function getSettings(salonId: string) {
   if (!settings) {
     // Should normally be created when salon is created, but handle if missing
     return {
-        salonId,
-        preventOverlaps: true,
-        allowOnlineBooking: false,
-        onlineBookingAutoConfirm: false
+      salonId,
+      preventOverlaps: true,
+      allowOnlineBooking: false,
+      onlineBookingAutoConfirm: false
     };
   }
   return settings;

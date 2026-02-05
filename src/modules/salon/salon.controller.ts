@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import { salonService } from "./salon.service";
-import { createSalonSchema, updateSalonSchema } from "./salon.validation";
+import { Request, Response, NextFunction } from 'express';
+import { salonService } from './salon.service';
+import { createSalonSchema, updateSalonSchema } from './salon.validation';
 
 export const salonController = {
   async createSalon(req: Request, res: Response, next: NextFunction) {

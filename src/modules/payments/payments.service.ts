@@ -64,7 +64,10 @@ const initiatePayment = async ({
       }),
     });
 
-    const result: any = await response.json();
+    const result = (await response.json()) as {
+      data: { authority: string; code: number; message: string; fee_type: string; fee: number };
+      errors: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+    };
 
     if (result.errors && (Array.isArray(result.errors) ? result.errors.length > 0 : Object.keys(result.errors).length > 0)) {
       console.error('ZarinPal Error:', result.errors);
@@ -80,7 +83,7 @@ const initiatePayment = async ({
 
     // 6. Update payment with authority
     await PaymentsRepo.updatePayment(payment.id, {
-        providerPaymentId: authority,
+      providerPaymentId: authority,
     });
 
     return {

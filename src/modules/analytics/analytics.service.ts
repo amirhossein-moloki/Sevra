@@ -1,9 +1,6 @@
 
 import { AnalyticsRepo } from './analytics.repo';
-import { BookingStatus } from '@prisma/client';
 import { format } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
-import { prisma } from '../../config/prisma';
 
 export const AnalyticsService = {
   async getSummary(salonId: string, startDate: Date, endDate: Date) {

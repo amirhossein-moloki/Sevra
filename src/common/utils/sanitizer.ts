@@ -26,7 +26,7 @@ const SENSITIVE_KEYS = [
  *
  * @param obj - The object to sanitize.
  */
-export const sanitizeLog = (obj: any): any => {
+export const sanitizeLog = (obj: any): any => { // eslint-disable-line @typescript-eslint/no-explicit-any
   if (obj === null || typeof obj !== 'object') {
     return obj;
   }

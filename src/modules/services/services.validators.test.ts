@@ -42,16 +42,16 @@ describe('Service Validators', () => {
     });
 
     it('should pass if isActive is not provided', () => {
-        const dataWithoutIsActive = {
-            body: {
-                name: 'Test Service',
-                durationMinutes: 30,
-                price: 50000,
-                currency: 'IRR',
-            },
-        };
-        const result = createServiceSchema.safeParse(dataWithoutIsActive);
-        expect(result.success).toBe(true);
+      const dataWithoutIsActive = {
+        body: {
+          name: 'Test Service',
+          durationMinutes: 30,
+          price: 50000,
+          currency: 'IRR',
+        },
+      };
+      const result = createServiceSchema.safeParse(dataWithoutIsActive);
+      expect(result.success).toBe(true);
     });
   });
 });

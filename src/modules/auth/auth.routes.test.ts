@@ -16,30 +16,30 @@ describe('Auth Routes', () => {
 
   describe('POST /auth/login', () => {
     it('should login a user with valid credentials', async () => {
-        const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
-        await prisma.user.create({
-          data: {
-            phone: '1234567890',
-            passwordHash: await argon2.hash('password'),
-            fullName: 'Test User',
-            role: UserRole.MANAGER,
-            salon: { connect: { id: salon.id } },
-          },
+      const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
+      await prisma.user.create({
+        data: {
+          phone: '1234567890',
+          passwordHash: await argon2.hash('password'),
+          fullName: 'Test User',
+          role: UserRole.MANAGER,
+          salon: { connect: { id: salon.id } },
+        },
+      });
+
+      const res = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          phone: '1234567890',
+          password: 'password',
+          actorType: 'USER',
+          salonId: salon.id,
         });
 
-        const res = await request(app)
-          .post('/api/v1/auth/login')
-          .send({
-            phone: '1234567890',
-            password: 'password',
-            actorType: 'USER',
-            salonId: salon.id,
-          });
-
-        expect(res.status).toBe(200);
-        expect(res.body.success).toBe(true);
-        expect(res.body.data.tokens).toHaveProperty('accessToken');
-      });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.tokens).toHaveProperty('accessToken');
+    });
 
     it('should not login a user with invalid credentials', async () => {
       const res = await request(app)
@@ -57,24 +57,24 @@ describe('Auth Routes', () => {
 
   describe('POST /auth/user/otp/request', () => {
     it('should request an OTP for an existing user', async () => {
-        const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
-        await prisma.user.create({
-          data: {
-            phone: '1234567890',
-            fullName: 'Test User',
-            role: UserRole.MANAGER,
-            salon: { connect: { id: salon.id } }
-          },
-        });
-
-        const res = await request(app)
-          .post('/api/v1/auth/user/otp/request')
-          .send({ phone: '1234567890' });
-
-        expect(res.status).toBe(200);
-        expect(res.body.success).toBe(true);
-        expect(res.body.data.message).toContain('OTP sent');
+      const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
+      await prisma.user.create({
+        data: {
+          phone: '1234567890',
+          fullName: 'Test User',
+          role: UserRole.MANAGER,
+          salon: { connect: { id: salon.id } }
+        },
       });
+
+      const res = await request(app)
+        .post('/api/v1/auth/user/otp/request')
+        .send({ phone: '1234567890' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.message).toContain('OTP sent');
+    });
 
     it('should return an error for a non-existing user', async () => {
       const res = await request(app)
@@ -87,24 +87,24 @@ describe('Auth Routes', () => {
 
   describe('POST /auth/user/otp/verify', () => {
     it('should verify a valid OTP', async () => {
-        const phone = '1234567890';
-        const code = '123456';
-        await prisma.phoneOtp.create({
-          data: {
-            phone,
-            codeHash: await argon2.hash(code),
-            purpose: 'LOGIN',
-            expiresAt: new Date(Date.now() + 10000),
-          },
-        });
-
-        const res = await request(app)
-          .post('/api/v1/auth/user/otp/verify')
-          .send({ phone, code });
-
-        expect(res.status).toBe(200);
-        expect(res.body.success).toBe(true);
+      const phone = '1234567890';
+      const code = '123456';
+      await prisma.phoneOtp.create({
+        data: {
+          phone,
+          codeHash: await argon2.hash(code),
+          purpose: 'LOGIN',
+          expiresAt: new Date(Date.now() + 10000),
+        },
       });
+
+      const res = await request(app)
+        .post('/api/v1/auth/user/otp/verify')
+        .send({ phone, code });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
 
     it('should return an error for an invalid OTP', async () => {
       const res = await request(app)
@@ -117,34 +117,34 @@ describe('Auth Routes', () => {
 
   describe('POST /auth/user/login/otp', () => {
     it('should login a user with a valid OTP', async () => {
-        const phone = '1234567890';
-        const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
-        await prisma.user.create({
-          data: {
-            phone,
-            fullName: 'Test User',
-            role: UserRole.MANAGER,
-            salon: { connect: { id: salon.id } }
-          }
-        });
-        await prisma.phoneOtp.create({
-          data: {
-            phone,
-            codeHash: await argon2.hash('123456'),
-            purpose: 'LOGIN',
-            expiresAt: new Date(Date.now() + 10000),
-            consumedAt: new Date(),
-          },
-        });
-
-        const res = await request(app)
-          .post('/api/v1/auth/user/login/otp')
-          .send({ phone, salonId: salon.id });
-
-        expect(res.status).toBe(200);
-        expect(res.body.success).toBe(true);
-        expect(res.body.data.tokens).toHaveProperty('accessToken');
+      const phone = '1234567890';
+      const salon = await prisma.salon.create({ data: { name: 'Test Salon', slug: 'test-salon' } });
+      await prisma.user.create({
+        data: {
+          phone,
+          fullName: 'Test User',
+          role: UserRole.MANAGER,
+          salon: { connect: { id: salon.id } }
+        }
       });
+      await prisma.phoneOtp.create({
+        data: {
+          phone,
+          codeHash: await argon2.hash('123456'),
+          purpose: 'LOGIN',
+          expiresAt: new Date(Date.now() + 10000),
+          consumedAt: new Date(),
+        },
+      });
+
+      const res = await request(app)
+        .post('/api/v1/auth/user/login/otp')
+        .send({ phone, salonId: salon.id });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.tokens).toHaveProperty('accessToken');
+    });
 
     it('should not login a user with an unverified OTP', async () => {
       const phone = '1234567890';

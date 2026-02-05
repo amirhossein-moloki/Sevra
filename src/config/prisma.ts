@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-import logger from "./logger";
+import { PrismaClient } from '@prisma/client';
+import logger from './logger';
 
 declare global {
   // جلوگیری از ساخت چندباره PrismaClient در dev (hot reload)
@@ -7,7 +7,7 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd = process.env.NODE_ENV === 'production';
 
 /**
  * Create a PrismaClient instance with sensible defaults.
@@ -16,34 +16,34 @@ const isProd = process.env.NODE_ENV === "production";
  */
 function createPrismaClient() {
   const enableQueryLogs =
-    !isProd && (process.env.PRISMA_LOG_QUERIES === "true" || process.env.PRISMA_LOG_QUERIES === "1");
+    !isProd && (process.env.PRISMA_LOG_QUERIES === 'true' || process.env.PRISMA_LOG_QUERIES === '1');
 
   const client = new PrismaClient({
     log: enableQueryLogs
       ? [
-          { level: "query", emit: "event" },
-          { level: "info", emit: "event" },
-          { level: "warn", emit: "event" },
-          { level: "error", emit: "event" },
-        ]
+        { level: 'query', emit: 'event' },
+        { level: 'info', emit: 'event' },
+        { level: 'warn', emit: 'event' },
+        { level: 'error', emit: 'event' },
+      ]
       : [
-          { level: "warn", emit: "event" },
-          { level: "error", emit: "event" },
-        ],
+        { level: 'warn', emit: 'event' },
+        { level: 'error', emit: 'event' },
+      ],
   });
 
   // --- Prisma event -> app logger ---
-  client.$on("warn", (e) => {
-    logger.warn({ prisma: { message: e.message, target: e.target } }, "Prisma warn");
+  client.$on('warn', (e) => {
+    logger.warn({ prisma: { message: e.message, target: e.target } }, 'Prisma warn');
   });
 
-  client.$on("error", (e) => {
-    logger.error({ prisma: { message: e.message, target: e.target } }, "Prisma error");
+  client.$on('error', (e) => {
+    logger.error({ prisma: { message: e.message, target: e.target } }, 'Prisma error');
   });
 
   // Query log only if enabled (to avoid noise in prod)
   if (enableQueryLogs) {
-    client.$on("query", (e) => {
+    client.$on('query', (e) => {
       logger.debug(
         {
           prisma: {
@@ -52,12 +52,12 @@ function createPrismaClient() {
             durationMs: e.duration,
           },
         },
-        "Prisma query"
+        'Prisma query'
       );
     });
 
-    client.$on("info", (e) => {
-      logger.info({ prisma: { message: e.message, target: e.target } }, "Prisma info");
+    client.$on('info', (e) => {
+      logger.info({ prisma: { message: e.message, target: e.target } }, 'Prisma info');
     });
   }
 
@@ -78,9 +78,9 @@ if (!isProd) {
 export async function connectPrisma(): Promise<void> {
   try {
     await prisma.$connect();
-    logger.info("Prisma connected");
+    logger.info('Prisma connected');
   } catch (err) {
-    logger.error({ err }, "Prisma failed to connect");
+    logger.error({ err }, 'Prisma failed to connect');
     throw err;
   }
 }
@@ -92,8 +92,8 @@ export async function connectPrisma(): Promise<void> {
 export async function disconnectPrisma(): Promise<void> {
   try {
     await prisma.$disconnect();
-    logger.info("Prisma disconnected");
+    logger.info('Prisma disconnected');
   } catch (err) {
-    logger.error({ err }, "Prisma failed to disconnect");
+    logger.error({ err }, 'Prisma failed to disconnect');
   }
 }

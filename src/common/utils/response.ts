@@ -27,11 +27,11 @@ export type ApiFailure = {
   meta?: ApiMeta;
 };
 
-function getRequestId(req: any): string | undefined {
+function getRequestId(req: any): string | undefined { // eslint-disable-line @typescript-eslint/no-explicit-any
   return req.id ?? req.requestId ?? req.context?.requestId;
 }
 
-const withMeta = (req: any, meta?: Omit<ApiMeta, 'requestId'>): ApiMeta | undefined => {
+const withMeta = (req: any, meta?: Omit<ApiMeta, 'requestId'>): ApiMeta | undefined => { // eslint-disable-line @typescript-eslint/no-explicit-any
   const requestId = getRequestId(req);
   const merged: ApiMeta = { ...(meta ?? {}), requestId };
   if (!merged.requestId && !merged.pagination) return undefined;

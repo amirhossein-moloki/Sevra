@@ -1,12 +1,11 @@
 
-import { NextFunction, Response } from 'express';
+import { Response } from 'express';
 import { AppRequest } from '../../types/express';
 import { bookingsService } from './bookings.service';
 
 export const createBooking = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const data = {
     ...req.body,
@@ -20,8 +19,7 @@ export const createBooking = async (
 
 export const createPublicBooking = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const { salonSlug } = req.params;
 
@@ -35,8 +33,7 @@ export const createPublicBooking = async (
 
 export const getBookings = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const result = await bookingsService.getBookings(req.tenant.salonId, req.query, req.actor);
   res.ok(result.data, { pagination: result.meta });
@@ -44,8 +41,7 @@ export const getBookings = async (
 
 export const getBookingById = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const booking = await bookingsService.getBookingById(
     req.params.bookingId,
@@ -57,8 +53,7 @@ export const getBookingById = async (
 
 export const updateBooking = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const booking = await bookingsService.updateBooking(
     req.params.bookingId,
@@ -72,8 +67,7 @@ export const updateBooking = async (
 
 export const confirmBooking = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const booking = await bookingsService.confirmBooking(
     req.params.bookingId,
@@ -85,8 +79,7 @@ export const confirmBooking = async (
 
 export const cancelBooking = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const booking = await bookingsService.cancelBooking(
     req.params.bookingId,
@@ -100,8 +93,7 @@ export const cancelBooking = async (
 
 export const completeBooking = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const booking = await bookingsService.completeBooking(
     req.params.bookingId,
@@ -114,8 +106,7 @@ export const completeBooking = async (
 
 export const markAsNoShow = async (
   req: AppRequest,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   const booking = await bookingsService.markAsNoShow(
     req.params.bookingId,

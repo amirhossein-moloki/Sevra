@@ -1,12 +1,12 @@
-import { Request, Response, NextFunction } from "express";
-import * as responseUtils from "../utils/response";
+import { Request, Response, NextFunction } from 'express';
+import * as responseUtils from '../utils/response';
 
 export function responseMiddleware(req: Request, res: Response, next: NextFunction) {
-  res.ok = function <T>(data: T, meta?: Omit<responseUtils.ApiMeta, "requestId">) {
+  res.ok = function <T>(data: T, meta?: Omit<responseUtils.ApiMeta, 'requestId'>) {
     return responseUtils.sendOk(res, data, meta);
   };
 
-  res.created = function <T>(data: T, meta?: Omit<responseUtils.ApiMeta, "requestId">) {
+  res.created = function <T>(data: T, meta?: Omit<responseUtils.ApiMeta, 'requestId'>) {
     return responseUtils.sendCreated(res, data, meta);
   };
 
@@ -19,7 +19,7 @@ export function responseMiddleware(req: Request, res: Response, next: NextFuncti
     message: string,
     status = 400,
     details?: unknown,
-    meta?: Omit<responseUtils.ApiMeta, "requestId">
+    meta?: Omit<responseUtils.ApiMeta, 'requestId'>
   ) {
     return responseUtils.sendFail(res, code, message, status, details, meta);
   };

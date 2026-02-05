@@ -1,5 +1,5 @@
 import { internal_calculateStaffSlotsForDay } from '../availability.service';
-import { addHours, startOfDay, parseISO } from 'date-fns';
+import { startOfDay } from 'date-fns';
 
 describe('Availability Logic (Interval Arithmetic)', () => {
   const staff = { id: 'staff-1', fullName: 'Test Staff' };

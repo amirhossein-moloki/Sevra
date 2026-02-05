@@ -58,12 +58,12 @@ describe('Settings Routes', () => {
     });
 
     it('should return 400 for invalid workStartTime format', async () => {
-        const res = await request(app)
-            .patch(`/api/v1/salons/${salon.id}/settings`)
-            .set('Authorization', `Bearer ${managerToken}`)
-            .send({ workStartTime: '9:00' }); // Invalid format, should be HH:mm
+      const res = await request(app)
+        .patch(`/api/v1/salons/${salon.id}/settings`)
+        .set('Authorization', `Bearer ${managerToken}`)
+        .send({ workStartTime: '9:00' }); // Invalid format, should be HH:mm
 
-        expect(res.status).toBe(httpStatus.BAD_REQUEST);
+      expect(res.status).toBe(httpStatus.BAD_REQUEST);
     });
   });
 });

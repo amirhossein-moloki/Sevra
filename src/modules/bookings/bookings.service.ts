@@ -338,9 +338,10 @@ export const bookingsService = {
         where,
         (page - 1) * pageSize,
         pageSize,
-        { [sortBy]: sortOrder }
+        { [sortBy]: sortOrder },
+        tx
       );
-      const c = await BookingsRepo.countBookings(where);
+      const c = await BookingsRepo.countBookings(where, tx);
       return [b, c] as const;
     });
 

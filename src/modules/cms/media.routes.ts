@@ -20,7 +20,7 @@ const upload = multer({
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only images are allowed') as any);
+      cb(new Error('Only images are allowed') as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     }
   },
 });

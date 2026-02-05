@@ -22,7 +22,7 @@ describe('Security Hardening E2E Tests', () => {
   let staffA1: User;
   let staffA2: User;
   let managerB: User;
-  let tokenManagerA: string;
+  let _tokenManagerA: string; // eslint-disable-line @typescript-eslint/no-unused-vars
   let tokenStaffA1: string;
   let tokenManagerB: string;
   let serviceA: Service;
@@ -36,7 +36,7 @@ describe('Security Hardening E2E Tests', () => {
     managerA = await createTestUser({ salonId: salonA.id, role: UserRole.MANAGER, phone: '09111111111' });
     staffA1 = await createTestUser({ salonId: salonA.id, role: UserRole.STAFF, phone: '09111111112' });
     staffA2 = await createTestUser({ salonId: salonA.id, role: UserRole.STAFF, phone: '09111111113' });
-    tokenManagerA = generateToken({ actorId: managerA.id, actorType: 'USER', salonId: salonA.id });
+    _tokenManagerA = generateToken({ actorId: managerA.id, actorType: 'USER', salonId: salonA.id });
     tokenStaffA1 = generateToken({ actorId: staffA1.id, actorType: 'USER', salonId: salonA.id, role: UserRole.STAFF });
 
     salonB = await createTestSalon({ name: 'Salon B', slug: 'salon-b' });
@@ -87,7 +87,7 @@ describe('Security Hardening E2E Tests', () => {
     });
 
     it('STAFF should get 404 for another staff member\'s booking', async () => {
-        const res = await request(app)
+      const res = await request(app)
         .get(`/api/v1/salons/${salonA.id}/bookings/${bookingA2.id}`)
         .set('Authorization', `Bearer ${tokenStaffA1}`);
       expect(res.status).toBe(httpStatus.NOT_FOUND);

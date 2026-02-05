@@ -12,10 +12,10 @@ import {
 import { BookingStatus, UserRole } from '@prisma/client';
 
 describe('Audit Logging E2E', () => {
-  let salon: any;
-  let manager: any;
+  let salon: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let manager: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   let managerToken: string;
-  let staff: any;
+  let staff: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   let staffToken: string;
 
   beforeAll(async () => {
@@ -61,7 +61,7 @@ describe('Audit Logging E2E', () => {
 
     expect(auditLog).toBeDefined();
     expect(auditLog?.actorId).toBe(manager.id);
-    expect((auditLog?.newData as any).status).toBe(BookingStatus.CANCELED);
+    expect((auditLog?.newData as any).status).toBe(BookingStatus.CANCELED); // eslint-disable-line @typescript-eslint/no-explicit-any
   });
 
   it('should allow manager to retrieve audit logs', async () => {
@@ -83,22 +83,22 @@ describe('Audit Logging E2E', () => {
   });
 
   it('should generate an audit log when a user is updated', async () => {
-      const response = await request(app)
-        .patch(`/api/v1/salons/${salon.id}/staff/${staff.id}`)
-        .set('Authorization', `Bearer ${managerToken}`)
-        .send({ fullName: 'Updated Staff Name' });
+    const response = await request(app)
+      .patch(`/api/v1/salons/${salon.id}/staff/${staff.id}`)
+      .set('Authorization', `Bearer ${managerToken}`)
+      .send({ fullName: 'Updated Staff Name' });
 
-      expect(response.status).toBe(200);
+    expect(response.status).toBe(200);
 
-      const auditLog = await prisma.auditLog.findFirst({
-        where: {
-          salonId: salon.id,
-          action: 'USER_UPDATE',
-          entityId: staff.id,
-        },
-      });
+    const auditLog = await prisma.auditLog.findFirst({
+      where: {
+        salonId: salon.id,
+        action: 'USER_UPDATE',
+        entityId: staff.id,
+      },
+    });
 
-      expect(auditLog).toBeDefined();
-      expect((auditLog?.newData as any).fullName).toBe('Updated Staff Name');
+    expect(auditLog).toBeDefined();
+    expect((auditLog?.newData as any).fullName).toBe('Updated Staff Name'); // eslint-disable-line @typescript-eslint/no-explicit-any
   });
 });

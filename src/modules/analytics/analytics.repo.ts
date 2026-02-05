@@ -1,5 +1,4 @@
 
-import { Prisma, BookingStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { formatInTimeZone } from 'date-fns-tz';
 

@@ -24,11 +24,9 @@ import {
   RobotsFollow,
   // NEW
   SessionActorType,
-  OtpPurpose,
-  OtpChannel,
-} from "@prisma/client";
-import "dotenv/config";
-import crypto from "crypto";
+} from '@prisma/client';
+import 'dotenv/config';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -69,62 +67,62 @@ type IranCity = {
 };
 
 const IRAN_CITIES: IranCity[] = [
-  { province: "تهران", city: "تهران", citySlug: "tehran", areaCode: "021", lat: "35.6892", lng: "51.3890", districts: ["ونک", "پاسداران", "صادقیه", "تهرانپارس", "یوسف‌آباد", "زعفرانیه", "جردن", "نیاوران"] },
-  { province: "اصفهان", city: "اصفهان", citySlug: "isfahan", areaCode: "031", lat: "32.6539", lng: "51.6660", districts: ["چهارباغ", "مرداویج", "هشت‌بهشت", "خانه اصفهان", "نظر", "جلفا"] },
-  { province: "خراسان رضوی", city: "مشهد", citySlug: "mashhad", areaCode: "051", lat: "36.2605", lng: "59.6168", districts: ["سجاد", "قاسم‌آباد", "احمدآباد", "وکیل‌آباد", "الهیه"] },
-  { province: "فارس", city: "شیراز", citySlug: "shiraz", areaCode: "071", lat: "29.5918", lng: "52.5837", districts: ["معالی‌آباد", "قصرالدشت", "ستارخان", "فرهنگ‌شهر", "چمران"] },
-  { province: "آذربایجان شرقی", city: "تبریز", citySlug: "tabriz", areaCode: "041", lat: "38.0962", lng: "46.2738", districts: ["ایل‌گلی", "آبرسان", "ولیعصر", "منظریه"] },
-  { province: "البرز", city: "کرج", citySlug: "karaj", areaCode: "026", lat: "35.8400", lng: "50.9391", districts: ["گوهردشت", "عظیمیه", "مهرشهر", "جهانشهر"] },
-  { province: "گیلان", city: "رشت", citySlug: "rasht", areaCode: "013", lat: "37.2809", lng: "49.5924", districts: ["گلسار", "معلم", "منظریه", "سبزه‌میدان"] },
-  { province: "مازندران", city: "ساری", citySlug: "sari", areaCode: "011", lat: "36.5633", lng: "53.0601", districts: ["بلوار خزر", "فرح‌آباد", "کیلومتر ۶", "سلمان فارسی"] },
-  { province: "کرمانشاه", city: "کرمانشاه", citySlug: "kermanshah", areaCode: "083", lat: "34.3142", lng: "47.0650", districts: ["شریعتی", "فرهنگیان", "22 بهمن", "مدرس"] },
-  { province: "خوزستان", city: "اهواز", citySlug: "ahvaz", areaCode: "061", lat: "31.3183", lng: "48.6706", districts: ["کیانپارس", "امانیه", "گلستان", "زیتون"] },
+  { province: 'تهران', city: 'تهران', citySlug: 'tehran', areaCode: '021', lat: '35.6892', lng: '51.3890', districts: ['ونک', 'پاسداران', 'صادقیه', 'تهرانپارس', 'یوسف‌آباد', 'زعفرانیه', 'جردن', 'نیاوران'] },
+  { province: 'اصفهان', city: 'اصفهان', citySlug: 'isfahan', areaCode: '031', lat: '32.6539', lng: '51.6660', districts: ['چهارباغ', 'مرداویج', 'هشت‌بهشت', 'خانه اصفهان', 'نظر', 'جلفا'] },
+  { province: 'خراسان رضوی', city: 'مشهد', citySlug: 'mashhad', areaCode: '051', lat: '36.2605', lng: '59.6168', districts: ['سجاد', 'قاسم‌آباد', 'احمدآباد', 'وکیل‌آباد', 'الهیه'] },
+  { province: 'فارس', city: 'شیراز', citySlug: 'shiraz', areaCode: '071', lat: '29.5918', lng: '52.5837', districts: ['معالی‌آباد', 'قصرالدشت', 'ستارخان', 'فرهنگ‌شهر', 'چمران'] },
+  { province: 'آذربایجان شرقی', city: 'تبریز', citySlug: 'tabriz', areaCode: '041', lat: '38.0962', lng: '46.2738', districts: ['ایل‌گلی', 'آبرسان', 'ولیعصر', 'منظریه'] },
+  { province: 'البرز', city: 'کرج', citySlug: 'karaj', areaCode: '026', lat: '35.8400', lng: '50.9391', districts: ['گوهردشت', 'عظیمیه', 'مهرشهر', 'جهانشهر'] },
+  { province: 'گیلان', city: 'رشت', citySlug: 'rasht', areaCode: '013', lat: '37.2809', lng: '49.5924', districts: ['گلسار', 'معلم', 'منظریه', 'سبزه‌میدان'] },
+  { province: 'مازندران', city: 'ساری', citySlug: 'sari', areaCode: '011', lat: '36.5633', lng: '53.0601', districts: ['بلوار خزر', 'فرح‌آباد', 'کیلومتر ۶', 'سلمان فارسی'] },
+  { province: 'کرمانشاه', city: 'کرمانشاه', citySlug: 'kermanshah', areaCode: '083', lat: '34.3142', lng: '47.0650', districts: ['شریعتی', 'فرهنگیان', '22 بهمن', 'مدرس'] },
+  { province: 'خوزستان', city: 'اهواز', citySlug: 'ahvaz', areaCode: '061', lat: '31.3183', lng: '48.6706', districts: ['کیانپارس', 'امانیه', 'گلستان', 'زیتون'] },
 ];
 
-const SALON_NAME_PREFIX = ["نگین", "پرنیان", "ماه‌رخ", "الماس", "زیبارخ", "آرتمیس", "روژان", "کیمیا", "سحر", "نارسیس"];
-const SALON_NAME_SUFFIX = ["بیوتی", "مرکز زیبایی", "سالن تخصصی", "آرایشگاه تخصصی", "اسپا", "کلینیک زیبایی"];
+const SALON_NAME_PREFIX = ['نگین', 'پرنیان', 'ماه‌رخ', 'الماس', 'زیبارخ', 'آرتمیس', 'روژان', 'کیمیا', 'سحر', 'نارسیس'];
+const SALON_NAME_SUFFIX = ['بیوتی', 'مرکز زیبایی', 'سالن تخصصی', 'آرایشگاه تخصصی', 'اسپا', 'کلینیک زیبایی'];
 
-const FIRST_NAMES_F = ["زهرا","فاطمه","مریم","نرگس","سارا","مینا","الهام","ریحانه","نازنین","سمیه","نگار","حدیث","پریسا","مهسا","رعنا","شیدا","کتایون","الهه","راضیه"];
-const FIRST_NAMES_M = ["علی","محمد","رضا","امیر","حسین","مهدی","سعید","پویا","مصطفی","یاسر","حمید","نوید","محسن","حامد","سینا","یوسف","رامین","مسعود"];
-const LAST_NAMES = ["محمدی","حسینی","احمدی","رضایی","کریمی","جعفری","قاسمی","موسوی","رحیمی","اکبری","مرادی","سلیمانی","هاشمی","یوسفی","صادقی","زارع","نعمتی","رستمی","نوری"];
+const FIRST_NAMES_F = ['زهرا','فاطمه','مریم','نرگس','سارا','مینا','الهام','ریحانه','نازنین','سمیه','نگار','حدیث','پریسا','مهسا','رعنا','شیدا','کتایون','الهه','راضیه'];
+const FIRST_NAMES_M = ['علی','محمد','رضا','امیر','حسین','مهدی','سعید','پویا','مصطفی','یاسر','حمید','نوید','محسن','حامد','سینا','یوسف','رامین','مسعود'];
+const LAST_NAMES = ['محمدی','حسینی','احمدی','رضایی','کریمی','جعفری','قاسمی','موسوی','رحیمی','اکبری','مرادی','سلیمانی','هاشمی','یوسفی','صادقی','زارع','نعمتی','رستمی','نوری'];
 
 const COMMENTS_POS = [
-  "خیلی راضی بودم، برخورد پرسنل عالی و نتیجه دقیقاً همونی شد که می‌خواستم.",
-  "محیط تمیز و حرفه‌ای بود. حتماً دوباره رزرو می‌کنم.",
-  "کیفیت کار عالی، زمان‌بندی دقیق، پیشنهادهای خوب برای مراقبت بعدش هم دادند.",
+  'خیلی راضی بودم، برخورد پرسنل عالی و نتیجه دقیقاً همونی شد که می‌خواستم.',
+  'محیط تمیز و حرفه‌ای بود. حتماً دوباره رزرو می‌کنم.',
+  'کیفیت کار عالی، زمان‌بندی دقیق، پیشنهادهای خوب برای مراقبت بعدش هم دادند.',
 ];
 const COMMENTS_MID = [
-  "در کل خوب بود، فقط کمی تأخیر داشتند.",
-  "کیفیت قابل قبول بود ولی انتظار داشتم کمی دقیق‌تر انجام شود.",
+  'در کل خوب بود، فقط کمی تأخیر داشتند.',
+  'کیفیت قابل قبول بود ولی انتظار داشتم کمی دقیق‌تر انجام شود.',
 ];
 const CANCEL_REASONS = [
-  "تداخل برنامه",
-  "مشکل رفت‌وآمد",
-  "تغییر زمان از طرف مشتری",
-  "عدم امکان حضور",
+  'تداخل برنامه',
+  'مشکل رفت‌وآمد',
+  'تغییر زمان از طرف مشتری',
+  'عدم امکان حضور',
 ];
 
 const SERVICES_IRAN = [
-  { name: "کوتاهی مو زنانه", durationMinutes: 45, price: 250_000 },
-  { name: "براشینگ", durationMinutes: 45, price: 200_000 },
-  { name: "شینیون ساده", durationMinutes: 60, price: 450_000 },
-  { name: "شینیون حرفه‌ای", durationMinutes: 90, price: 900_000 },
-  { name: "رنگ ریشه", durationMinutes: 60, price: 650_000 },
-  { name: "رنگ کامل مو", durationMinutes: 120, price: 1_200_000 },
-  { name: "هایلایت / بالیاژ", durationMinutes: 180, price: 2_800_000 },
-  { name: "دکلره کامل", durationMinutes: 180, price: 3_200_000 },
-  { name: "کراتینه مو", durationMinutes: 180, price: 4_500_000 },
-  { name: "پروتئین‌تراپی مو", durationMinutes: 120, price: 2_200_000 },
-  { name: "پاکسازی پوست (فیشیال)", durationMinutes: 75, price: 750_000 },
-  { name: "میکروبلیدینگ ابرو", durationMinutes: 120, price: 2_900_000 },
-  { name: "لیفت و لمینت مژه", durationMinutes: 90, price: 1_200_000 },
-  { name: "اکستنشن مژه", durationMinutes: 120, price: 1_800_000 },
-  { name: "اصلاح ابرو", durationMinutes: 20, price: 120_000 },
-  { name: "وکس صورت", durationMinutes: 20, price: 150_000 },
-  { name: "مانیکور", durationMinutes: 45, price: 350_000 },
-  { name: "پدیکور", durationMinutes: 60, price: 450_000 },
-  { name: "کاشت ناخن", durationMinutes: 120, price: 1_500_000 },
-  { name: "ترمیم ناخن", durationMinutes: 90, price: 950_000 },
+  { name: 'کوتاهی مو زنانه', durationMinutes: 45, price: 250_000 },
+  { name: 'براشینگ', durationMinutes: 45, price: 200_000 },
+  { name: 'شینیون ساده', durationMinutes: 60, price: 450_000 },
+  { name: 'شینیون حرفه‌ای', durationMinutes: 90, price: 900_000 },
+  { name: 'رنگ ریشه', durationMinutes: 60, price: 650_000 },
+  { name: 'رنگ کامل مو', durationMinutes: 120, price: 1_200_000 },
+  { name: 'هایلایت / بالیاژ', durationMinutes: 180, price: 2_800_000 },
+  { name: 'دکلره کامل', durationMinutes: 180, price: 3_200_000 },
+  { name: 'کراتینه مو', durationMinutes: 180, price: 4_500_000 },
+  { name: 'پروتئین‌تراپی مو', durationMinutes: 120, price: 2_200_000 },
+  { name: 'پاکسازی پوست (فیشیال)', durationMinutes: 75, price: 750_000 },
+  { name: 'میکروبلیدینگ ابرو', durationMinutes: 120, price: 2_900_000 },
+  { name: 'لیفت و لمینت مژه', durationMinutes: 90, price: 1_200_000 },
+  { name: 'اکستنشن مژه', durationMinutes: 120, price: 1_800_000 },
+  { name: 'اصلاح ابرو', durationMinutes: 20, price: 120_000 },
+  { name: 'وکس صورت', durationMinutes: 20, price: 150_000 },
+  { name: 'مانیکور', durationMinutes: 45, price: 350_000 },
+  { name: 'پدیکور', durationMinutes: 60, price: 450_000 },
+  { name: 'کاشت ناخن', durationMinutes: 120, price: 1_500_000 },
+  { name: 'ترمیم ناخن', durationMinutes: 90, price: 950_000 },
 ];
 
 function pick<T>(arr: T[]) {
@@ -147,24 +145,24 @@ function shuffle<T>(arr: T[]) {
 function slugifyLatin(input: string) {
   return input
     .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^a-z0-9-]+/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]+/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 function randomTokenHash() {
   // فقط برای seed — در محصول واقعی باید امن‌تر/واقعی‌تر باشد
-  return crypto.createHash("sha256").update(crypto.randomBytes(32)).digest("hex");
+  return crypto.createHash('sha256').update(crypto.randomBytes(32)).digest('hex');
 }
 function passwordHashDummy() {
   // فقط برای seed (در سیستم واقعی bcrypt واقعی بزنید)
-  return "bcrypt$seed_dummy_hash";
+  return 'bcrypt$seed_dummy_hash';
 }
 function makeIranMobileUnique(counter: number) {
   // 09 + 9 رقم
-  const prefixes = ["10","11","12","13","14","15","16","17","18","19","20","21","22","30","33","35","36","37","38","39"];
+  const prefixes = ['10','11','12','13','14','15','16','17','18','19','20','21','22','30','33','35','36','37','38','39'];
   const p = pick(prefixes);
-  const body = String(counter).padStart(7, "0"); // 7 رقم
+  const body = String(counter).padStart(7, '0'); // 7 رقم
   return `09${p}${body}`.slice(0, 11);
 }
 function makeIranLandline(areaCode: string) {
@@ -182,10 +180,10 @@ function toTehranDate(dayOffset: number, hour: number, minute: number) {
   base.setUTCDate(base.getUTCDate() + dayOffset);
 
   const yyyy = base.getUTCFullYear();
-  const mm = String(base.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(base.getUTCDate()).padStart(2, "0");
-  const hh = String(hour).padStart(2, "0");
-  const mi = String(minute).padStart(2, "0");
+  const mm = String(base.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(base.getUTCDate()).padStart(2, '0');
+  const hh = String(hour).padStart(2, '0');
+  const mi = String(minute).padStart(2, '0');
 
   const iso = `${yyyy}-${mm}-${dd}T${hh}:${mi}:00+03:30`;
   return new Date(iso);
@@ -195,8 +193,8 @@ function tehranYMDKey(date: Date) {
   const offsetMs = CONFIG.tehranUtcOffsetMinutes * 60_000;
   const d = new Date(date.getTime() + offsetMs);
   const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
@@ -234,19 +232,19 @@ async function clearAll() {
 function buildStructuredDataLocalBusiness(salonName: string, city: IranCity, slug: string) {
   // JSON-LD مناسب SEO / LocalBusiness
   const obj = {
-    "@context": "https://schema.org",
-    "@type": "BeautySalon",
+    '@context': 'https://schema.org',
+    '@type': 'BeautySalon',
     name: salonName,
     areaServed: city.city,
     address: {
-      "@type": "PostalAddress",
+      '@type': 'PostalAddress',
       addressRegion: city.province,
       addressLocality: city.city,
-      addressCountry: "IR",
+      addressCountry: 'IR',
     },
     url: `https://example.com/${slug}`,
     geo: {
-      "@type": "GeoCoordinates",
+      '@type': 'GeoCoordinates',
       latitude: city.lat,
       longitude: city.lng,
     },
@@ -255,7 +253,7 @@ function buildStructuredDataLocalBusiness(salonName: string, city: IranCity, slu
 }
 
 async function main() {
-  console.log("🧹 پاکسازی دیتای قبلی...");
+  console.log('🧹 پاکسازی دیتای قبلی...');
   await clearAll();
 
   /**
@@ -263,7 +261,7 @@ async function main() {
    * 1) SALONS + SITE
    * -----------------
    */
-  console.log("🏢 ساخت سالن‌ها + تنظیمات سایت/SEO ...");
+  console.log('🏢 ساخت سالن‌ها + تنظیمات سایت/SEO ...');
   const salons: {
     id: string;
     name: string;
@@ -299,9 +297,9 @@ async function main() {
         settings: {
           create: {
             preventOverlaps: true,
-            timeZone: "Asia/Tehran",
-            workStartTime: "09:00",
-            workEndTime: "20:00",
+            timeZone: 'Asia/Tehran',
+            workStartTime: '09:00',
+            workEndTime: '20:00',
             allowOnlineBooking,
             onlineBookingAutoConfirm,
           },
@@ -334,7 +332,7 @@ async function main() {
         addresses: {
           create: [
             {
-              title: "شعبه اصلی",
+              title: 'شعبه اصلی',
               province: city.province,
               city: city.city,
               district: pick(city.districts),
@@ -349,21 +347,21 @@ async function main() {
 
         links: {
           create: [
-            { type: LinkType.INSTAGRAM, label: "اینستاگرام", value: `https://instagram.com/${slugifyLatin(salonName.replace(/\s+/g, "_"))}`, isPrimary: true, isActive: true },
-            { type: LinkType.WHATSAPP, label: "واتساپ", value: makeIranMobileUnique(9_000_000 + i), isPrimary: false, isActive: true },
-            { type: LinkType.PHONE, label: "تماس", value: makeIranLandline(city.areaCode), isPrimary: false, isActive: true },
-            { type: LinkType.GOOGLE_MAP, label: "لوکیشن", value: `https://maps.google.com/?q=${city.lat},${city.lng}`, isPrimary: false, isActive: true },
-            { type: LinkType.WEBSITE, label: "وبسایت", value: `https://example.com/${slug}`, isPrimary: false, isActive: true },
+            { type: LinkType.INSTAGRAM, label: 'اینستاگرام', value: `https://instagram.com/${slugifyLatin(salonName.replace(/\s+/g, '_'))}`, isPrimary: true, isActive: true },
+            { type: LinkType.WHATSAPP, label: 'واتساپ', value: makeIranMobileUnique(9_000_000 + i), isPrimary: false, isActive: true },
+            { type: LinkType.PHONE, label: 'تماس', value: makeIranLandline(city.areaCode), isPrimary: false, isActive: true },
+            { type: LinkType.GOOGLE_MAP, label: 'لوکیشن', value: `https://maps.google.com/?q=${city.lat},${city.lng}`, isPrimary: false, isActive: true },
+            { type: LinkType.WEBSITE, label: 'وبسایت', value: `https://example.com/${slug}`, isPrimary: false, isActive: true },
           ],
         },
 
         media: {
           create: [
-            { type: MediaType.IMAGE, purpose: MediaPurpose.LOGO, url: `https://picsum.photos/seed/${slug}-logo2/800/800`, altText: `لوگو ${salonName}`, category: "سالن", caption: "لوگو رسمی", sortOrder: 0, isActive: true },
-            { type: MediaType.IMAGE, purpose: MediaPurpose.COVER, url: `https://picsum.photos/seed/${slug}-cover/1600/800`, altText: `کاور ${salonName}`, category: "سالن", caption: "تصویر کاور", sortOrder: 1, isActive: true },
-            { type: MediaType.IMAGE, purpose: MediaPurpose.GALLERY, url: `https://picsum.photos/seed/${slug}-gal-1/1200/900`, altText: "محیط سالن", category: "سالن", caption: "فضای داخلی", sortOrder: 2, isActive: true },
-            { type: MediaType.IMAGE, purpose: MediaPurpose.BEFORE_AFTER, url: `https://picsum.photos/seed/${slug}-ba-1/1200/900`, altText: "قبل و بعد خدمات مو", category: "مو", caption: "نمونه قبل/بعد", sortOrder: 3, isActive: true },
-            { type: MediaType.IMAGE, purpose: MediaPurpose.GALLERY, url: `https://picsum.photos/seed/${slug}-gal-2/1200/900`, altText: "نمونه کار ناخن", category: "ناخن", caption: "نمونه طراحی", sortOrder: 4, isActive: true },
+            { type: MediaType.IMAGE, purpose: MediaPurpose.LOGO, url: `https://picsum.photos/seed/${slug}-logo2/800/800`, altText: `لوگو ${salonName}`, category: 'سالن', caption: 'لوگو رسمی', sortOrder: 0, isActive: true },
+            { type: MediaType.IMAGE, purpose: MediaPurpose.COVER, url: `https://picsum.photos/seed/${slug}-cover/1600/800`, altText: `کاور ${salonName}`, category: 'سالن', caption: 'تصویر کاور', sortOrder: 1, isActive: true },
+            { type: MediaType.IMAGE, purpose: MediaPurpose.GALLERY, url: `https://picsum.photos/seed/${slug}-gal-1/1200/900`, altText: 'محیط سالن', category: 'سالن', caption: 'فضای داخلی', sortOrder: 2, isActive: true },
+            { type: MediaType.IMAGE, purpose: MediaPurpose.BEFORE_AFTER, url: `https://picsum.photos/seed/${slug}-ba-1/1200/900`, altText: 'قبل و بعد خدمات مو', category: 'مو', caption: 'نمونه قبل/بعد', sortOrder: 3, isActive: true },
+            { type: MediaType.IMAGE, purpose: MediaPurpose.GALLERY, url: `https://picsum.photos/seed/${slug}-gal-2/1200/900`, altText: 'نمونه کار ناخن', category: 'ناخن', caption: 'نمونه طراحی', sortOrder: 4, isActive: true },
           ],
         },
       },
@@ -384,8 +382,8 @@ async function main() {
         dataJson: JSON.stringify({
           headline: title,
           subheadline: `رزرو آنلاین و حضوری در ${city.city}`,
-          primaryCta: { label: "رزرو نوبت", url: "/booking" },
-          secondaryCta: { label: "دیدن خدمات", url: "/services" },
+          primaryCta: { label: 'رزرو نوبت', url: '/booking' },
+          secondaryCta: { label: 'دیدن خدمات', url: '/services' },
           backgroundImageUrl: `https://picsum.photos/seed/${slug}-hero/1600/900`,
         }),
         sortOrder: 0,
@@ -394,11 +392,11 @@ async function main() {
       highlights: () => ({
         type: PageSectionType.HIGHLIGHTS,
         dataJson: JSON.stringify({
-          title: "چرا ما؟",
+          title: 'چرا ما؟',
           items: [
-            { title: "محیط بهداشتی", text: "ضدعفونی منظم ابزار و رعایت کامل پروتکل‌ها" },
-            { title: "پرسنل حرفه‌ای", text: "متخصصین با تجربه در مو، پوست و ناخن" },
-            { title: "رزرو آسان", text: "رزرو آنلاین/حضوری با مدیریت زمان" },
+            { title: 'محیط بهداشتی', text: 'ضدعفونی منظم ابزار و رعایت کامل پروتکل‌ها' },
+            { title: 'پرسنل حرفه‌ای', text: 'متخصصین با تجربه در مو، پوست و ناخن' },
+            { title: 'رزرو آسان', text: 'رزرو آنلاین/حضوری با مدیریت زمان' },
           ],
         }),
         sortOrder: 1,
@@ -406,29 +404,29 @@ async function main() {
       }),
       servicesGrid: () => ({
         type: PageSectionType.SERVICES_GRID,
-        dataJson: JSON.stringify({ title: "خدمات پرطرفدار", showPrices: true, maxItems: 12 }),
+        dataJson: JSON.stringify({ title: 'خدمات پرطرفدار', showPrices: true, maxItems: 12 }),
         sortOrder: 2,
         isEnabled: true,
       }),
       galleryGrid: () => ({
         type: PageSectionType.GALLERY_GRID,
-        dataJson: JSON.stringify({ title: "گالری نمونه کار", categories: ["مو", "ناخن", "پوست", "سالن"], limit: 12 }),
+        dataJson: JSON.stringify({ title: 'گالری نمونه کار', categories: ['مو', 'ناخن', 'پوست', 'سالن'], limit: 12 }),
         sortOrder: 3,
         isEnabled: true,
       }),
       testimonials: () => ({
         type: PageSectionType.TESTIMONIALS,
-        dataJson: JSON.stringify({ title: "نظرات مشتریان", limit: 6 }),
+        dataJson: JSON.stringify({ title: 'نظرات مشتریان', limit: 6 }),
         sortOrder: 4,
         isEnabled: true,
       }),
       faq: () => ({
         type: PageSectionType.FAQ,
         dataJson: JSON.stringify({
-          title: "سوالات پرتکرار",
+          title: 'سوالات پرتکرار',
           items: [
-            { q: "برای رزرو آنلاین نیاز به پرداخت است؟", a: "بسته به سرویس، ممکن است بیعانه فعال باشد." },
-            { q: "چطور زمان رزرو را تغییر دهم؟", a: "از طریق تماس با پذیرش یا پنل رزرو (در صورت فعال بودن) اقدام کنید." },
+            { q: 'برای رزرو آنلاین نیاز به پرداخت است؟', a: 'بسته به سرویس، ممکن است بیعانه فعال باشد.' },
+            { q: 'چطور زمان رزرو را تغییر دهم؟', a: 'از طریق تماس با پذیرش یا پنل رزرو (در صورت فعال بودن) اقدام کنید.' },
           ],
         }),
         sortOrder: 5,
@@ -437,10 +435,10 @@ async function main() {
       cta: () => ({
         type: PageSectionType.CTA,
         dataJson: JSON.stringify({
-          title: "برای تغییر استایل آماده‌اید؟",
-          text: "همین الان نوبت خود را رزرو کنید.",
-          buttonLabel: "رزرو نوبت",
-          buttonUrl: "/booking",
+          title: 'برای تغییر استایل آماده‌اید؟',
+          text: 'همین الان نوبت خود را رزرو کنید.',
+          buttonLabel: 'رزرو نوبت',
+          buttonUrl: '/booking',
         }),
         sortOrder: 6,
         isEnabled: true,
@@ -448,9 +446,9 @@ async function main() {
       contactCard: () => ({
         type: PageSectionType.CONTACT_CARD,
         dataJson: JSON.stringify({
-          title: "اطلاعات تماس",
+          title: 'اطلاعات تماس',
           city: city.city,
-          workHours: "09:00 تا 20:00",
+          workHours: '09:00 تا 20:00',
         }),
         sortOrder: 0,
         isEnabled: true,
@@ -464,10 +462,10 @@ async function main() {
       richTextAbout: () => ({
         type: PageSectionType.RICH_TEXT,
         dataJson: JSON.stringify({
-          title: "درباره ما",
+          title: 'درباره ما',
           blocks: [
-            { type: "paragraph", text: `ما در ${city.city} با تمرکز بر کیفیت، بهداشت و تجربه مشتری فعالیت می‌کنیم.` },
-            { type: "paragraph", text: "تیم ما با جدیدترین متدها و مواد باکیفیت آماده ارائه خدمات است." },
+            { type: 'paragraph', text: `ما در ${city.city} با تمرکز بر کیفیت، بهداشت و تجربه مشتری فعالیت می‌کنیم.` },
+            { type: 'paragraph', text: 'تیم ما با جدیدترین متدها و مواد باکیفیت آماده ارائه خدمات است.' },
           ],
         }),
         sortOrder: 0,
@@ -475,7 +473,7 @@ async function main() {
       }),
       staffGrid: () => ({
         type: PageSectionType.STAFF_GRID,
-        dataJson: JSON.stringify({ title: "تیم ما", showRoles: true, showBio: true }),
+        dataJson: JSON.stringify({ title: 'تیم ما', showRoles: true, showBio: true }),
         sortOrder: 0,
         isEnabled: true,
       }),
@@ -483,8 +481,8 @@ async function main() {
 
     const pagesToCreate = [
       {
-        slug: "home",
-        title: "صفحه اصلی",
+        slug: 'home',
+        title: 'صفحه اصلی',
         type: PageType.HOME,
         status: PageStatus.PUBLISHED,
         publishedAt: new Date(),
@@ -503,8 +501,8 @@ async function main() {
         },
       },
       {
-        slug: "about",
-        title: "درباره ما",
+        slug: 'about',
+        title: 'درباره ما',
         type: PageType.ABOUT,
         status: PageStatus.PUBLISHED,
         publishedAt: new Date(),
@@ -512,8 +510,8 @@ async function main() {
         sections: { create: [commonSections.richTextAbout(), commonSections.highlights(), commonSections.faq()] },
       },
       {
-        slug: "services",
-        title: "خدمات",
+        slug: 'services',
+        title: 'خدمات',
         type: PageType.SERVICES,
         status: PageStatus.PUBLISHED,
         publishedAt: new Date(),
@@ -521,32 +519,32 @@ async function main() {
         sections: { create: [commonSections.servicesGrid(), commonSections.faq(), commonSections.cta()] },
       },
       {
-        slug: "gallery",
-        title: "گالری",
+        slug: 'gallery',
+        title: 'گالری',
         type: PageType.GALLERY,
         status: PageStatus.PUBLISHED,
         publishedAt: new Date(),
         sections: { create: [commonSections.galleryGrid()] },
       },
       {
-        slug: "team",
-        title: "تیم ما",
+        slug: 'team',
+        title: 'تیم ما',
         type: PageType.TEAM,
         status: PageStatus.PUBLISHED,
         publishedAt: new Date(),
         sections: { create: [commonSections.staffGrid()] },
       },
       {
-        slug: "contact",
-        title: "تماس با ما",
+        slug: 'contact',
+        title: 'تماس با ما',
         type: PageType.CONTACT,
         status: PageStatus.PUBLISHED,
         publishedAt: new Date(),
         sections: { create: [commonSections.contactCard(), commonSections.map()] },
       },
       {
-        slug: "rules",
-        title: "قوانین و مقررات",
+        slug: 'rules',
+        title: 'قوانین و مقررات',
         type: PageType.CUSTOM,
         status: PageStatus.DRAFT,
         seoTitle: `${salonName} | قوانین`,
@@ -557,10 +555,10 @@ async function main() {
             {
               type: PageSectionType.RICH_TEXT,
               dataJson: JSON.stringify({
-                title: "قوانین",
+                title: 'قوانین',
                 blocks: [
-                  { type: "paragraph", text: "لطفاً در صورت لغو نوبت، حداقل ۳ ساعت قبل اطلاع دهید." },
-                  { type: "paragraph", text: "در برخی خدمات ممکن است بیعانه دریافت شود." },
+                  { type: 'paragraph', text: 'لطفاً در صورت لغو نوبت، حداقل ۳ ساعت قبل اطلاع دهید.' },
+                  { type: 'paragraph', text: 'در برخی خدمات ممکن است بیعانه دریافت شود.' },
                 ],
               }),
               sortOrder: 0,
@@ -576,7 +574,7 @@ async function main() {
         data: {
           salonId: created.id,
           ...p,
-        } as any,
+        } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
       });
 
       // page slug history
@@ -605,7 +603,7 @@ async function main() {
    * 2) SERVICES
    * ----------------
    */
-  console.log("🧴 ساخت سرویس‌ها (ایران‌محور) ...");
+  console.log('🧴 ساخت سرویس‌ها (ایران‌محور) ...');
   if (CONFIG.servicesPerSalon) {
     for (const s of salons) {
       await prisma.service.createMany({
@@ -614,7 +612,7 @@ async function main() {
           name: svc.name,
           durationMinutes: svc.durationMinutes,
           price: svc.price,
-          currency: "IRT", // تومان
+          currency: 'IRT', // تومان
           isActive: true,
         })),
       });
@@ -629,7 +627,7 @@ async function main() {
           name: svc.name,
           durationMinutes: svc.durationMinutes,
           price: svc.price,
-          currency: "IRT",
+          currency: 'IRT',
           isActive: true,
         },
       });
@@ -641,7 +639,7 @@ async function main() {
    * 3) USERS (131)
    * ----------------
    */
-  console.log("👤 ساخت کاربران پنل (131) ...");
+  console.log('👤 ساخت کاربران پنل (131) ...');
   const users: {
     id: string;
     salonId: string;
@@ -673,7 +671,7 @@ async function main() {
           isActive: true,
           isPublic: true,
           publicName: fullName,
-          bio: "مدیر سالن | هماهنگی تیم و کنترل کیفیت خدمات",
+          bio: 'مدیر سالن | هماهنگی تیم و کنترل کیفیت خدمات',
           avatarUrl: `https://picsum.photos/seed/${salon.slug}-manager/320/320`,
         },
       });
@@ -740,7 +738,7 @@ async function main() {
           isActive,
           isPublic,
           publicName: isPublic ? fullName : null,
-          bio: isPublic ? "متخصص خدمات زیبایی | مشاوره و اجرای خدمات مطابق سلیقه مشتری" : null,
+          bio: isPublic ? 'متخصص خدمات زیبایی | مشاوره و اجرای خدمات مطابق سلیقه مشتری' : null,
           avatarUrl: isPublic ? `https://picsum.photos/seed/${salon.slug}-staff-${sIdx}/320/320` : null,
         },
       });
@@ -767,14 +765,14 @@ async function main() {
    * ----------------
    */
   if (CONFIG.seedShifts) {
-    console.log("🗓️ ساخت شیفت‌ها (واقعی و قابل تست زمان‌بندی) ...");
+    console.log('🗓️ ساخت شیفت‌ها (واقعی و قابل تست زمان‌بندی) ...');
     const activeWorkingUsers = users.filter((u) => u.isActive && (u.role === UserRole.STAFF || u.role === UserRole.RECEPTIONIST));
 
     // 6 روز کاری (شنبه تا پنجشنبه) — dayOfWeek را 0..5 فرض می‌کنیم
     for (const u of activeWorkingUsers) {
       for (let dayOfWeek = 0; dayOfWeek <= 5; dayOfWeek++) {
-        const start = chance(0.2) ? "10:00" : "09:00";
-        const end = chance(0.2) ? "19:00" : "20:00";
+        const start = chance(0.2) ? '10:00' : '09:00';
+        const end = chance(0.2) ? '19:00' : '20:00';
 
         await prisma.shift.create({
           data: {
@@ -795,7 +793,7 @@ async function main() {
    * 5) USER SERVICES
    * ----------------
    */
-  console.log("🧩 اتصال مهارت پرسنل به سرویس‌ها (با پوشش کامل هر سرویس) ...");
+  console.log('🧩 اتصال مهارت پرسنل به سرویس‌ها (با پوشش کامل هر سرویس) ...');
   for (const salon of salons) {
     const salonServices = await prisma.service.findMany({ where: { salonId: salon.id } });
     const salonStaff = users.filter((u) => u.salonId === salon.id && u.role === UserRole.STAFF && u.isActive);
@@ -834,7 +832,7 @@ async function main() {
    * 6) CUSTOMERS + PROFILES
    * ----------------
    */
-  console.log("👥 ساخت مشتری‌ها (50) + CRM پروفایل‌ها ...");
+  console.log('👥 ساخت مشتری‌ها (50) + CRM پروفایل‌ها ...');
   const customers: { id: string; phone: string; fullName: string }[] = [];
   const profileMap = new Map<string, string>(); // key: salonId:customerAccountId -> profileId
 
@@ -857,7 +855,7 @@ async function main() {
           salonId: s.id,
           customerAccountId: ca.id,
           displayName: fullName,
-          note: chance(0.25) ? "مشتری وفادار | ترجیحاً صبح‌ها" : null,
+          note: chance(0.25) ? 'مشتری وفادار | ترجیحاً صبح‌ها' : null,
         },
       });
       profileMap.set(`${s.id}:${ca.id}`, prof.id);
@@ -870,7 +868,7 @@ async function main() {
    * ----------------
    */
   if (CONFIG.seedBookings) {
-    console.log("📌 ساخت Booking/Payment/Review/Commission ...");
+    console.log('📌 ساخت Booking/Payment/Review/Commission ...');
 
     // برای جلوگیری از همپوشانی (واقع‌گرایانه‌تر)
     const staffCalendar = new Map<string, { startMs: number; endMs: number }[]>(); // key: staffId:YYYY-MM-DD
@@ -906,7 +904,7 @@ async function main() {
               salonId: salon.id,
               customerAccountId: customer.id,
               displayName: customer.fullName,
-              note: chance(0.15) ? "ثبت خودکار پروفایل از اولین رزرو" : null,
+              note: chance(0.15) ? 'ثبت خودکار پروفایل از اولین رزرو' : null,
             },
           });
           profileId = prof.id;
@@ -1110,7 +1108,7 @@ async function main() {
 
             status,
             source,
-            note: chance(0.15) ? "در صورت نیاز به مشاوره، قبل از شروع خدمات اطلاع دهید." : null,
+            note: chance(0.15) ? 'در صورت نیاز به مشاوره، قبل از شروع خدمات اطلاع دهید.' : null,
 
             canceledAt,
             cancelReason,
@@ -1127,7 +1125,7 @@ async function main() {
             data: {
               bookingId: booking.id,
               amount: p.amount,
-              currency: "IRT",
+              currency: 'IRT',
               status: p.status,
               method: p.method,
               paidAt: p.paidAt,
@@ -1166,7 +1164,7 @@ async function main() {
                 target: ReviewTarget.SERVICE,
                 serviceId: service.id,
                 rating: rating,
-                comment: chance(0.7) ? "کیفیت سرویس عالی بود." : "در کل خوب بود.",
+                comment: chance(0.7) ? 'کیفیت سرویس عالی بود.' : 'در کل خوب بود.',
                 status: ReviewStatus.PUBLISHED,
               },
             });
@@ -1194,7 +1192,7 @@ async function main() {
                 salonId: salon.id,
                 status: commissionStatus,
                 baseAmount,
-                currency: "IRT",
+                currency: 'IRT',
 
                 type: CommissionType.PERCENT,
                 percentBps: salon.commissionPercentBps,
@@ -1203,7 +1201,7 @@ async function main() {
                 commissionAmount,
                 calculatedAt: new Date(),
                 chargedAt: commissionStatus === CommissionStatus.CHARGED ? new Date() : null,
-                note: commissionStatus === CommissionStatus.CHARGED ? "کسر کارمزد بابت رزرو آنلاین" : null,
+                note: commissionStatus === CommissionStatus.CHARGED ? 'کسر کارمزد بابت رزرو آنلاین' : null,
               },
             });
 
@@ -1213,7 +1211,7 @@ async function main() {
                 data: {
                   commissionId: commission.id,
                   amount: commissionAmount,
-                  currency: "IRT",
+                  currency: 'IRT',
                   status: CommissionPaymentStatus.PAID,
                   method: CommissionPaymentMethod.TRANSFER,
                   paidAt: new Date(),
@@ -1235,14 +1233,14 @@ async function main() {
                 salonId: salon.id,
                 status: CommissionStatus.WAIVED,
                 baseAmount,
-                currency: "IRT",
+                currency: 'IRT',
                 type: CommissionType.PERCENT,
                 percentBps: salon.commissionPercentBps,
                 fixedAmount: null,
                 commissionAmount,
                 calculatedAt: new Date(),
                 chargedAt: null,
-                note: "لغو رزرو — کارمزد لحاظ نشد",
+                note: 'لغو رزرو — کارمزد لحاظ نشد',
               },
             });
           }
@@ -1251,7 +1249,7 @@ async function main() {
     } // end salon loop
   }
 
-  console.log("✅ Seed حرفه‌ای و کامل ایران‌محور انجام شد.");
+  console.log('✅ Seed حرفه‌ای و کامل ایران‌محور انجام شد.');
   console.log(`Salons: ${salons.length}`);
   console.log(`Users: ${users.length}`);
   console.log(`Customers: ${customers.length}`);
@@ -1261,7 +1259,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error("❌ Seed failed:", e);
+    console.error('❌ Seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {

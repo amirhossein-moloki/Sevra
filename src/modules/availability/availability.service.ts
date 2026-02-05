@@ -1,7 +1,7 @@
 import { GetAvailabilityQuery } from './availability.validators';
 import { AvailabilityRepo } from './availability.repo';
 import createHttpError from 'http-errors';
-import { add, isBefore, isEqual, startOfDay, max, differenceInMinutes } from 'date-fns';
+import { add, isBefore, isEqual, max, differenceInMinutes } from 'date-fns';
 import { format as formatTz, toZonedTime } from 'date-fns-tz';
 import { getZonedStartAndEnd } from '../../common/utils/date';
 
@@ -45,7 +45,7 @@ export const getAvailableSlots = async (
   }
 
   if (staffToCheck.length === 0) {
-      return []; // No staff available for this service
+    return []; // No staff available for this service
   }
 
   const staffIds = staffToCheck.map(s => s.id);
@@ -59,13 +59,13 @@ export const getAvailableSlots = async (
   const serviceDuration = service.durationMinutes;
 
   // Create maps for quick lookups
-  const shiftsByUserId: { [userId: string]: { [day: number]: any } } = {};
+  const shiftsByUserId: { [userId: string]: { [day: number]: any } } = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
   for (const shift of shifts) {
     if (!shiftsByUserId[shift.userId]) shiftsByUserId[shift.userId] = {};
     shiftsByUserId[shift.userId][shift.dayOfWeek] = shift;
   }
 
-  const bookingsByStaffAndDate: { [key: string]: any[] } = {};
+  const bookingsByStaffAndDate: { [key: string]: any[] } = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
   for (const booking of bookings) {
     const dateKey = formatTz(booking.startAt, 'yyyy-MM-dd', { timeZone });
     const key = `${booking.staffId}-${dateKey}`;
@@ -146,8 +146,8 @@ export const internal_calculateStaffSlotsForDay = (
       diffToShiftStart <= 0
         ? new Date(shiftStart)
         : add(shiftStart, {
-            minutes: Math.ceil(diffToShiftStart / SLOT_INTERVAL_MINUTES) * SLOT_INTERVAL_MINUTES,
-          });
+          minutes: Math.ceil(diffToShiftStart / SLOT_INTERVAL_MINUTES) * SLOT_INTERVAL_MINUTES,
+        });
 
     for (
       let slotStart = new Date(alignedStart);

@@ -88,12 +88,12 @@ describe('Public Routes Enforcement', () => {
     });
 
     it('returns 400 or 404 for availability with missing serviceId (validation check)', async () => {
-        // Just checking that it goes through resolveSalonBySlug first
-        const response = await request(app)
-          .get(`/api/v1/public/salons/${activeSalon.slug}/availability/slots`);
+      // Just checking that it goes through resolveSalonBySlug first
+      const response = await request(app)
+        .get(`/api/v1/public/salons/${activeSalon.slug}/availability/slots`);
 
-        // It should reach validation if salon is found
-        expect(response.status).not.toBe(404);
+      // It should reach validation if salon is found
+      expect(response.status).not.toBe(404);
     });
   });
 
@@ -107,16 +107,16 @@ describe('Public Routes Enforcement', () => {
     });
 
     it('returns 404 for salon root if no HOME page exists', async () => {
-        const salonNoHome = await prisma.salon.create({
-            data: {
-                name: 'No Home Salon',
-                slug: 'no-home-salon',
-            }
-        });
+      const salonNoHome = await prisma.salon.create({
+        data: {
+          name: 'No Home Salon',
+          slug: 'no-home-salon',
+        }
+      });
 
-        await request(app)
-            .get(`/api/v1/public/salons/${salonNoHome.slug}`)
-            .expect(404);
+      await request(app)
+        .get(`/api/v1/public/salons/${salonNoHome.slug}`)
+        .expect(404);
     });
   });
 
@@ -131,36 +131,36 @@ describe('Public Routes Enforcement', () => {
     });
 
     it('falls back to site settings for SEO if page fields are missing', async () => {
-        await prisma.salonSiteSettings.upsert({
-            where: { salonId: activeSalon.id },
-            create: {
-                salonId: activeSalon.id,
-                defaultSeoTitle: 'Default Salon SEO',
-            },
-            update: {
-                defaultSeoTitle: 'Default Salon SEO',
-            }
-        });
+      await prisma.salonSiteSettings.upsert({
+        where: { salonId: activeSalon.id },
+        create: {
+          salonId: activeSalon.id,
+          defaultSeoTitle: 'Default Salon SEO',
+        },
+        update: {
+          defaultSeoTitle: 'Default Salon SEO',
+        }
+      });
 
-        const pageNoSeo = await prisma.salonPage.create({
-            data: {
-                salonId: activeSalon.id,
-                slug: 'fallback-seo',
-                title: 'Fallback Page',
-                status: PageStatus.PUBLISHED,
-            },
-        });
+      const pageNoSeo = await prisma.salonPage.create({
+        data: {
+          salonId: activeSalon.id,
+          slug: 'fallback-seo',
+          title: 'Fallback Page',
+          status: PageStatus.PUBLISHED,
+        },
+      });
 
-        const response = await request(app)
-            .get(`/api/v1/public/salons/${activeSalon.slug}/pages/${pageNoSeo.slug}`)
-            .expect(200);
+      const response = await request(app)
+        .get(`/api/v1/public/salons/${activeSalon.slug}/pages/${pageNoSeo.slug}`)
+        .expect(200);
 
-        expect(response.text).toContain('<title>Default Salon SEO</title>');
+      expect(response.text).toContain('<title>Default Salon SEO</title>');
     });
 
     it('falls back to page title if both seoTitle and site settings are missing', async () => {
       const otherSalon = await prisma.salon.create({
-          data: { name: 'Other Salon', slug: 'other-salon' }
+        data: { name: 'Other Salon', slug: 'other-salon' }
       });
       const pageNoSeo = await prisma.salonPage.create({
         data: {

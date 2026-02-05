@@ -33,7 +33,7 @@ describe('Shifts API Endpoints', () => {
   let salonId: string;
   let managerToken: string;
   let staffToken: string;
-  let managerId: string;
+  let _managerId: string; // eslint-disable-line @typescript-eslint/no-unused-vars
   let staffId: string;
 
   beforeAll(async () => {
@@ -49,17 +49,17 @@ describe('Shifts API Endpoints', () => {
       data: {
         salonId,
         fullName: 'Shift Manager',
-        phone: `+10000000004`,
+        phone: '+10000000004',
         role: UserRole.MANAGER,
       },
     });
-    managerId = manager.id;
+    _managerId = manager.id;
 
     const staff = await prisma.user.create({
       data: {
         salonId,
         fullName: 'Shift Staff',
-        phone: `+10000000005`,
+        phone: '+10000000005',
         role: UserRole.STAFF,
       },
     });

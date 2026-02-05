@@ -1,7 +1,7 @@
 
 // src/types/express.d.ts
 import { SessionActorType, UserRole } from '@prisma/client';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { ApiMeta } from '../common/utils/response';
 
 // Extend the Express Request interface to include our custom properties

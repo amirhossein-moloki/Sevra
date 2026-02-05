@@ -6,10 +6,10 @@ import { add, set } from 'date-fns';
 import { UserRole } from '@prisma/client';
 
 describe('Booking Management E2E', () => {
-  let salon: any;
-  let manager: any;
-  let staff: any;
-  let service: any;
+  let salon: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let manager: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let staff: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let service: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   let managerToken: string;
 
   beforeAll(async () => {

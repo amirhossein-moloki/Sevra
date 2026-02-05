@@ -16,7 +16,7 @@ const TTL = { hours: 24 };
 /**
  * Normalizes and hashes the request body to create a consistent representation.
  */
-const getRequestHash = (body: any): string => {
+const getRequestHash = (body: any): string => { // eslint-disable-line @typescript-eslint/no-explicit-any
   if (!body || Object.keys(body).length === 0) {
     return '';
   }
@@ -26,7 +26,7 @@ const getRequestHash = (body: any): string => {
     .reduce((acc, key) => {
       acc[key] = body[key];
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, any>); // eslint-disable-line @typescript-eslint/no-explicit-any
   const stringifiedBody = JSON.stringify(sortedBody);
   return createHash('sha256').update(stringifiedBody).digest('hex');
 };
@@ -69,46 +69,46 @@ export const idempotencyMiddleware = async (
   const requestHash = getRequestHash(req.body);
 
   // 3. Check for an existing idempotency record
-  let existingRecord = await IdempotencyRepo.findKey(scope, idempotencyKey);
+  const existingRecord = await IdempotencyRepo.findKey(scope, idempotencyKey);
 
   if (existingRecord) {
     // 4. Handle existing record based on its status
     switch (existingRecord.status) {
-      case IdempotencyStatus.COMPLETED:
-        if (existingRecord.requestHash !== requestHash) {
-          return next(
-            new AppError(
-              'Idempotency-Key is being reused with a different request payload.',
-              httpStatus.CONFLICT,
-              { code: 'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD' },
-            ),
-          );
-        }
-        // Return the cached response
-        logger.info({
-          event: 'idempotency.replay',
-          key: idempotencyKey,
-          scope,
-        });
-        return res
-          .status(existingRecord.responseStatusCode as number)
-          .json(existingRecord.responseBody);
-
-      case IdempotencyStatus.IN_PROGRESS:
-        // Fail fast for in-flight requests
+    case IdempotencyStatus.COMPLETED:
+      if (existingRecord.requestHash !== requestHash) {
         return next(
           new AppError(
-            'A request with this Idempotency-Key is already in progress.',
+            'Idempotency-Key is being reused with a different request payload.',
             httpStatus.CONFLICT,
-            { code: 'IDEMPOTENCY_REQUEST_IN_PROGRESS' },
+            { code: 'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD' },
           ),
         );
+      }
+      // Return the cached response
+      logger.info({
+        event: 'idempotency.replay',
+        key: idempotencyKey,
+        scope,
+      });
+      return res
+        .status(existingRecord.responseStatusCode as number)
+        .json(existingRecord.responseBody);
 
-      case IdempotencyStatus.FAILED:
-        // If a previous attempt failed, allow a new attempt by deleting the old key.
-        // This will allow the flow to proceed to the 'create' step.
-        await IdempotencyRepo.deleteKey(existingRecord.id);
-        break;
+    case IdempotencyStatus.IN_PROGRESS:
+      // Fail fast for in-flight requests
+      return next(
+        new AppError(
+          'A request with this Idempotency-Key is already in progress.',
+          httpStatus.CONFLICT,
+          { code: 'IDEMPOTENCY_REQUEST_IN_PROGRESS' },
+        ),
+      );
+
+    case IdempotencyStatus.FAILED:
+      // If a previous attempt failed, allow a new attempt by deleting the old key.
+      // This will allow the flow to proceed to the 'create' step.
+      await IdempotencyRepo.deleteKey(existingRecord.id);
+      break;
     }
   }
 
@@ -121,7 +121,7 @@ export const idempotencyMiddleware = async (
       status: IdempotencyStatus.IN_PROGRESS,
       expiresAt: add(new Date(), TTL),
     });
-  } catch (error: any) {
+  } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (error.code === 'P2002') {
       // Race condition: another request created the key just now.
       // Re-fetch and treat as an in-flight request.
@@ -145,7 +145,7 @@ export const idempotencyMiddleware = async (
   // 6. Wrap response methods to capture the result after business logic runs
   const originalJson = res.json;
   const originalSend = res.send;
-  let responseBody: any;
+  let responseBody: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   res.json = (body) => {
     responseBody = body;

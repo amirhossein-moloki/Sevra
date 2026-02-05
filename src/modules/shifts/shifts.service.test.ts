@@ -25,21 +25,21 @@ describe('ShiftsService', () => {
       { dayOfWeek: 2, startTime: '09:00', endTime: '17:00', isActive: true },
     ];
     const mockUser = {
-        id: userId,
-        salonId: salonId,
-        fullName: 'Test User',
-        phone: '1234567890',
-        passwordHash: 'hashedpassword',
-        phoneVerifiedAt: new Date(),
-        role: UserRole.STAFF,
-        isActive: true,
-        isPublic: false,
-        publicName: null,
-        bio: null,
-        avatarUrl: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      id: userId,
+      salonId: salonId,
+      fullName: 'Test User',
+      phone: '1234567890',
+      passwordHash: 'hashedpassword',
+      phoneVerifiedAt: new Date(),
+      role: UserRole.STAFF,
+      isActive: true,
+      isPublic: false,
+      publicName: null,
+      bio: null,
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
     it('should successfully upsert shifts if the user exists', async () => {
       // Arrange

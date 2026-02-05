@@ -4,7 +4,7 @@ import { Writable } from 'stream';
 
 // Mock the sanitizer before importing the middleware
 jest.mock('../utils/sanitizer', () => ({
-  sanitizeLog: (obj: any) => {
+  sanitizeLog: (obj: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (obj.headers && obj.headers.authorization) {
       obj.headers.authorization = '[REDACTED]';
     }
@@ -25,7 +25,7 @@ const mockLogger = {
   error: jest.fn(),
 };
 jest.mock('pino-http', () => {
-  return jest.fn(() => (req: any, res: any, next?: () => void) => {
+  return jest.fn(() => (req: any, res: any, next?: () => void) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     // This is a simplified mock of the pino-http middleware.
     // It captures the log object that would be generated.
     const logObject = {
@@ -75,19 +75,19 @@ describe('Logger Middleware', () => {
       },
       actor: { id: 'user-123' },
       params: { salonId: 'salon-abc' },
-    } as any;
+    } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     // A mock for ServerResponse that allows setting headers and status code
     const resWritable = new Writable();
     res = new http.ServerResponse(req);
-    res.assignSocket(resWritable as any);
+    res.assignSocket(resWritable as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     res.statusCode = 200;
 
     next = jest.fn();
   });
 
   it('should be created in non-test environments', () => {
-    const pinoHttp = require('pino-http');
+    const pinoHttp = require('pino-http'); // eslint-disable-line @typescript-eslint/no-var-requires
     expect(pinoHttp).toHaveBeenCalled();
   });
 

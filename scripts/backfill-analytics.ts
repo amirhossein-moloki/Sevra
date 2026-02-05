@@ -1,4 +1,5 @@
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from '../src/config/prisma';
 import { AnalyticsRepo } from '../src/modules/analytics/analytics.repo';
 
@@ -6,7 +7,7 @@ async function backfill() {
   console.log('Starting backfill of analytics summary tables...');
 
   // 1. Get all unique (salonId, date) combinations from Bookings
-  const bookingDates = await prisma.$queryRaw<any[]>`
+  const bookingDates = await prisma.$queryRaw<any[]>` // eslint-disable-line @typescript-eslint/no-explicit-any
     SELECT DISTINCT "salonId", "startAt"::date as date
     FROM "Booking"
   `;
@@ -19,7 +20,7 @@ async function backfill() {
     await AnalyticsRepo.syncSalonStats(pair.salonId, date);
 
     // Sync for each staff on that date
-    const staffIds = await prisma.$queryRaw<any[]>`
+    const staffIds = await prisma.$queryRaw<any[]>` // eslint-disable-line @typescript-eslint/no-explicit-any
       SELECT DISTINCT "staffId" FROM "Booking"
       WHERE "salonId" = ${pair.salonId} AND "startAt"::date = ${pair.date}::date
     `;
@@ -28,7 +29,7 @@ async function backfill() {
     }
 
     // Sync for each service on that date
-    const serviceIds = await prisma.$queryRaw<any[]>`
+    const serviceIds = await prisma.$queryRaw<any[]>` // eslint-disable-line @typescript-eslint/no-explicit-any
       SELECT DISTINCT "serviceId" FROM "Booking"
       WHERE "salonId" = ${pair.salonId} AND "startAt"::date = ${pair.date}::date
     `;
@@ -38,7 +39,7 @@ async function backfill() {
   }
 
   // 2. Also handle payments that might be on different dates than bookings
-  const paymentDates = await prisma.$queryRaw<any[]>`
+  const paymentDates = await prisma.$queryRaw<any[]>` // eslint-disable-line @typescript-eslint/no-explicit-any
     SELECT DISTINCT "salonId", "paidAt"::date as date
     FROM "Payment"
     WHERE "status" = 'PAID' AND "paidAt" IS NOT NULL

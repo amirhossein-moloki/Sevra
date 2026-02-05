@@ -1,5 +1,5 @@
 import { prisma } from '../../config/prisma';
-import { ReviewStatus, ReviewTarget } from '@prisma/client';
+import { ReviewStatus } from '@prisma/client';
 import { SubmitReviewInput } from './reviews.types';
 
 export async function createReview(salonId: string, customerAccountId: string, input: SubmitReviewInput) {
@@ -50,9 +50,9 @@ export async function updateReviewStatus(reviewId: string, salonId: string, stat
 }
 
 export async function findReviewById(reviewId: string, salonId: string) {
-    return prisma.review.findFirst({
-        where: { id: reviewId, salonId }
-    });
+  return prisma.review.findFirst({
+    where: { id: reviewId, salonId }
+  });
 }
 
 export async function findBookingForReview(bookingId: string, salonSlug: string) {

@@ -68,12 +68,12 @@ describe('Services API E2E Tests', () => {
 
     // Temporarily skip the 401 test to focus on the main path
     it.skip('should return 401 if no token is provided', async () => {
-        const serviceData = { name: 'No Auth Service', durationMinutes: 10, price: 10, currency: 'IRR' };
-        const response = await request(app)
-            .post(`/api/v1/salons/${testSalon.id}/services`)
-            .send(serviceData);
+      const serviceData = { name: 'No Auth Service', durationMinutes: 10, price: 10, currency: 'IRR' };
+      const response = await request(app)
+        .post(`/api/v1/salons/${testSalon.id}/services`)
+        .send(serviceData);
 
-        expect(response.status).toBe(401);
+      expect(response.status).toBe(401);
     });
   });
 });

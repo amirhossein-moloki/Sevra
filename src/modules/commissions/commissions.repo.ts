@@ -1,5 +1,5 @@
 
-import { Prisma } from '@prisma/client';
+import { Prisma, CommissionPaymentStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 
 export const CommissionsRepo = {
@@ -78,7 +78,7 @@ export const CommissionsRepo = {
     });
   },
 
-  async findCommissionPayments(commissionId: string, status?: any, tx?: Prisma.TransactionClient) {
+  async findCommissionPayments(commissionId: string, status?: CommissionPaymentStatus, tx?: Prisma.TransactionClient) {
     const client = tx || prisma;
     return client.commissionPayment.findMany({
       where: { commissionId, status },

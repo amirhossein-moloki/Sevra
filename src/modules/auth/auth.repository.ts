@@ -1,4 +1,4 @@
-import { PrismaClient, SessionActorType } from '@prisma/client';
+import { SessionActorType } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 
 export class AuthRepository {
@@ -14,11 +14,11 @@ export class AuthRepository {
     return prisma.customerAccount.create({ data: { phone } });
   }
 
-  async createOtp(data: { phone: string; purpose: any; codeHash: string; expiresAt: Date }) {
+  async createOtp(data: { phone: string; purpose: any; codeHash: string; expiresAt: Date }) { // eslint-disable-line @typescript-eslint/no-explicit-any
     return prisma.phoneOtp.create({ data });
   }
 
-  async findRecentOtp(phone: string, purpose: any) {
+  async findRecentOtp(phone: string, purpose: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     return prisma.phoneOtp.findFirst({
       where: {
         phone,
@@ -30,7 +30,7 @@ export class AuthRepository {
     });
   }
 
-  async findRecentConsumedOtp(phone: string, purpose: any, window: Date) {
+  async findRecentConsumedOtp(phone: string, purpose: any, window: Date) { // eslint-disable-line @typescript-eslint/no-explicit-any
     return prisma.phoneOtp.findFirst({
       where: {
         phone,

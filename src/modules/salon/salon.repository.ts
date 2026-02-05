@@ -1,5 +1,5 @@
-import { prisma } from "../../config/prisma";
-import { CreateSalonInput, UpdateSalonInput } from "./salon.types";
+import { prisma } from '../../config/prisma';
+import { CreateSalonInput, UpdateSalonInput } from './salon.types';
 
 export const salonRepository = {
   async create(data: CreateSalonInput) {

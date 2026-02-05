@@ -26,13 +26,13 @@ const publicApiKeyGenerator = (req: Request): string => {
 export const privateApiRateLimiter = process.env.NODE_ENV === 'test'
   ? mockMiddleware
   : rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 500,
-      standardHeaders: true,
-      legacyHeaders: false,
-      store,
-      message: 'Too many requests for this session, please try again after 15 minutes',
-    });
+    windowMs: 15 * 60 * 1000,
+    max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+    store,
+    message: 'Too many requests for this session, please try again after 15 minutes',
+  });
 
 /**
  * Rate limiter for general public API GET routes.
@@ -40,14 +40,14 @@ export const privateApiRateLimiter = process.env.NODE_ENV === 'test'
 export const publicApiRateLimiter = process.env.NODE_ENV === 'test'
   ? mockMiddleware
   : rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 100,
-      standardHeaders: true,
-      legacyHeaders: false,
-      store,
-      keyGenerator: publicApiKeyGenerator,
-      message: 'Too many requests from this IP for this salon, please try again after 15 minutes',
-    });
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    store,
+    keyGenerator: publicApiKeyGenerator,
+    message: 'Too many requests from this IP for this salon, please try again after 15 minutes',
+  });
 
 /**
  * Strictest rate limiter for the public booking creation endpoint.
@@ -55,11 +55,11 @@ export const publicApiRateLimiter = process.env.NODE_ENV === 'test'
 export const publicBookingRateLimiter = process.env.NODE_ENV === 'test'
   ? mockMiddleware
   : rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 10,
-      standardHeaders: true,
-      legacyHeaders: false,
-      store,
-      keyGenerator: publicApiKeyGenerator,
-      message: 'Too many booking attempts from this IP for this salon, please try again after 15 minutes',
-    });
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    store,
+    keyGenerator: publicApiKeyGenerator,
+    message: 'Too many booking attempts from this IP for this salon, please try again after 15 minutes',
+  });

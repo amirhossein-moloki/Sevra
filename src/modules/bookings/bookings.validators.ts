@@ -1,7 +1,6 @@
 
 import { z } from 'zod';
 import { BookingStatus } from '@prisma/client';
-import { idParamSchema } from '../../common/validators/common.validators';
 
 const CUID_MESSAGE = 'Invalid CUID';
 

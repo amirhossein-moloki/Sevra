@@ -3,9 +3,9 @@ import app from '../../app';
 import { prisma } from '../../config/prisma';
 
 describe('GET /public/salons/:salonSlug/availability/slots', () => {
-  let salon: any;
-  let service: any;
-  let staff: any;
+  let salon: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let service: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let staff: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   let testDate: Date; // A fixed Monday for testing
 
   beforeAll(async () => {
@@ -15,7 +15,7 @@ describe('GET /public/salons/:salonSlug/availability/slots', () => {
     testDate.setHours(0, 0, 0, 0); // Start of the day
     // In JS, Sunday is 0, Monday is 1. Prisma schema uses Int. This is consistent.
     while (testDate.getDay() !== 1) {
-        testDate.setDate(testDate.getDate() + 1);
+      testDate.setDate(testDate.getDate() + 1);
     }
 
     // 1. Create Salon
@@ -74,31 +74,31 @@ describe('GET /public/salons/:salonSlug/availability/slots', () => {
     });
 
     await prisma.booking.create({
-        data: {
-            salonId: salon.id,
-            staffId: staff.id,
-            serviceId: service.id,
-            customerProfileId: customerProfile.id,
-            customerAccountId: customer.id,
-            createdByUserId: creator.id,
-            startAt: new Date(new Date(testDate).setHours(11, 0, 0, 0)),
-            endAt: new Date(new Date(testDate).setHours(12, 0, 0, 0)),
-            serviceNameSnapshot: service.name,
-            serviceDurationSnapshot: service.durationMinutes,
-            servicePriceSnapshot: service.price,
-            currencySnapshot: service.currency,
-            amountDueSnapshot: service.price,
-        }
+      data: {
+        salonId: salon.id,
+        staffId: staff.id,
+        serviceId: service.id,
+        customerProfileId: customerProfile.id,
+        customerAccountId: customer.id,
+        createdByUserId: creator.id,
+        startAt: new Date(new Date(testDate).setHours(11, 0, 0, 0)),
+        endAt: new Date(new Date(testDate).setHours(12, 0, 0, 0)),
+        serviceNameSnapshot: service.name,
+        serviceDurationSnapshot: service.durationMinutes,
+        servicePriceSnapshot: service.price,
+        currencySnapshot: service.currency,
+        amountDueSnapshot: service.price,
+      }
     });
   });
 
   afterAll(async () => {
     // Clean up in reverse order of creation
     await prisma.$transaction([
-        prisma.booking.deleteMany({ where: { salonId: salon.id } }),
-        prisma.salonCustomerProfile.deleteMany({ where: { salonId: salon.id } }),
-        prisma.userService.deleteMany({ where: { serviceId: service.id } }),
-        prisma.shift.deleteMany({ where: { salonId: salon.id } }),
+      prisma.booking.deleteMany({ where: { salonId: salon.id } }),
+      prisma.salonCustomerProfile.deleteMany({ where: { salonId: salon.id } }),
+      prisma.userService.deleteMany({ where: { serviceId: service.id } }),
+      prisma.shift.deleteMany({ where: { salonId: salon.id } }),
     ]);
 
     await prisma.service.delete({ where: { id: service.id } });
@@ -124,7 +124,7 @@ describe('GET /public/salons/:salonSlug/availability/slots', () => {
     expect(response.body.success).toBe(true);
     expect(Array.isArray(response.body.data)).toBe(true);
 
-    const returnedTimes = response.body.data.map((s: any) => new Date(s.time).getTime());
+    const returnedTimes = response.body.data.map((s: any) => new Date(s.time).getTime()); // eslint-disable-line @typescript-eslint/no-explicit-any
 
     const ten = new Date(new Date(testDate).setHours(10, 0, 0, 0)).getTime();
     const tenFifteen = new Date(new Date(testDate).setHours(10, 15, 0, 0)).getTime(); // Overlaps
@@ -138,8 +138,8 @@ describe('GET /public/salons/:salonSlug/availability/slots', () => {
 
     // Also check the staff info in the response
     expect(response.body.data[0].staff).toEqual({
-        id: staff.id,
-        fullName: staff.fullName,
+      id: staff.id,
+      fullName: staff.fullName,
     });
   });
 });

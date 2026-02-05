@@ -73,27 +73,27 @@ export async function updatePage(
   sections?: PageSectionInput[],
   slugHistory?: string
 ) {
-  const { sections: _sections, ...pageData } = data;
+  const { sections: _, ...pageData } = data; // eslint-disable-line @typescript-eslint/no-unused-vars
   return prisma.salonPage.update({
     where: { id: pageId },
     data: {
       ...pageData,
       ...(slugHistory
         ? {
-            slugHistory: {
-              create: {
-                oldSlug: slugHistory,
-              },
+          slugHistory: {
+            create: {
+              oldSlug: slugHistory,
             },
-          }
+          },
+        }
         : {}),
       ...(sections
         ? {
-            sections: {
-              deleteMany: {},
-              create: mapSections(sections),
-            },
-          }
+          sections: {
+            deleteMany: {},
+            create: mapSections(sections),
+          },
+        }
         : {}),
     },
     include: {

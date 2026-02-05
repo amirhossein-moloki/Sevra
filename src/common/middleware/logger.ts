@@ -1,22 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 
-let loggerMiddleware;
+let loggerMiddleware: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 if (process.env.NODE_ENV === 'test') {
   // In a test environment, export a mock middleware to avoid pino-http issues with Jest
   loggerMiddleware = (req: Request, res: Response, next: NextFunction) => next();
 } else {
   // In other environments, use the actual pino-http logger
-  const pinoHttp = require('pino-http');
-  const logger = require('../../config/logger').default;
-  const { sanitizeLog } = require('../utils/sanitizer');
-
-  const cuid = require('cuid');
+  const pinoHttp = require('pino-http'); // eslint-disable-line @typescript-eslint/no-var-requires
+  const logger = require('../../config/logger').default; // eslint-disable-line @typescript-eslint/no-var-requires
+  const { sanitizeLog } = require('../utils/sanitizer'); // eslint-disable-line @typescript-eslint/no-var-requires
+  const cuid = require('cuid'); // eslint-disable-line @typescript-eslint/no-var-requires
 
   loggerMiddleware = pinoHttp({
     logger,
-    genReqId: function (req, res) {
-      const existingId = req.id ?? req.headers["x-request-id"];
+    genReqId: function (req, _res) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      const existingId = req.id ?? req.headers['x-request-id'];
       if (existingId) return existingId;
       const id = cuid();
       res.setHeader('X-Request-Id', id);
@@ -29,7 +28,7 @@ if (process.env.NODE_ENV === 'test') {
       responseTime: 'duration',
       reqId: 'requestId',
     },
-    customProps: function (req, res) {
+    customProps: function (req, _res) { // eslint-disable-line @typescript-eslint/no-unused-vars
       return {
         actorId: req.actor?.id || null,
         salonId: req.params?.salonId || null,

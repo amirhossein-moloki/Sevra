@@ -1,7 +1,7 @@
 import { WebhooksService } from './webhooks.service';
 import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
 import { PaymentsRepo } from '../payments/payments.repo';
-import { IdempotencyStatus, PaymentStatus } from '@prisma/client';
+import { IdempotencyStatus } from '@prisma/client';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 
@@ -27,12 +27,12 @@ describe('WebhooksService', () => {
     it('should throw error if payload is invalid', async () => {
       await expect(WebhooksService.processPaymentWebhook({
         provider,
-        payload: { eventId: '', paymentId: '', status: 'SUCCEEDED' as any }
+        payload: { eventId: '', paymentId: '', status: 'SUCCEEDED' as any } // eslint-disable-line @typescript-eslint/no-explicit-any
       })).rejects.toThrow(new AppError('Invalid payload.', httpStatus.BAD_REQUEST));
     });
 
     it('should return if event already processed (COMPLETED)', async () => {
-      mockedIdempotencyRepo.findKey.mockResolvedValue({ status: IdempotencyStatus.COMPLETED } as any);
+      mockedIdempotencyRepo.findKey.mockResolvedValue({ status: IdempotencyStatus.COMPLETED } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       await WebhooksService.processPaymentWebhook({ provider, payload });
 
@@ -41,7 +41,7 @@ describe('WebhooksService', () => {
     });
 
     it('should throw conflict if event is IN_PROGRESS', async () => {
-      mockedIdempotencyRepo.findKey.mockResolvedValue({ status: IdempotencyStatus.IN_PROGRESS } as any);
+      mockedIdempotencyRepo.findKey.mockResolvedValue({ status: IdempotencyStatus.IN_PROGRESS } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       await expect(WebhooksService.processPaymentWebhook({ provider, payload }))
         .rejects.toThrow(new AppError('Request is already being processed.', httpStatus.CONFLICT));
@@ -49,13 +49,13 @@ describe('WebhooksService', () => {
 
     it('should process successful payment', async () => {
       mockedIdempotencyRepo.findKey.mockResolvedValue(null);
-      mockedIdempotencyRepo.createKey.mockResolvedValue({} as any);
+      mockedIdempotencyRepo.createKey.mockResolvedValue({} as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const mockTx = {};
-      mockedPaymentsRepo.transaction.mockImplementation(async (cb) => cb(mockTx as any));
+      mockedPaymentsRepo.transaction.mockImplementation(async (cb) => cb(mockTx as any)); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const mockPayment = { id: 'pay_123', booking: {} };
-      (mockTx as any).payment = { findUnique: jest.fn().mockResolvedValue(mockPayment) };
+      (mockTx as any).payment = { findUnique: jest.fn().mockResolvedValue(mockPayment) }; // eslint-disable-line @typescript-eslint/no-explicit-any
 
       await WebhooksService.processPaymentWebhook({ provider, payload });
 
@@ -69,10 +69,10 @@ describe('WebhooksService', () => {
       mockedIdempotencyRepo.findKey.mockResolvedValue(null);
 
       const mockTx = {};
-      mockedPaymentsRepo.transaction.mockImplementation(async (cb) => cb(mockTx as any));
+      mockedPaymentsRepo.transaction.mockImplementation(async (cb) => cb(mockTx as any)); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const mockPayment = { id: 'pay_123', booking: {} };
-      (mockTx as any).payment = { findUnique: jest.fn().mockResolvedValue(mockPayment) };
+      (mockTx as any).payment = { findUnique: jest.fn().mockResolvedValue(mockPayment) }; // eslint-disable-line @typescript-eslint/no-explicit-any
 
       await WebhooksService.processPaymentWebhook({ provider, payload: failPayload });
 

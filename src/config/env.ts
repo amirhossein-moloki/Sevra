@@ -1,41 +1,41 @@
 // src/config/env.ts
-import "dotenv/config";
-import { z } from "zod";
+import 'dotenv/config';
+import { z } from 'zod';
 
 const toBool = (v: unknown) => {
-  if (typeof v !== "string") return v;
+  if (typeof v !== 'string') return v;
   const s = v.trim().toLowerCase();
-  if (["true", "1", "yes", "y", "on"].includes(s)) return true;
-  if (["false", "0", "no", "n", "off"].includes(s)) return false;
+  if (['true', '1', 'yes', 'y', 'on'].includes(s)) return true;
+  if (['false', '0', 'no', 'n', 'off'].includes(s)) return false;
   return v;
 };
 
 const corsOriginTransform = (v: unknown) => {
-  if (typeof v !== "string") return v;
+  if (typeof v !== 'string') return v;
   const trimmed = v.trim();
   if (!trimmed) return [];
   // allow "*" OR comma-separated
-  if (trimmed === "*") return "*";
-  return trimmed.split(",").map((x) => x.trim()).filter(Boolean);
+  if (trimmed === '*') return '*';
+  return trimmed.split(',').map((x) => x.trim()).filter(Boolean);
 };
 
 const EnvSchema = z.object({
   // App
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  APP_NAME: z.string().default("sevra"),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  APP_NAME: z.string().default('sevra'),
   PORT: z.coerce.number().int().positive().default(3000),
-  LOG_LEVEL: z.string().default("info"),
+  LOG_LEVEL: z.string().default('info'),
 
   // JWT / Security
-  JWT_ACCESS_SECRET: z.string().min(10, "JWT_ACCESS_SECRET is too short"),
-  JWT_REFRESH_SECRET: z.string().min(10, "JWT_REFRESH_SECRET is too short"),
-  JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
-  JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+  JWT_ACCESS_SECRET: z.string().min(10, 'JWT_ACCESS_SECRET is too short'),
+  JWT_REFRESH_SECRET: z.string().min(10, 'JWT_REFRESH_SECRET is too short'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   COOKIE_SECRET: z.string().min(10).optional(),
 
   // CORS
   CORS_ORIGIN: z
-    .preprocess(corsOriginTransform, z.union([z.literal("*"), z.array(z.string().min(1))]))
+    .preprocess(corsOriginTransform, z.union([z.literal('*'), z.array(z.string().min(1))]))
     .default([]),
   CORS_CREDENTIALS: z.preprocess(toBool, z.boolean()).default(true),
 
@@ -49,9 +49,9 @@ const EnvSchema = z.object({
   RATE_LIMIT_ENABLED: z.preprocess(toBool, z.boolean()).default(true),
   RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_DURATION: z.coerce.number().int().positive().default(1), // seconds
-  RATE_LIMIT_KEY_PREFIX: z.string().default("rl"),
+  RATE_LIMIT_KEY_PREFIX: z.string().default('rl'),
   RATE_LIMIT_BLOCK_DURATION: z.coerce.number().int().nonnegative().default(60),
-  RATE_LIMIT_STORE: z.enum(["redis", "memory"]).default("redis"),
+  RATE_LIMIT_STORE: z.enum(['redis', 'memory']).default('redis'),
 
   // Optional flags
   COMPRESSION_ENABLED: z.preprocess(toBool, z.boolean()).default(true),
@@ -64,15 +64,15 @@ const EnvSchema = z.object({
   PAYMENT_PROVIDER_WEBHOOK_SECRET: z.string().min(1),
 
   // ZarinPal
-  ZARINPAL_MERCHANT_ID: z.string().min(1).default("00000000-0000-0000-0000-000000000000"),
-  ZARINPAL_CALLBACK_URL: z.string().min(1).default("http://localhost:3000/api/v1/payments/callback"),
+  ZARINPAL_MERCHANT_ID: z.string().min(1).default('00000000-0000-0000-0000-000000000000'),
+  ZARINPAL_CALLBACK_URL: z.string().min(1).default('http://localhost:3000/api/v1/payments/callback'),
   ZARINPAL_SANDBOX: z.preprocess(toBool, z.boolean()).default(true),
 
   // Media storage
-  MEDIA_STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
-  MEDIA_PUBLIC_BASE_URL: z.string().min(1).default("http://localhost:3000"),
-  MEDIA_LOCAL_ROOT: z.string().default("storage"),
-  MEDIA_LOCAL_PUBLIC_PATH: z.string().default("/media"),
+  MEDIA_STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+  MEDIA_PUBLIC_BASE_URL: z.string().min(1).default('http://localhost:3000'),
+  MEDIA_LOCAL_ROOT: z.string().default('storage'),
+  MEDIA_LOCAL_PUBLIC_PATH: z.string().default('/media'),
   MEDIA_S3_BUCKET: z.string().optional(),
   MEDIA_S3_REGION: z.string().optional(),
   MEDIA_S3_UPLOAD_URL_TEMPLATE: z.string().optional(),
@@ -87,17 +87,17 @@ const parsed = EnvSchema.safeParse(process.env);
 
 if (!parsed.success) {
   // خروجی خطاها برای دیباگ
-  console.error("❌ Invalid environment variables:");
+  console.error('❌ Invalid environment variables:');
   console.error(parsed.error.flatten().fieldErrors);
-  throw new Error("Invalid environment variables");
+  throw new Error('Invalid environment variables');
 }
 
-if (parsed.success && parsed.data.MEDIA_STORAGE_DRIVER === "s3") {
+if (parsed.success && parsed.data.MEDIA_STORAGE_DRIVER === 's3') {
   if (!parsed.data.MEDIA_S3_BUCKET || !parsed.data.MEDIA_S3_REGION) {
-    throw new Error("MEDIA_S3_BUCKET and MEDIA_S3_REGION are required when MEDIA_STORAGE_DRIVER=s3");
+    throw new Error('MEDIA_S3_BUCKET and MEDIA_S3_REGION are required when MEDIA_STORAGE_DRIVER=s3');
   }
   if (!parsed.data.MEDIA_S3_UPLOAD_URL_TEMPLATE) {
-    throw new Error("MEDIA_S3_UPLOAD_URL_TEMPLATE is required when MEDIA_STORAGE_DRIVER=s3");
+    throw new Error('MEDIA_S3_UPLOAD_URL_TEMPLATE is required when MEDIA_STORAGE_DRIVER=s3');
   }
 }
 

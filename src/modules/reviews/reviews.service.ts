@@ -14,7 +14,7 @@ export async function submitReview(salonSlug: string, input: SubmitReviewInput) 
 
   // 2. check if booking is completed
   if (booking.status !== BookingStatus.DONE) {
-      throw createHttpError(400, 'Only completed bookings can be reviewed');
+    throw createHttpError(400, 'Only completed bookings can be reviewed');
   }
 
   // 3. Create the review

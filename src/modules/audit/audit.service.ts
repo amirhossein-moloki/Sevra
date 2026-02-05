@@ -9,8 +9,8 @@ export interface RecordLogInput {
   action: string;
   entity: string;
   entityId: string;
-  oldData?: any;
-  newData?: any;
+  oldData?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  newData?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   ipAddress?: string;
   userAgent?: string;
 }
@@ -64,8 +64,8 @@ export const auditService = {
     };
 
     const [logs, totalItems] = await AuditRepo.transaction(async (tx) => {
-      const l = await AuditRepo.findManyLogs(where, skip, pageSize);
-      const c = await AuditRepo.countLogs(where);
+      const l = await AuditRepo.findManyLogs(where, skip, pageSize, tx);
+      const c = await AuditRepo.countLogs(where, tx);
       return [l, c] as const;
     });
 

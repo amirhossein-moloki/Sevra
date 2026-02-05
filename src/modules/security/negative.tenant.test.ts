@@ -9,7 +9,7 @@ describe('Negative Tenant Isolation E2E Tests', () => {
   let salonA: Salon;
   let salonB: Salon;
   let managerA: User;
-  let managerB: User;
+  let _managerB: User; // eslint-disable-line @typescript-eslint/no-unused-vars
   let serviceB: Service;
   let tokenA: string;
 
@@ -18,7 +18,7 @@ describe('Negative Tenant Isolation E2E Tests', () => {
     salonB = await createTestSalon('salon-b');
 
     managerA = await createTestUser(salonA.id, 'MANAGER', 'manager-a');
-    managerB = await createTestUser(salonB.id, 'MANAGER', 'manager-b');
+    _managerB = await createTestUser(salonB.id, 'MANAGER', 'manager-b');
 
     // Resource belonging to Salon B
     serviceB = await createTestService(salonB.id, []);

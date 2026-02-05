@@ -5,7 +5,7 @@ import { CreateServiceInput } from './services.types';
 
 describe('Services Service Logic Integration Tests', () => {
   let testSalon: Salon;
-  let testUser: User;
+  let _testUser: User; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   beforeAll(async () => {
     // Create a salon for the tests
@@ -16,7 +16,7 @@ describe('Services Service Logic Integration Tests', () => {
       },
     });
     // Create a user for the tests
-    testUser = await prisma.user.create({
+    _testUser = await prisma.user.create({
       data: {
         fullName: 'Test User',
         phone: `+989120000000${Date.now()}`.slice(0, 14),

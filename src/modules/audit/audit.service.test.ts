@@ -35,7 +35,7 @@ describe('AuditService', () => {
       mockedAuditRepo.createLog.mockRejectedValue(new Error('DB Error'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      await expect(auditService.recordLog({} as any)).resolves.toBeUndefined();
+      await expect(auditService.recordLog({} as any)).resolves.toBeUndefined(); // eslint-disable-line @typescript-eslint/no-explicit-any
       expect(consoleSpy).toHaveBeenCalledWith('Failed to record audit log:', expect.any(Error));
 
       consoleSpy.mockRestore();
@@ -48,8 +48,8 @@ describe('AuditService', () => {
       const mockLogs = [{ id: 'log-1' }];
       const mockTotal = 1;
 
-      mockedAuditRepo.transaction.mockImplementation(async (cb) => cb({} as any));
-      mockedAuditRepo.findManyLogs.mockResolvedValue(mockLogs as any);
+      mockedAuditRepo.transaction.mockImplementation(async (cb) => cb({} as any)); // eslint-disable-line @typescript-eslint/no-explicit-any
+      mockedAuditRepo.findManyLogs.mockResolvedValue(mockLogs as any); // eslint-disable-line @typescript-eslint/no-explicit-any
       mockedAuditRepo.countLogs.mockResolvedValue(mockTotal);
 
       const result = await auditService.getLogs(salonId, { page: 1, pageSize: 10 });

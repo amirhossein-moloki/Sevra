@@ -9,9 +9,9 @@ describe('Review Routes', () => {
   let salon: Salon;
   let manager: User;
   let managerToken: string;
-  let customerAccount: any;
-  let profile: any;
-  let booking: any;
+  let customerAccount: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let profile: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let booking: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   beforeAll(async () => {
     await prisma.$connect();
@@ -37,13 +37,13 @@ describe('Review Routes', () => {
         customerProfileId: profile.id,
         customerAccountId: customerAccount.id,
         serviceId: (await prisma.service.create({
-            data: {
-                salonId: salon.id,
-                name: 'Test Service',
-                durationMinutes: 30,
-                price: 1000,
-                currency: 'IRR'
-            }
+          data: {
+            salonId: salon.id,
+            name: 'Test Service',
+            durationMinutes: 30,
+            price: 1000,
+            currency: 'IRR'
+          }
         })).id,
         staffId: manager.id,
         createdByUserId: manager.id,
@@ -89,15 +89,15 @@ describe('Review Routes', () => {
     });
 
     it('should return 400 if booking is not DONE', async () => {
-        const pendingBooking = await prisma.booking.create({
-            data: { ...booking, id: undefined, status: BookingStatus.PENDING } as any
-        });
+      const pendingBooking = await prisma.booking.create({
+        data: { ...booking, id: undefined, status: BookingStatus.PENDING } as any // eslint-disable-line @typescript-eslint/no-explicit-any
+      });
 
-        const res = await request(app)
-            .post(`/api/v1/public/salons/${salon.slug}/bookings/${pendingBooking.id}/reviews`)
-            .send({ bookingId: pendingBooking.id, target: ReviewTarget.SALON, rating: 5 });
+      const res = await request(app)
+        .post(`/api/v1/public/salons/${salon.slug}/bookings/${pendingBooking.id}/reviews`)
+        .send({ bookingId: pendingBooking.id, target: ReviewTarget.SALON, rating: 5 });
 
-        expect(res.status).toBe(httpStatus.BAD_REQUEST);
+      expect(res.status).toBe(httpStatus.BAD_REQUEST);
     });
   });
 
@@ -127,7 +127,7 @@ describe('Review Routes', () => {
       // Verify it's no longer in public list
       const publicRes = await request(app)
         .get(`/api/v1/public/salons/${salon.slug}/reviews`);
-      const hiddenReview = publicRes.body.data.find((r: any) => r.id === review?.id);
+      const hiddenReview = publicRes.body.data.find((r: any) => r.id === review?.id); // eslint-disable-line @typescript-eslint/no-explicit-any
       expect(hiddenReview).toBeUndefined();
     });
   });

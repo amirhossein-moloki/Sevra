@@ -16,13 +16,13 @@ const OTP_LENGTH = 6;
 const OTP_POST_VERIFICATION_WINDOW_MINUTES = 5; // How long a user has to login after verifying OTP
 
 const generateNumericOtp = (length: number): string => {
-    const digits = '0123456789';
-    let otp = '';
-    for (let i = 0; i < length; i++) {
-        otp += digits[Math.floor(Math.random() * 10)];
-    }
-    return otp;
-}
+  const digits = '0123456789';
+  let otp = '';
+  for (let i = 0; i < length; i++) {
+    otp += digits[Math.floor(Math.random() * 10)];
+  }
+  return otp;
+};
 
 export class AuthService {
   private authRepository: AuthRepository;
@@ -35,7 +35,7 @@ export class AuthService {
 
     const templateId = process.env.SMSIR_OTP_TEMPLATE_ID;
     if (!templateId) {
-        throw new Error('SMSIR_OTP_TEMPLATE_ID must be set in the environment variables.');
+      throw new Error('SMSIR_OTP_TEMPLATE_ID must be set in the environment variables.');
     }
     this.otpTemplateId = parseInt(templateId, 10);
   }
@@ -82,7 +82,7 @@ export class AuthService {
   async requestUserOtp(phone: string) {
     const users = await this.authRepository.findUsersWithSalons(phone);
     if (users.length === 0) {
-        throw createHttpError(404, 'No user found with this phone number.');
+      throw createHttpError(404, 'No user found with this phone number.');
     }
 
     const code = generateNumericOtp(OTP_LENGTH);
@@ -90,10 +90,10 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000);
 
     await this.authRepository.createOtp({
-        phone,
-        purpose: OtpPurpose.LOGIN,
-        codeHash,
-        expiresAt,
+      phone,
+      purpose: OtpPurpose.LOGIN,
+      codeHash,
+      expiresAt,
     });
 
     await this.smsService.sendTemplateSms(phone, this.otpTemplateId, [{ name: 'CODE', value: code }]);
@@ -105,14 +105,14 @@ export class AuthService {
     const otp = await this.authRepository.findRecentOtp(phone, OtpPurpose.LOGIN);
 
     if (!otp) {
-        throw createHttpError(401, 'Invalid or expired OTP.');
+      throw createHttpError(401, 'Invalid or expired OTP.');
     }
 
     const isCodeValid = await argon2.verify(otp.codeHash, code);
 
     if (!isCodeValid) {
-        // Optional: Increment an attempt counter to prevent brute-force attacks
-        throw createHttpError(401, 'Invalid or expired OTP.');
+      // Optional: Increment an attempt counter to prevent brute-force attacks
+      throw createHttpError(401, 'Invalid or expired OTP.');
     }
 
     await this.authRepository.consumeOtp(otp.id);
@@ -120,8 +120,8 @@ export class AuthService {
     const users = await this.authRepository.findUsersWithSalons(phone);
 
     const salons = users.map(user => ({
-        id: user.salon.id,
-        name: user.salon.name,
+      id: user.salon.id,
+      name: user.salon.name,
     }));
 
     return { salons };
@@ -133,7 +133,7 @@ export class AuthService {
     const recentVerifiedOtp = await this.authRepository.findRecentConsumedOtp(phone, OtpPurpose.LOGIN, verificationWindow);
 
     if (!recentVerifiedOtp) {
-        throw createHttpError(401, 'No recent OTP verification found. Please verify again.');
+      throw createHttpError(401, 'No recent OTP verification found. Please verify again.');
     }
 
     const user = await this.authRepository.findUserByPhone(phone, salonId);
@@ -155,7 +155,7 @@ export class AuthService {
     // For now, we'll create a customer if they don't exist.
     // In a real scenario, this would be part of a signup/OTP flow.
     if (!customer) {
-        customer = await this.authRepository.createCustomer(phone);
+      customer = await this.authRepository.createCustomer(phone);
     }
 
     const { accessToken, refreshToken } = await this.createAndSaveSession(customer.id, 'CUSTOMER');

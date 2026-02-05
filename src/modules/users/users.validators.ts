@@ -24,7 +24,7 @@ export const updateUserSchema = z.object({
     avatarUrl: z.string().url().optional(),
   }),
   params: z.object({
-      userId: z.string().cuid('Invalid user ID format'),
+    userId: z.string().cuid('Invalid user ID format'),
   })
 });
 

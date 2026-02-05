@@ -1,5 +1,5 @@
-import * as Sentry from "@sentry/node";
-import { nodeProfilingIntegration } from "@sentry/profiling-node";
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';

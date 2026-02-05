@@ -14,7 +14,7 @@ describe('Commissions Service', () => {
       amount: 1000,
       currency: 'USD',
       status: CommissionPaymentStatus.PAID,
-      method: 'CARD' as any,
+      method: 'CARD' as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     };
 
     beforeEach(() => {

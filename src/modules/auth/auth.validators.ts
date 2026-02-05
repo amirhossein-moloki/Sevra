@@ -9,13 +9,13 @@ export const loginSchema = z.object({
     salonId: z.string().optional(), // Required for USER actorType
   }),
 }).refine(data => {
-    if (data.body.actorType === 'USER') {
-        return !!data.body.password && !!data.body.salonId;
-    }
-    return true;
+  if (data.body.actorType === 'USER') {
+    return !!data.body.password && !!data.body.salonId;
+  }
+  return true;
 }, {
-    message: "Password and Salon ID are required for USER login",
-    path: ["body"],
+  message: 'Password and Salon ID are required for USER login',
+  path: ['body'],
 });
 
 export const refreshSchema = z.object({

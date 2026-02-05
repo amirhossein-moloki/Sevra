@@ -1,11 +1,10 @@
 
-import { NextFunction, Response } from 'express';
+import { Response } from 'express';
 import { AppRequest } from '../../types/express';
 import { commissionsService } from './commissions.service';
 export const getPolicy = async (
   req: AppRequest,
-  res: Response,
-  _next: NextFunction
+  res: Response
 ) => {
   const policy = await commissionsService.getPolicy(req.tenant.salonId);
   res.ok(policy);
@@ -13,8 +12,7 @@ export const getPolicy = async (
 
 export const upsertPolicy = async (
   req: AppRequest,
-  res: Response,
-  _next: NextFunction
+  res: Response
 ) => {
   const policy = await commissionsService.upsertPolicy(
     req.tenant.salonId,
@@ -27,8 +25,7 @@ export const upsertPolicy = async (
 
 export const listCommissions = async (
   req: AppRequest,
-  res: Response,
-  _next: NextFunction
+  res: Response
 ) => {
   const result = await commissionsService.listCommissions(req.tenant.salonId, req.query);
   res.ok(result.data, { pagination: result.meta });
@@ -36,8 +33,7 @@ export const listCommissions = async (
 
 export const payCommission = async (
   req: AppRequest,
-  res: Response,
-  _next: NextFunction
+  res: Response
 ) => {
   const payment = await commissionsService.payCommission(
     req.params.commissionId,

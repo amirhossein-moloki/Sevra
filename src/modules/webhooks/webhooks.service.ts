@@ -44,7 +44,7 @@ const processPaymentWebhook = async ({
       // Set a reasonable expiry, e.g., 24 hours
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
-  } catch (error: any) {
+  } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (error.code === 'P2002') {
       const racedKey = await IdempotencyRepo.findKey(idempotencyScope, eventId);
 
@@ -77,19 +77,19 @@ const processPaymentWebhook = async ({
 
       // Apply the state machine logic
       switch (eventStatus) {
-        case 'SUCCEEDED':
-          await PaymentsRepo.handleSuccessfulPayment(tx, paymentId);
-          break;
-        case 'FAILED':
-          await PaymentsRepo.handleFailedPayment(tx, paymentId);
-          break;
-        case 'EXPIRED':
-          // Assuming EXPIRED is a type of failure for the booking state
-          await PaymentsRepo.handleFailedPayment(tx, paymentId, PaymentStatus.CANCELED);
-          break;
-        default:
-          // Should not happen if payload validation is good
-          throw new AppError(`Unknown event status: ${eventStatus}`, httpStatus.BAD_REQUEST);
+      case 'SUCCEEDED':
+        await PaymentsRepo.handleSuccessfulPayment(tx, paymentId);
+        break;
+      case 'FAILED':
+        await PaymentsRepo.handleFailedPayment(tx, paymentId);
+        break;
+      case 'EXPIRED':
+        // Assuming EXPIRED is a type of failure for the booking state
+        await PaymentsRepo.handleFailedPayment(tx, paymentId, PaymentStatus.CANCELED);
+        break;
+      default:
+        // Should not happen if payload validation is good
+        throw new AppError(`Unknown event status: ${eventStatus}`, httpStatus.BAD_REQUEST);
       }
 
     });

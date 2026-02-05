@@ -9,9 +9,9 @@ const router = Router();
 router.post(
   '/webhooks/payments/:provider',
   json({
-    verify: (req: any, res, buf) => {
+    verify: (req: any, res, buf) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       // Attach raw body to the request object
-      req.rawBody = buf;
+      (req as any).rawBody = buf; // eslint-disable-line @typescript-eslint/no-explicit-any
     },
   }),
   verifyPaymentWebhookSignature,

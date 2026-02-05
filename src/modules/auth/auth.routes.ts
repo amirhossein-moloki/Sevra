@@ -1,20 +1,20 @@
 import { Router } from 'express';
 import {
-    login,
-    refresh,
-    logout,
-    me,
-    requestUserOtp,
-    verifyUserOtp,
-    loginUserWithOtp
+  login,
+  refresh,
+  logout,
+  me,
+  requestUserOtp,
+  verifyUserOtp,
+  loginUserWithOtp
 } from './auth.controller';
 import { validate } from '../../common/middleware/validate';
 import {
-    loginSchema,
-    refreshSchema,
-    requestOtpSchema,
-    verifyOtpSchema,
-    loginWithOtpSchema
+  loginSchema,
+  refreshSchema,
+  requestOtpSchema,
+  verifyOtpSchema,
+  loginWithOtpSchema
 } from './auth.validators';
 import { authMiddleware } from '../../common/middleware/auth';
 import { publicApiRateLimiter } from '../../common/middleware/rateLimit';

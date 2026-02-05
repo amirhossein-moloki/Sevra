@@ -3,7 +3,7 @@ import { prisma } from '../../config/prisma';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 
-export const createTestSalon = (options?: { name?: string; slug?: string; settings?: any }): Promise<Salon> => {
+export const createTestSalon = (options?: { name?: string; slug?: string; settings?: any }): Promise<Salon> => { // eslint-disable-line @typescript-eslint/no-explicit-any
   const { name = 'Test Salon', slug = 'test-salon', settings } = options || {};
   return prisma.salon.create({ data: { name, slug, settings } });
 };

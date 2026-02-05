@@ -1,7 +1,6 @@
 
 import { AnalyticsService } from '../analytics.service';
 import { AnalyticsRepo } from '../analytics.repo';
-import { BookingStatus } from '@prisma/client';
 
 jest.mock('../analytics.repo');
 

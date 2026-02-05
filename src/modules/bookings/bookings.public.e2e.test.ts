@@ -7,9 +7,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
 
 describe('POST /api/v1/public/salons/:salonSlug/bookings', () => {
-  let salon: any;
-  let staff: any;
-  let service: any;
+  let salon: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let staff: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let service: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   beforeAll(async () => {
     await prisma.booking.deleteMany({});

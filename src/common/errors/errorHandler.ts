@@ -1,11 +1,8 @@
 
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import httpStatus from 'http-status';
-import { ApiFailure } from "../utils/response";
-
-// We can now safely import AppError
-import AppError from "./AppError";
+import { ApiFailure } from '../utils/response';
 
 type NormalizedError = {
   status: number;
@@ -15,16 +12,16 @@ type NormalizedError = {
 };
 
 function getRequestId(req: Request): string | undefined {
-  const anyReq = req as any;
+  const anyReq = req as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   return anyReq.id ?? anyReq.requestId ?? anyReq.context?.requestId;
 }
 
-function normalizeError(err: any): NormalizedError {
+function normalizeError(err: any): NormalizedError { // eslint-disable-line @typescript-eslint/no-explicit-any
   // 1. AppError (our custom, preferred error type)
   if (err.isOperational) {
     return {
       status: err.statusCode,
-      code: err.code || "APP_ERROR",
+      code: err.code || 'APP_ERROR',
       message: err.message,
       details: err.details,
     };
@@ -33,31 +30,32 @@ function normalizeError(err: any): NormalizedError {
   // 2. Prisma Known Request Error
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     switch (err.code) {
-      case "P2002":
-        const target = err.meta?.target;
-        const message = Array.isArray(target)
-          ? `Duplicate value for field(s): ${target.join(', ')}`
-          : "Duplicate value for field";
-        return {
-          status: 409,
-          code: "CONFLICT",
-          message,
-          details: err.meta,
-        };
-      case "P2025":
-        return {
-          status: 404,
-          code: "NOT_FOUND",
-          message: "The requested record was not found.",
-          details: err.meta,
-        };
-      default:
-        return {
-          status: 400,
-          code: "DB_REQUEST_FAILED",
-          message: "Database request failed.",
-          details: { prismaCode: err.code, meta: err.meta },
-        };
+    case 'P2002': {
+      const target = err.meta?.target;
+      const message = Array.isArray(target)
+        ? `Duplicate value for field(s): ${target.join(', ')}`
+        : 'Duplicate value for field';
+      return {
+        status: 409,
+        code: 'CONFLICT',
+        message,
+        details: err.meta,
+      };
+    }
+    case 'P2025':
+      return {
+        status: 404,
+        code: 'NOT_FOUND',
+        message: 'The requested record was not found.',
+        details: err.meta,
+      };
+    default:
+      return {
+        status: 400,
+        code: 'DB_REQUEST_FAILED',
+        message: 'Database request failed.',
+        details: { prismaCode: err.code, meta: err.meta },
+      };
     }
   }
 
@@ -67,31 +65,31 @@ function normalizeError(err: any): NormalizedError {
   if (err.code === '23P01' && err.message?.includes('Booking_no_overlap_active')) {
     return {
       status: 409,
-      code: "BOOKING_OVERLAP",
-      message: "This time slot is already booked for the selected staff member.",
+      code: 'BOOKING_OVERLAP',
+      message: 'This time slot is already booked for the selected staff member.',
     };
   }
 
   // 4. Zod Validation Error
-  if (err?.name === "ZodError") {
+  if (err?.name === 'ZodError') {
     return {
       status: 400,
-      code: "VALIDATION_ERROR",
-      message: "Invalid request payload.",
+      code: 'VALIDATION_ERROR',
+      message: 'Invalid request payload.',
       details: err.errors ?? err.issues ?? err,
     };
   }
 
   // 5. http-errors or similar errors with status codes
-  if (typeof err?.status === "number" || typeof err?.statusCode === "number") {
+  if (typeof err?.status === 'number' || typeof err?.statusCode === 'number') {
     const status = err.status ?? err.statusCode;
     const statusText = httpStatus[status] as string | undefined;
-    const code = err.code ?? (statusText ? statusText.replace(/\s+/g, "_").toUpperCase() : "HTTP_ERROR");
+    const code = err.code ?? (statusText ? statusText.replace(/\s+/g, '_').toUpperCase() : 'HTTP_ERROR');
 
     return {
       status,
       code,
-      message: err.message ?? statusText ?? "Request failed.",
+      message: err.message ?? statusText ?? 'Request failed.',
       details: err.details,
     };
   }
@@ -99,8 +97,8 @@ function normalizeError(err: any): NormalizedError {
   // 6. Default/Unknown Error
   return {
     status: 500,
-    code: "INTERNAL_ERROR",
-    message: "An unexpected internal server error occurred.",
+    code: 'INTERNAL_ERROR',
+    message: 'An unexpected internal server error occurred.',
   };
 }
 
@@ -108,7 +106,7 @@ function normalizeError(err: any): NormalizedError {
  * Express error-handling middleware
  * Usage: app.use(errorHandler);
  */
-export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) { // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
   const requestId = getRequestId(req);
   const normalized = normalizeError(err);
 
@@ -117,7 +115,7 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
 
   // For 5xx errors in production, we don't want to leak implementation details
   const isServerError = normalized.status >= 500;
-  const includeDetails = !isServerError || process.env.NODE_ENV !== "production";
+  const includeDetails = !isServerError || process.env.NODE_ENV !== 'production';
 
   const body: ApiFailure = {
     success: false,
