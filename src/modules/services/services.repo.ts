@@ -1,5 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { CreateServiceInput, UpdateServiceInput } from './services.types';
+import { Prisma } from '@prisma/client';
 
 /**
  * Creates a new service for a given salon.
@@ -8,11 +9,12 @@ import { CreateServiceInput, UpdateServiceInput } from './services.types';
  * @returns The newly created service.
  */
 export async function createService(salonId: string, data: CreateServiceInput) {
+  const createInput: Prisma.ServiceUncheckedCreateInput = {
+    ...(data as any),
+    salonId,
+  };
   return prisma.service.create({
-    data: {
-      ...data,
-      salonId,
-    },
+    data: createInput as any,
   });
 }
 

@@ -1,10 +1,8 @@
 
-// src/types/express.d.ts
 import { SessionActorType, UserRole } from '@prisma/client';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { ApiMeta } from '../common/utils/response';
 
-// Extend the Express Request interface to include our custom properties
 declare global {
   namespace Express {
     export interface Request {
@@ -15,9 +13,10 @@ declare global {
         salonId?: string;
         actorType?: SessionActorType;
       };
-      salonId?: string; // salonId is added by various middlewares for panel routes
+      salonId?: string;
       id?: string;
       requestId?: string;
+      rawBody?: Buffer;
     }
 
     export interface Response {
@@ -35,8 +34,6 @@ declare global {
   }
 }
 
-// You can also define a custom request type for convenience if you have routes
-// where these properties are guaranteed to exist.
 export interface AppRequest extends Request {
   actor: {
     id: string;
@@ -46,4 +43,6 @@ export interface AppRequest extends Request {
     actorType: SessionActorType;
   };
   tenant: { salonId: string };
+  salonId?: string;
+  id?: string;
 }

@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodObject, ZodError } from 'zod';
+import { ZodSchema, ZodError } from 'zod';
 import createHttpError from 'http-errors';
 
 export const validate =
-  (schema: ZodObject<any>) => // eslint-disable-line @typescript-eslint/no-explicit-any
+  (schema: ZodSchema<any>) => // eslint-disable-line @typescript-eslint/no-explicit-any
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         await schema.parseAsync({

@@ -1,4 +1,5 @@
-import { PaymentStatus, IdempotencyStatus } from '@prisma/client';
+import { PaymentStatus } from '@prisma/client';
+import { IdempotencyStatus } from '../../types/idempotency';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
@@ -8,9 +9,11 @@ import { AnalyticsRepo } from '../analytics/analytics.repo';
 const processPaymentWebhook = async ({
   provider,
   payload,
+  signature,
 }: {
   provider: string;
   payload: { eventId: string; paymentId: string; status: 'SUCCEEDED' | 'FAILED' | 'EXPIRED' };
+  signature?: string | null;
 }) => {
   const { eventId, paymentId, status: eventStatus } = payload;
 

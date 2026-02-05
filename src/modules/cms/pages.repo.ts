@@ -1,6 +1,6 @@
 import { prisma } from '../../config/prisma';
 import { CreatePageData, UpdatePageData, CreatePageInput } from './pages.types';
-import { PageStatus, PageType } from '@prisma/client';
+import { PageStatus, PageType, Prisma } from '@prisma/client';
 
 type PageFilters = {
   status?: PageStatus;
@@ -22,14 +22,15 @@ const mapSections = (sections: PageSectionInput[]) =>
 
 export async function createPage(salonId: string, data: CreatePageData) {
   const { sections, ...pageData } = data;
-  return prisma.salonPage.create({
-    data: {
-      ...pageData,
-      salonId,
-      sections: {
-        create: mapSections(sections),
-      },
+  const createInput: Prisma.SalonPageUncheckedCreateInput = {
+    ...(pageData as any),
+    salonId,
+    sections: {
+      create: mapSections(sections),
     },
+  };
+  return prisma.salonPage.create({
+    data: createInput as any,
     include: {
       sections: { orderBy: { sortOrder: 'asc' } },
     },

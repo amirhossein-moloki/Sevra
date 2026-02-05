@@ -14,7 +14,7 @@ if (process.env.NODE_ENV === 'test') {
 
   loggerMiddleware = pinoHttp({
     logger,
-    genReqId: function (req, _res) { // eslint-disable-line @typescript-eslint/no-unused-vars
+    genReqId: function (req, res) {
       const existingId = req.id ?? req.headers['x-request-id'];
       if (existingId) return existingId;
       const id = cuid();
