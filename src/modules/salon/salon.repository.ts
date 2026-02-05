@@ -1,10 +1,11 @@
 import { prisma } from '../../config/prisma';
 import { CreateSalonInput, UpdateSalonInput } from './salon.types';
+import { Prisma } from '@prisma/client';
 
 export const salonRepository = {
   async create(data: CreateSalonInput) {
     return prisma.salon.create({
-      data,
+      data: data as Prisma.SalonCreateInput,
     });
   },
 

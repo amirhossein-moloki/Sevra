@@ -3,7 +3,7 @@ import request from 'supertest';
 import app from '../../app';
 import { prisma } from '../../config/prisma';
 import { User, Salon } from '@prisma/client';
-import { createTestSalon, createTestUser, createToken } from '../../../test-utils/helpers';
+import { createTestSalon, createTestUser, generateToken as createToken } from '../../common/utils/test-utils';
 
 describe('Negative Permission (RBAC) E2E Tests', () => {
   let salon: Salon;
@@ -16,13 +16,13 @@ describe('Negative Permission (RBAC) E2E Tests', () => {
 
   beforeAll(async () => {
     salon = await createTestSalon();
-    manager = await createTestUser(salon.id, 'MANAGER');
-    receptionist = await createTestUser(salon.id, 'RECEPTIONIST');
-    staff = await createTestUser(salon.id, 'STAFF');
+    manager = await createTestUser({ salonId: salon.id, role: 'MANAGER' });
+    receptionist = await createTestUser({ salonId: salon.id, role: 'RECEPTIONIST' });
+    staff = await createTestUser({ salonId: salon.id, role: 'STAFF' });
 
-    _managerToken = createToken(manager);
-    receptionistToken = createToken(receptionist);
-    staffToken = createToken(staff);
+    _managerToken = createToken({ actorId: manager.id, actorType: 'USER' });
+    receptionistToken = createToken({ actorId: receptionist.id, actorType: 'USER' });
+    staffToken = createToken({ actorId: staff.id, actorType: 'USER' });
   });
 
   afterAll(async () => {
@@ -45,7 +45,7 @@ describe('Negative Permission (RBAC) E2E Tests', () => {
     });
 
     it('should return 403 Forbidden for STAFF trying to delete another user', async () => {
-      const anotherStaff = await createTestUser(salon.id, 'STAFF', 'anotherstaff');
+      const anotherStaff = await createTestUser({ salonId: salon.id, role: 'STAFF' });
       const response = await request(app)
         .delete(`/api/v1/salons/${salon.id}/staff/${anotherStaff.id}`)
         .set('Authorization', `Bearer ${staffToken}`);

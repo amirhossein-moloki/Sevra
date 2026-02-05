@@ -45,7 +45,7 @@ describe('ShiftsService', () => {
       // Arrange
       mockedUserRepo.findUserById.mockResolvedValue(mockUser);
       // Corrected the mock return value to be an array of shifts
-      mockedShiftsRepo.upsertShifts.mockResolvedValue(shiftsInput.map(s => ({...s, id: 'shift-id', salonId, userId, createdAt: new Date(), updatedAt: new Date()})));
+      mockedShiftsRepo.upsertShifts.mockResolvedValue(shiftsInput.map(s => ({ ...s, id: 'shift-id', salonId, userId, createdAt: new Date(), updatedAt: new Date() })) as any);
 
       // Act
       const result = await shiftsService.upsertShifts(salonId, userId, shiftsInput);

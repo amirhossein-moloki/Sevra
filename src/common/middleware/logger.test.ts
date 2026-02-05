@@ -78,7 +78,11 @@ describe('Logger Middleware', () => {
     } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     // A mock for ServerResponse that allows setting headers and status code
-    const resWritable = new Writable();
+    const resWritable = new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    });
     res = new http.ServerResponse(req);
     res.assignSocket(resWritable as any); // eslint-disable-line @typescript-eslint/no-explicit-any
     res.statusCode = 200;
@@ -98,7 +102,7 @@ describe('Logger Middleware', () => {
     // End the response to trigger the logging logic in a real scenario
     res.end(() => {
       expect(mockLogger.info).toHaveBeenCalledTimes(1);
-      const loggedData = mockLogger.info.mock.calls[0][0];
+      const loggedData = mockLogger.info.mock.calls[0][0] as any;
 
       // 1. Check for custom context
       expect(loggedData).toHaveProperty('requestId');

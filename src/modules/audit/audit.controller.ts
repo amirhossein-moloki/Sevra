@@ -19,7 +19,8 @@ export const getAuditLogs = async (
       pagination: {
         page: result.meta.page,
         pageSize: result.meta.pageSize,
-        total: result.meta.totalItems,
+        totalItems: result.meta.totalItems,
+        totalPages: result.meta.totalPages,
       },
     });
   } catch (error) {

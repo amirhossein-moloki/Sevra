@@ -78,7 +78,7 @@ describe('page section schemas', () => {
       blocks: [{ type: 'paragraph', text: '<p>HTML متن</p>' }],
     };
 
-    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload));
+    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload)) as any;
     expect(parsed.blocks[0].text).toBe('HTML متن');
   });
 
@@ -88,7 +88,7 @@ describe('page section schemas', () => {
       blocks: [{ type: 'paragraph', text: 'متن <strong>پررنگ</strong>', allowHtml: true }],
     };
 
-    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload));
+    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload)) as any;
     expect(parsed.blocks[0].text).toBe('متن <strong>پررنگ</strong>');
   });
 
@@ -108,7 +108,7 @@ describe('page section schemas', () => {
       ],
     };
 
-    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload));
+    const parsed = validateSectionData(PageSectionType.RICH_TEXT, JSON.stringify(payload)) as any;
     expect(parsed.blocks[0].text).toContain('Hello');
     expect(parsed.blocks[0].text).toContain('<strong>ok</strong>');
     expect(parsed.blocks[0].text).toContain('<a>bad</a>');

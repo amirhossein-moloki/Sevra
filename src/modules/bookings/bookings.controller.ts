@@ -35,7 +35,7 @@ export const getBookings = async (
   req: AppRequest,
   res: Response
 ) => {
-  const result = await bookingsService.getBookings(req.tenant.salonId, req.query, req.actor);
+  const result = await bookingsService.getBookings(req.tenant.salonId, req.query, req.actor as any);
   res.ok(result.data, { pagination: result.meta });
 };
 
@@ -46,7 +46,7 @@ export const getBookingById = async (
   const booking = await bookingsService.getBookingById(
     req.params.bookingId,
     req.tenant.salonId,
-    req.actor
+    req.actor as any
   );
   res.ok(booking);
 };
@@ -59,7 +59,7 @@ export const updateBooking = async (
     req.params.bookingId,
     req.tenant.salonId,
     req.body,
-    req.actor,
+    req.actor as any,
     { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
   res.ok(booking);
@@ -72,7 +72,7 @@ export const confirmBooking = async (
   const booking = await bookingsService.confirmBooking(
     req.params.bookingId,
     req.tenant.salonId,
-    req.actor
+    req.actor as any
   );
   res.ok(booking);
 };
@@ -84,7 +84,7 @@ export const cancelBooking = async (
   const booking = await bookingsService.cancelBooking(
     req.params.bookingId,
     req.tenant.salonId,
-    req.actor,
+    req.actor as any,
     req.body,
     { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
@@ -98,7 +98,7 @@ export const completeBooking = async (
   const booking = await bookingsService.completeBooking(
     req.params.bookingId,
     req.tenant.salonId,
-    req.actor,
+    req.actor as any,
     { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
   res.ok(booking);
@@ -111,7 +111,7 @@ export const markAsNoShow = async (
   const booking = await bookingsService.markAsNoShow(
     req.params.bookingId,
     req.tenant.salonId,
-    req.actor,
+    req.actor as any,
     { ip: req.ip, userAgent: req.headers['user-agent'] }
   );
   res.ok(booking);

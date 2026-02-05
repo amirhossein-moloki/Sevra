@@ -1,7 +1,7 @@
 import { WebhooksService } from './webhooks.service';
 import { IdempotencyRepo } from '../../common/repositories/idempotency.repo';
 import { PaymentsRepo } from '../payments/payments.repo';
-import { IdempotencyStatus } from '@prisma/client';
+import { IdempotencyStatus } from '../../types/idempotency';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 
@@ -61,7 +61,7 @@ describe('WebhooksService', () => {
 
       expect(mockedIdempotencyRepo.createKey).toHaveBeenCalled();
       expect(mockedPaymentsRepo.handleSuccessfulPayment).toHaveBeenCalledWith(mockTx, 'pay_123');
-      expect(mockedIdempotencyRepo.updateKey).toHaveBeenCalledWith(expect.any(String), 'evt_123', { status: IdempotencyStatus.COMPLETED }, mockTx);
+      expect(mockedIdempotencyRepo.updateKey).toHaveBeenCalledWith(expect.any(String), 'evt_123', { status: IdempotencyStatus.COMPLETED });
     });
 
     it('should process failed payment', async () => {

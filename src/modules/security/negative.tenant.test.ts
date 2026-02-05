@@ -3,7 +3,7 @@ import request from 'supertest';
 import app from '../../app';
 import { prisma } from '../../config/prisma';
 import { User, Salon, Service } from '@prisma/client';
-import { createTestSalon, createTestUser, createToken, createTestService } from '../../../test-utils/helpers';
+import { createTestSalon, createTestUser, createTestService, generateToken as createToken } from '../../common/utils/test-utils';
 
 describe('Negative Tenant Isolation E2E Tests', () => {
   let salonA: Salon;
@@ -14,16 +14,16 @@ describe('Negative Tenant Isolation E2E Tests', () => {
   let tokenA: string;
 
   beforeAll(async () => {
-    salonA = await createTestSalon('salon-a');
-    salonB = await createTestSalon('salon-b');
+    salonA = await createTestSalon({ slug: 'salon-a' });
+    salonB = await createTestSalon({ slug: 'salon-b' });
 
-    managerA = await createTestUser(salonA.id, 'MANAGER', 'manager-a');
-    _managerB = await createTestUser(salonB.id, 'MANAGER', 'manager-b');
+    managerA = await createTestUser({ salonId: salonA.id, role: 'MANAGER' });
+    _managerB = await createTestUser({ salonId: salonB.id, role: 'MANAGER' });
 
     // Resource belonging to Salon B
-    serviceB = await createTestService(salonB.id, []);
+    serviceB = await createTestService({ salonId: salonB.id });
 
-    tokenA = createToken(managerA, salonA.id);
+    tokenA = createToken({ actorId: managerA.id, actorType: 'USER' });
   });
 
   afterAll(async () => {

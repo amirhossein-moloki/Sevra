@@ -25,11 +25,17 @@ export async function listPages(req: Request<{ salonId: string }>, res: Response
     offset,
   });
 
+  const totalItems = total;
+  const pageSize = limit;
+  const page = Math.floor(offset / limit) + 1;
+  const totalPages = Math.ceil(total / limit);
+
   res.ok(pages, {
     pagination: {
-      total,
-      pageSize: limit,
-      page: Math.floor(offset / limit) + 1,
+      totalItems,
+      totalPages,
+      pageSize,
+      page,
     },
   });
 }

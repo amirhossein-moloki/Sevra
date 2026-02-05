@@ -15,7 +15,7 @@ describe('AuditService', () => {
       const input = {
         salonId: 'salon-1',
         actorId: 'actor-1',
-        actorType: SessionActorType.MANAGER,
+        actorType: SessionActorType.USER,
         action: 'TEST_ACTION',
         entity: 'TestEntity',
         entityId: 'entity-1',
