@@ -27,6 +27,7 @@ describe('Commissions Service', () => {
         salonId,
         commissionAmount: 1000,
         status: CommissionStatus.PENDING,
+        currency: 'USD',
       };
 
       (CommissionsRepo.findCommissionById as jest.Mock).mockResolvedValue(mockCommission);
@@ -60,6 +61,22 @@ describe('Commissions Service', () => {
 
       await expect(commissionsService.payCommission(commissionId, salonId, input, actor))
         .rejects.toThrow('Commission record not found.');
+    });
+
+    it('should throw error if currency does not match commission currency', async () => {
+      const mockCommission = {
+        id: commissionId,
+        salonId,
+        commissionAmount: 1000,
+        status: CommissionStatus.PENDING,
+        currency: 'EUR',
+      };
+
+      (CommissionsRepo.findCommissionById as jest.Mock).mockResolvedValue(mockCommission);
+      (CommissionsRepo.transaction as jest.Mock).mockImplementation((cb) => cb({}));
+
+      await expect(commissionsService.payCommission(commissionId, salonId, input, actor))
+        .rejects.toThrow('Currency mismatch. Commission is in EUR, but payment is in USD.');
     });
   });
 

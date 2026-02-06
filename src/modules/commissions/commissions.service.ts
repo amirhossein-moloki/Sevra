@@ -172,6 +172,14 @@ export const commissionsService = {
         throw new AppError('Commission record not found.', httpStatus.NOT_FOUND);
       }
 
+      // Ensure currency matches
+      if (input.currency !== commission.currency) {
+        throw new AppError(
+          `Currency mismatch. Commission is in ${commission.currency}, but payment is in ${input.currency}.`,
+          httpStatus.BAD_REQUEST
+        );
+      }
+
       const payment = await CommissionsRepo.createCommissionPayment({
         commissionId: commissionId,
         amount: input.amount,
