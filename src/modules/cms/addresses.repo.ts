@@ -1,5 +1,5 @@
 import { PrismaClient, SalonAddress } from '@prisma/client';
-import { prisma } from '../../common/utils/prisma';
+import { prisma } from '../../config/prisma';
 
 export class AddressesRepo {
   private prisma: PrismaClient;

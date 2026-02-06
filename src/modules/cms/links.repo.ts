@@ -1,5 +1,5 @@
 import { PrismaClient, SalonLink } from '@prisma/client';
-import { prisma } from '../../common/utils/prisma';
+import { prisma } from '../../config/prisma';
 
 export class LinksRepo {
   private prisma: PrismaClient;
