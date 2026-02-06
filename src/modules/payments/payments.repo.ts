@@ -5,8 +5,9 @@ import { validateBookingTransition, validatePaymentTransition } from './payments
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { commissionsService } from '../commissions/commissions.service';
+import { WalletService } from '../wallet/wallet.service';
 
-type Tx = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+type Tx = Prisma.TransactionClient;
 
 const findBookingForUpdate = (bookingId: string, salonId: string) => {
   return prisma.booking.findFirst({
@@ -49,18 +50,34 @@ const handleSuccessfulPayment = async (tx: Tx, paymentId: string) => {
 
   // Validate state transitions
   validatePaymentTransition(payment.status, PaymentStatus.PAID);
-  validateBookingTransition(payment.booking.paymentState, BookingPaymentState.PAID);
 
-  // Update records
-  await tx.payment.update({
-    where: { id: paymentId },
-    data: { status: PaymentStatus.PAID, paidAt: new Date() },
-  });
+  try {
+    validateBookingTransition(payment.booking.paymentState, BookingPaymentState.PAID);
 
-  await tx.booking.update({
-    where: { id: payment.bookingId },
-    data: { paymentState: BookingPaymentState.PAID },
-  });
+    // Update records
+    await tx.payment.update({
+      where: { id: paymentId },
+      data: { status: PaymentStatus.PAID, paidAt: new Date() },
+    });
+
+    await tx.booking.update({
+      where: { id: payment.bookingId },
+      data: { paymentState: BookingPaymentState.PAID },
+    });
+  } catch (error) {
+    if (error instanceof AppError && error.statusCode === httpStatus.CONFLICT) {
+      // If booking is in a state that doesn't allow transitioning to PAID (e.g., CANCELED)
+      // we still mark the payment as PAID but immediately refund it to the wallet.
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: { status: PaymentStatus.PAID, paidAt: new Date() },
+      });
+
+      await WalletService.refundBookingToWallet(payment.bookingId, tx);
+      return;
+    }
+    throw error;
+  }
 
   // Trigger commission calculation (async, non-blocking for the transaction)
   // We use the bookingId from the payment record

@@ -7,6 +7,7 @@ import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { getZonedStartAndEnd } from '../../common/utils/date';
 import { commissionsService } from '../commissions/commissions.service';
+import { WalletService } from '../wallet/wallet.service';
 import { auditService } from '../audit/audit.service';
 import { SmsService } from '../notifications/sms.service';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -584,19 +585,27 @@ export const bookingsService = {
       throw new AppError('Invalid state transition: Booking cannot be canceled.', httpStatus.CONFLICT);
     }
 
-    const updatedBooking = await BookingsRepo.updateBookingWithInclude(
-      bookingId,
-      {
-        status: BookingStatus.CANCELED,
-        canceledAt: new Date(),
-        canceledByUserId: actor.id,
-        cancelReason: data.reason,
-      },
-      {
-        salon: { include: { settings: true } },
-        customerAccount: true,
-      }
-    );
+    const updatedBooking = await BookingsRepo.transaction(async (tx) => {
+      const result = await BookingsRepo.updateBookingWithInclude(
+        bookingId,
+        {
+          status: BookingStatus.CANCELED,
+          canceledAt: new Date(),
+          canceledByUserId: actor.id,
+          cancelReason: data.reason,
+        },
+        {
+          salon: { include: { settings: true } },
+          customerAccount: true,
+        },
+        tx
+      );
+
+      // Trigger refund if there are successful payments
+      await WalletService.refundBookingToWallet(bookingId, tx);
+
+      return result;
+    });
 
     await sendBookingStatusSms(
       updatedBooking,
