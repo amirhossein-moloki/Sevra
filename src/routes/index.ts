@@ -34,6 +34,7 @@ import { commissionsRoutes } from '../modules/commissions/commissions.routes';
 import auditRoutes from '../modules/audit/audit.routes';
 import { analyticsRoutes } from '../modules/analytics/analytics.routes';
 import { resolveSalonBySlug } from '../common/middleware/resolveSalonBySlug';
+import { customerPanelRouter } from '../modules/customer-panel/customer-panel.routes';
 
 const router = Router();
 
@@ -85,6 +86,9 @@ router.use('/salons/:salonId/commissions', commissionsRoutes);
 
 // --- Audit Module Routes ---
 router.use('/salons/:salonId/audit-logs', auditRoutes);
+
+// --- Customer Panel Routes ---
+router.use('/customer', customerPanelRouter);
 
 // --- Analytics Module Routes ---
 router.use('/salons/:salonId/analytics', analyticsRoutes);
