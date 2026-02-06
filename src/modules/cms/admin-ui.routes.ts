@@ -1,9 +1,15 @@
 import { Router } from 'express';
-import { PageStatus, PageType, RobotsFollow, RobotsIndex } from '@prisma/client';
+import { PageStatus, PageType, RobotsFollow, RobotsIndex, UserRole } from '@prisma/client';
 import { renderPageDocument } from '../public/page-renderer';
 import { serializeSectionRegistryForEditor } from './page-section-registry';
+import { authMiddleware } from '../../common/middleware/auth';
+import { tenantGuard } from '../../common/middleware/tenantGuard';
+import { requireRole } from '../../common/middleware/requireRole';
 
 export const cmsAdminUiRouter = Router();
+
+// Secure all admin UI routes
+cmsAdminUiRouter.use(authMiddleware, tenantGuard, requireRole([UserRole.MANAGER]));
 
 const buildOptions = (values: string[]) =>
   values.map((value) => `<option value="${value}">${value}</option>`).join('');
@@ -1342,7 +1348,22 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
         })),
       });
 
+      const validateMainFields = () => {
+        const errors = [];
+        if (!fields.title.value.trim()) errors.push('Title is required.');
+        if (!fields.slug.value.trim()) errors.push('Slug is required.');
+        if (!/^[a-z0-9-]+$/.test(fields.slug.value.trim())) {
+          errors.push('Slug must be lowercase, numbers, and dashes only.');
+        }
+        return errors;
+      };
+
       const buildPayload = () => {
+        const mainErrors = validateMainFields();
+        if (mainErrors.length > 0) {
+          throw new Error(mainErrors.join(' '));
+        }
+
         const payload = {};
         const title = readValue(fields.title);
         const slug = readValue(fields.slug);
@@ -1411,17 +1432,19 @@ cmsAdminUiRouter.get('/salons/:salonId/pages/:pageId', (req, res) => {
       };
 
       const savePage = async () => {
-        setStatus('Saving...');
+        setStatus('Validating...');
         const token = authTokenInput.value.trim();
         if (token) saveToken();
         try {
+          const payload = buildPayload();
+          setStatus('Saving...');
           const response = await fetch('/api/v1/salons/${salonId}/pages/${pageId}', {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
               ...(token ? { Authorization: \`Bearer \${token}\` } : {}),
             },
-            body: JSON.stringify(buildPayload()),
+            body: JSON.stringify(payload),
           });
           if (!response.ok) {
             const errorText = await response.text();

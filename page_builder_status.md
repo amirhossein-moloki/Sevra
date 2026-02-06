@@ -54,21 +54,29 @@
 
 ---
 
-## ۴. نقاط ضعف و کارهای باقی‌مانده (Gaps & TODOs)
+## ۴. تغییرات و بهبودهای اخیر (Recent Improvements)
 
-۱. **امنیت مسیرهای مدیریت (Auth Gaps):** مسیرهای `/api/v1/admin/...` در حال حاضر فاقد Middleware احراز هویت در سطح Router هستند. گرچه برای فراخوانی APIها نیاز به توکن است، اما خودِ صفحه ویرایشگر به صورت عمومی در دسترس است.
-۲. **بخش‌های نیمه‌تمام (Placeholders):** مسیرهای مربوط به مدیریت لینک‌ها (`SalonLink`) و آدرس‌ها (`SalonAddress`) در لایه CMS در حال حاضر پاسخ `501 Not Implemented` برمی‌گردانند.
-۳. **تجربه کاربری ویرایشگر:** ویرایشگر فعلی با Vanilla JS نوشته شده است. برای پروژه‌های بزرگتر، بازنویسی این بخش با React یا Vue پیشنهاد می‌شود.
-۴. **اعتبارسنجی فرانت‌اِند:** بخش زیادی از اعتبارسنجی‌ها در سمت سرور انجام می‌شود و در ویرایشگر فعلی، خطاهای لحظه‌ای (Real-time) به صورت کامل پوشش داده نشده‌اند.
+در آخرین به‌روزرسانی، موارد زیر برای رفع خلأهای شناسایی شده انجام شد:
+
+۱. **ایمن‌سازی مسیرهای مدیریت:** تمامی مسیرهای `/api/v1/admin/...` اکنون توسط `authMiddleware` و `requireRole` محافظت می‌شوند و تنها مدیران (MANAGER) به آن‌ها دسترسی دارند.
+۲. **پیاده‌سازی کامل بخش‌های لینک و آدرس:** قابلیت‌های CRUD (ایجاد، نمایش، ویرایش و حذف) برای `SalonLink` و `SalonAddress` در لایه CMS به طور کامل پیاده‌سازی شد.
+۳. **بهبود اعتبارسنجی سمت کلاینت:** اعتبارسنجی‌های اولیه‌ (مانند اجباری بودن عنوان و فرمت صحیح Slug) به ویرایشگر اضافه شد تا قبل از ارسال به سرور، به کاربر بازخورد داده شود.
 
 ---
 
-## ۵. جمع‌بندی (Summary)
+## ۵. نقاط ضعف باقی‌مانده (Remaining Gaps)
 
-وضعیت صفحه‌ساز در پروژه **"عملیاتی و آماده استفاده" (Production-Ready Core)** است. زیرساخت دیتابیس و رندرینگ بسیار قوی طراحی شده و تمام نیازهای یک سایت سالن زیبایی برای سئو و نمایش محتوا را پوشش می‌دهد. اولویت بعدی باید بر روی تکمیل بخش‌های ۵۰۱ و ایمن‌سازی مسیرهای ادمین باشد.
+۱. **تجربه کاربری ویرایشگر:** ویرایشگر همچنان با Vanilla JS است. برای پروژه‌های بسیار پیچیده، بازنویسی با React/Vue همچنان به عنوان یک نقشه راه میان‌مدت پیشنهاد می‌شود.
+۲. **غنی‌تر کردن اعتبارسنجی لحظه‌ای:** اگرچه اعتبارسنجی پایه اضافه شده، اما می‌توان آن را برای تک‌تک فیلدها با جزئیات بیشتر (مثلاً نمایش خطا دقیقا زیر هر فیلد) بهبود داد.
+
+---
+
+## ۶. جمع‌بندی (Summary)
+
+وضعیت صفحه‌ساز در پروژه **"کامل و ایمن" (Feature Complete & Secure)** است. زیرساخت دیتابیس، رندرینگ، و لایه مدیریت اکنون به طور کامل با هم یکپارچه هستند و خلأهای امنیتی و عملکردی قبلی برطرف شده‌اند.
 
 ---
 
 ## English Summary
 
-The Page Builder in Sevra is a robust, registry-based system integrated with Prisma and Zod. It supports 11 section types (Hero, Rich Text, Services, etc.) and features a built-in Vanilla JS editor with live preview and drag-and-drop capabilities. It is highly optimized for SEO with support for Open Graph, JSON-LD, and automatic 301 redirects via slug history. Current gaps include missing authentication on admin UI routes and placeholder (501) routes for salon links and addresses management. Overall, the core system is functional and performant.
+The Page Builder in Sevra is a robust, registry-based system integrated with Prisma and Zod. Following recent updates, it is now **feature-complete and secure**. Admin UI routes are protected by authentication, and CRUD operations for salon links and addresses are fully implemented. Basic client-side validation has been added to the Vanilla JS editor to improve UX. While a migration to a framework like React/Vue remains a potential future improvement for extreme scalability, the current system is production-ready and covers all functional requirements.
