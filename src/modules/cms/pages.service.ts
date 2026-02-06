@@ -80,3 +80,29 @@ export async function getPage(salonId: string, pageId: string) {
   }
   return page;
 }
+
+export async function copyPage(sourcePageId: string, targetSalonId: string) {
+  try {
+    return await PagesRepo.copyPage(sourcePageId, targetSalonId);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Source page not found') {
+      throw createHttpError(404, error.message);
+    }
+    // Handle Prisma unique constraint error (P2002)
+    if ((error as any).code === 'P2002') { // eslint-disable-line @typescript-eslint/no-explicit-any
+      throw createHttpError(409, 'A page with this slug already exists in the target salon');
+    }
+    throw error;
+  }
+}
+
+export async function copyAllPages(sourceSalonId: string, targetSalonId: string) {
+  try {
+    return await PagesRepo.copyAllPages(sourceSalonId, targetSalonId);
+  } catch (error) {
+    if ((error as any).code === 'P2002') { // eslint-disable-line @typescript-eslint/no-explicit-any
+      throw createHttpError(409, 'One or more pages already exist in the target salon (slug conflict)');
+    }
+    throw error;
+  }
+}
