@@ -90,10 +90,15 @@ export const CustomerPanelRepo = {
     });
   },
 
-  async updateBooking(id: string, data: Prisma.BookingUpdateInput) {
-    return prisma.booking.update({
+  async updateBooking(id: string, data: Prisma.BookingUpdateInput, tx?: Prisma.TransactionClient) {
+    const client = tx || prisma;
+    return client.booking.update({
       where: { id },
       data,
     });
+  },
+
+  async transaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
+    return prisma.$transaction(fn);
   },
 };

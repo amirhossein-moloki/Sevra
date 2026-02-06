@@ -3,6 +3,7 @@ import { CustomerPanelRepo } from './customer-panel.repo';
 import { GetCustomerBookingsQuery, CustomerSubmitReviewInput } from './customer-panel.validators';
 import { BookingStatus, Prisma, SessionActorType } from '@prisma/client';
 import { auditService } from '../audit/audit.service';
+import { WalletService } from '../wallet/wallet.service';
 import { AnalyticsRepo } from '../analytics/analytics.repo';
 import * as reviewsRepo from '../reviews/reviews.repo';
 
@@ -64,12 +65,17 @@ export const CustomerPanelService = {
       throw createHttpError(400, 'Booking cannot be canceled in its current state');
     }
 
-    const updatedBooking = await CustomerPanelRepo.updateBooking(bookingId, {
-      status: BookingStatus.CANCELED,
-      canceledAt: new Date(),
-      cancelReason: reason || 'Canceled by customer',
-      // We don't have a canceledByUserId that is a customer in the schema for now,
-      // but we can record it in audit log.
+    const updatedBooking = await CustomerPanelRepo.transaction(async (tx) => {
+      const result = await CustomerPanelRepo.updateBooking(bookingId, {
+        status: BookingStatus.CANCELED,
+        canceledAt: new Date(),
+        cancelReason: reason || 'Canceled by customer',
+      }, tx);
+
+      // Trigger refund if there are successful payments
+      await WalletService.refundBookingToWallet(bookingId, tx);
+
+      return result;
     });
 
     await auditService.recordLog({

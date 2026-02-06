@@ -350,9 +350,12 @@ model CustomerAccount {
   // ✅ optional but recommended
   phoneVerifiedAt DateTime?
 
-  profiles SalonCustomerProfile[]
-  bookings Booking[]
-  reviews  Review[]
+  walletBalance Int @default(0)
+
+  profiles           SalonCustomerProfile[]
+  bookings           Booking[]
+  reviews            Review[]
+  walletTransactions WalletTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -495,9 +498,10 @@ model Booking {
   completedAt DateTime? @db.Timestamptz(6)
   noShowAt    DateTime? @db.Timestamptz(6)
 
-  payments   Payment[]
-  reviews    Review[]
-  commission BookingCommission?
+  payments           Payment[]
+  reviews            Review[]
+  commission         BookingCommission?
+  walletTransactions WalletTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -927,6 +931,37 @@ model ServiceAnalytics {
 
   @@id([salonId, serviceId, date])
   @@index([salonId, serviceId, date])
+}
+
+// =====================================================
+// Wallet
+// =====================================================
+
+enum WalletTransactionType {
+  REFUND
+  BOOKING_PAYMENT
+  DEPOSIT
+  MANUAL_ADJUSTMENT
+}
+
+model WalletTransaction {
+  id                String          @id @default(cuid())
+  customerAccountId String
+  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id])
+
+  amount   Int // can be positive (credit) or negative (debit)
+  currency String
+  type     WalletTransactionType
+
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+
+  note String?
+
+  createdAt DateTime @default(now())
+
+  @@index([customerAccountId])
+  @@index([bookingId])
 }
 
 // =====================================================
