@@ -133,5 +133,19 @@ export const getPageSchema = z.object({
   }),
 });
 
+export const copyAllPagesSchema = z.object({
+  body: z.object({
+    sourceSalonId: z.string().cuid(CUID_MESSAGE),
+    targetSalonId: z.string().cuid(CUID_MESSAGE),
+  }),
+});
+
+export const copySinglePageSchema = z.object({
+  body: z.object({
+    sourcePageId: z.string().cuid(CUID_MESSAGE),
+    targetSalonId: z.string().cuid(CUID_MESSAGE),
+  }),
+});
+
 export type CreatePageInput = z.infer<typeof createPageSchema>['body'];
 export type UpdatePageInput = z.infer<typeof updatePageSchema>['body'];
