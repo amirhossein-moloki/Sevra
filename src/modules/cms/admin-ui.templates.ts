@@ -821,11 +821,11 @@ export const pageEditorTemplate = (
       let sections = [];
       const htmlTagRegex = /<[^>]+>/;
       const cloneData = (value) => JSON.parse(JSON.stringify(value ?? {}));
-      const sectionRegistry = ${serializeSectionRegistryForEditor()};
+      const sectionConfigs = ${serializeSectionRegistryForEditor()};
       const sectionDefaults = Object.fromEntries(
-        Object.entries(sectionRegistry).map(([type, entry]) => [type, cloneData(entry.defaults)]),
+        Object.entries(sectionConfigs).map(([type, config]) => [type, cloneData(config.defaults)]),
       );
-      const sectionTypes = Object.keys(sectionRegistry);
+      const sectionTypes = Object.keys(sectionConfigs);
 
       const toDatetimeLocal = (value) => {
         if (!value) return '';
@@ -943,11 +943,28 @@ export const pageEditorTemplate = (
       };
 
       const validateSection = (type, data) => {
-        const entry = sectionRegistry[type];
-        if (!entry || typeof entry.validate !== 'function') {
-          return [\`\${type}: Unsupported section type.\`];
-        }
-        return entry.validate(data, validationHelpers);
+        const config = sectionConfigs[type];
+        if (!config) return [\`\${type}: Unsupported section type.\`];
+        const errors = [];
+
+        const validateField = (field, value, path) => {
+          if (field.required && (value === undefined || value === null || (typeof value === 'string' && value.trim() === ''))) {
+            errors.push(\`\${path}: Required.\`);
+          }
+          if (field.type === 'group' && field.fields) {
+            field.fields.forEach(f => validateField(f, (value || {})[f.name], \`\${path}.\${f.name}\`));
+          }
+          if (field.type === 'list' && field.fields) {
+            if (Array.isArray(value)) {
+              value.forEach((item, i) => {
+                field.fields.forEach(f => validateField(f, (item || {})[f.name], \`\${path}[\${i}].\${f.name}\`));
+              });
+            }
+          }
+        };
+
+        config.fields.forEach(f => validateField(f, data[f.name], f.name));
+        return errors;
       };
 
       const createLabeledField = (labelText) => {
@@ -1080,9 +1097,61 @@ export const pageEditorTemplate = (
         grid.className = 'editor-grid';
 
         const update = () => syncSectionData(section, metaEl, errorsEl);
-        const entry = sectionRegistry[section.type];
-        if (entry?.buildEditor) {
-          entry.buildEditor({ section, data, grid, editor, update, helpers: editorHelpers });
+        const config = sectionConfigs[section.type];
+
+        const renderField = (field, container, currentData, currentUpdate) => {
+          if (field.type === 'text') {
+            container.appendChild(createTextInput(field.label, currentData[field.name], (val) => {
+              currentData[field.name] = val;
+              currentUpdate();
+            }));
+          } else if (field.type === 'textarea') {
+            container.appendChild(createTextarea(field.label, currentData[field.name], (val) => {
+              currentData[field.name] = val;
+              currentUpdate();
+            }));
+          } else if (field.type === 'number') {
+            container.appendChild(createNumberInput(field.label, currentData[field.name], (val) => {
+              currentData[field.name] = val;
+              currentUpdate();
+            }));
+          } else if (field.type === 'checkbox') {
+            container.appendChild(createCheckbox(field.label, currentData[field.name], (val) => {
+              currentData[field.name] = val;
+              currentUpdate();
+            }));
+          } else if (field.type === 'group' && field.fields) {
+            const groupData = currentData[field.name] || (currentData[field.name] = {});
+            field.fields.forEach(f => renderField(f, container, groupData, currentUpdate));
+          } else if (field.type === 'list' && field.fields) {
+            const listData = currentData[field.name] || (currentData[field.name] = []);
+            const listEditor = createListEditor({
+              items: listData,
+              renderItem: (block, item, index) => {
+                const itemGrid = document.createElement('div');
+                itemGrid.className = 'editor-grid';
+                field.fields.forEach(f => renderField(f, itemGrid, item, () => {
+                   currentUpdate();
+                }));
+                block.appendChild(itemGrid);
+              },
+              onAdd: () => {
+                const newItem = {};
+                field.fields.forEach(f => { if(f.defaultValue !== undefined) newItem[f.name] = f.defaultValue; });
+                listData.push(newItem);
+                currentUpdate();
+              },
+              onRemove: (index) => {
+                listData.splice(index, 1);
+                currentUpdate();
+              }
+            });
+            editor.appendChild(listEditor);
+          }
+        };
+
+        if (config && config.fields) {
+          config.fields.forEach(f => renderField(f, grid, data, update));
         }
 
         if (grid.children.length > 0) {
