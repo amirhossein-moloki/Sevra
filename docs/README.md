@@ -6,11 +6,16 @@ This folder contains documentation generated directly from the current Sevra cod
 
 - [Architecture](architecture.md)
 - [Database](database.md)
-- [API](api.md)
+- [API Reference](api.md)
+- [API List (Persian)](API_LIST.md)
 - [Authentication](auth.md)
+- [Auth Explanation (Simple)](auth_explanation_simple.md)
 - [CMS + SEO](cms-seo.md)
 - [Payments, Commission, Webhooks](payments-commission-webhooks.md)
 - [Onboarding](onboarding.md)
+- [Frontend Requirements](FRONTEND_REQUIREMENTS.md)
+- [Page Builder Status](page_builder_status.md)
+- [Roadmap / Todo](todo.md)
 
 ## Notes
 
