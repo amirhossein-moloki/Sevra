@@ -38,17 +38,28 @@ The state machine logic is centralized in `src/modules/payments/payments.state.t
 
 **Keep initiation mocked.** The current code creates a `Payment` with provider `ZARINPAL` and returns a sandbox checkout URL, while webhook handling is implemented to finalize `Payment.status` and `Booking.paymentState`. In a real-world scenario, the `initiatePayment` service would call the ZarinPal API to get a real `Authority` and redirect URL.
 
+## Wallet & Refunds
+
+- **Wallet System:** Every `CustomerAccount` has a `walletBalance`.
+- **Automated Refunds:** When a booking is canceled or a payment is processed for an already-canceled booking, funds are automatically credited to the customer's wallet.
+- **Transactions:** All wallet changes are recorded in the `WalletTransaction` model for auditability.
+- **Usage:** Wallet balances can be used for future bookings (feature roadmap) or recorded as a store credit.
+
 ## Commission
 
 ### Data Model
 
-- `SalonCommissionPolicy` stores the policy per salon.
+- `SalonCommissionPolicy` stores the policy per salon (PERCENT or FIXED).
 - `BookingCommission` records the commission for a specific booking.
 - `CommissionPayment` tracks payments against a commission.
 
-### Implementation Status
+### Calculation Rules
 
-**Skeleton Only.** The data model and basic file structure for commissions exist in `src/modules/commissions`, but there are no implemented services, controllers, or routes. Commission calculation logic should be triggered upon booking completion or payment success in a future iteration.
+- **Source Filter:** Only `ONLINE` source bookings incur platform commissions. `IN_PERSON` bookings do not generate commission records.
+- **Trigger:** Commissions are calculated when a booking is created or updated.
+- **Settlement:**
+  - For online payments (e.g., ZarinPal), commissions are automatically marked as `CHARGED` and a `CommissionPayment` is created upon successful payment.
+  - For other bookings (e.g., online booking paid in-person), commissions remain `PENDING` until manually settled via the `payCommission` endpoint.
 
 ## Webhooks
 
@@ -68,6 +79,8 @@ Route: `POST /api/v1/webhooks/payments/:provider`
 
 ## Source of Truth
 
+- `src/modules/commissions/commissions.service.ts`
+- `src/modules/wallet/wallet.service.ts`
 - `src/modules/payments/payments.routes.ts`
 - `src/modules/payments/payments.controller.ts`
 - `src/modules/payments/payments.service.ts`

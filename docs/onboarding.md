@@ -25,6 +25,7 @@ npm install
 - `JWT_ACCESS_EXPIRES_IN` (default: `15m`)
 - `JWT_REFRESH_EXPIRES_IN` (default: `7d`)
 - `DATABASE_URL`
+- `REDIS_URL` (Required for Idempotency and Rate Limiting)
 - `CORS_ORIGIN` (default: `[]` or `*`)
 - `CORS_CREDENTIALS` (default: `true`)
 - `RATE_LIMIT_*` (rate limit settings)
@@ -34,17 +35,19 @@ npm install
 - `MEDIA_LOCAL_ROOT` (default: `storage`)
 - `MEDIA_LOCAL_PUBLIC_PATH` (default: `/media`)
 - `MEDIA_S3_*` (required if `MEDIA_STORAGE_DRIVER=s3`)
+- `SENTRY_ENABLED` (boolean, default: `false`)
+- `SENTRY_DSN` (required if `SENTRY_ENABLED=true`)
 
 Additional required variable for OTP (validated in code, not in env schema):
 
 - `SMSIR_OTP_TEMPLATE_ID`
 
-## Database Setup
+## Local Infrastructure Setup
 
-Using Docker Compose (provided in repo):
+Using Docker Compose (provides PostgreSQL and Redis):
 
 ```bash
-docker compose up -d db
+docker compose up -d
 ```
 
 Run Prisma migrations or generate client as needed:

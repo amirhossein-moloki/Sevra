@@ -4,6 +4,22 @@ Base URL: `/api/v1`
 
 This document is generated from route files in `src/routes/index.ts` and `src/modules/**/**.routes.ts`. It does not assume any behavior not present in code.
 
+## API Standards
+
+### Naming
+- Paths: `lowercase`, kebab-case for multiple words.
+- JSON Keys: `camelCase`.
+
+### Timezone
+- All dates are sent and received in **ISO 8601** format in **UTC**.
+- Salon-specific local time is handled by the application using `Settings.timeZone`.
+
+### Idempotency
+- Required for sensitive operations: **Public Bookings** and **Payments**.
+- Header: `Idempotency-Key: <string>` (16-128 chars).
+- Scope: Key + Salon + Path.
+- TTL: 24 hours.
+
 ## Response Envelope
 
 Most JSON APIs use `responseMiddleware` which wraps responses like:
@@ -312,9 +328,7 @@ Example response:
 
 ## Payments
 
-### POST `/salons/:salonId/bookings/bookings/:bookingId/payments/init`
-
-> Path is composed from `src/routes/index.ts` and `src/modules/payments/payments.routes.ts` (note the duplicated `bookings` segment).
+### POST `/salons/:salonId/bookings/:bookingId/payments/init`
 
 - **Auth**: required
 - **Roles**: `MANAGER`, `RECEPTIONIST`, `STAFF`
@@ -398,9 +412,7 @@ All CMS routes require auth + `MANAGER` role + tenant guard.
 
 ## Webhooks
 
-### POST `/api/v1/webhooks/payments/:provider`
-
-- **Important**: this is mounted under `/api/v1` *again* in `src/routes/index.ts`, so the full path is `/api/v1/api/v1/webhooks/payments/:provider`.
+### POST `/webhooks/payments/:provider`
 - **Auth**: signature-based (HMAC SHA-256) using `X-Signature` header.
 - **Body**: raw JSON; middleware uses `express.json({ verify })` to capture the raw body.
 - **Response**: `{ success: true, data: { message: 'Webhook received and processed.' } }`
