@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import createHttpError from 'http-errors';
+import AppError from '../errors/AppError';
+import httpStatus from 'http-status';
 import { SessionActorType } from '@prisma/client';
 
 export const requireActorType = (allowedType: SessionActorType) => {
@@ -8,7 +9,7 @@ export const requireActorType = (allowedType: SessionActorType) => {
 
     if (!actor || !actor.actorType) {
       return next(
-        createHttpError(500, 'Actor type could not be determined from the request actor.'),
+        new AppError('Actor type could not be determined from the request actor.', httpStatus.INTERNAL_SERVER_ERROR),
       );
     }
 
@@ -16,7 +17,7 @@ export const requireActorType = (allowedType: SessionActorType) => {
       return next();
     } else {
       return next(
-        createHttpError(403, 'Forbidden: This endpoint is restricted to ' + allowedType),
+        new AppError('Forbidden: This endpoint is restricted to ' + allowedType, httpStatus.FORBIDDEN),
       );
     }
   };

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import createHttpError from 'http-errors';
+import AppError from '../errors/AppError';
+import httpStatus from 'http-status';
 
 /**
  * This middleware enforces tenant isolation for private routes.
@@ -19,19 +20,19 @@ export const tenantGuard = (req: Request, res: Response, next: NextFunction) => 
     // This indicates a server-side configuration error.
     // authMiddleware should have been called first.
     return next(
-      createHttpError(500, 'User context (actor) not found on request.')
+      new AppError('User context (actor) not found on request.', httpStatus.INTERNAL_SERVER_ERROR)
     );
   }
 
   // Every user accessing a tenant route MUST have a salonId.
   if (!actor.salonId) {
-    return next(createHttpError(404, 'Salon not found.'));
+    return next(new AppError('Salon not found.', httpStatus.NOT_FOUND));
   }
 
   if (actor.salonId !== salonId) {
     // Use 404 to prevent tenant enumeration attacks.
     // The user should not know that a salon with this ID exists.
-    return next(createHttpError(404, 'Salon not found.'));
+    return next(new AppError('Salon not found.', httpStatus.NOT_FOUND));
   }
 
   // Attach tenant context to the request for use in downstream services/repos.

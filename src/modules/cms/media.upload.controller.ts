@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import * as UploadService from '../../common/services/upload.service';
 import * as MediaService from './media.service';
 
@@ -13,7 +14,7 @@ export async function uploadMedia(
     const file = req.file;
 
     if (!file) {
-      throw createHttpError(400, 'No file uploaded.');
+      throw new AppError('No file uploaded.', httpStatus.BAD_REQUEST);
     }
 
     // Process image: save original and generate thumbnail

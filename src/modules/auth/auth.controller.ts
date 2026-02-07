@@ -2,16 +2,14 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { SessionActorType } from '@prisma/client';
 
-const authService = new AuthService();
-
 export const login = async (req: Request, res: Response) => {
   const { phone, password, actorType, salonId } = req.body;
 
   let result;
   if (actorType === SessionActorType.USER) {
-    result = await authService.loginUser(phone, password, salonId);
+    result = await AuthService.loginUser(phone, password, salonId);
   } else {
-    result = await authService.loginCustomer(phone);
+    result = await AuthService.loginCustomer(phone);
   }
 
   res.ok(result);
@@ -19,32 +17,32 @@ export const login = async (req: Request, res: Response) => {
 
 export const requestUserOtp = async (req: Request, res: Response) => {
   const { phone } = req.body;
-  const result = await authService.requestUserOtp(phone);
+  const result = await AuthService.requestUserOtp(phone);
   res.ok(result);
 };
 
 export const verifyUserOtp = async (req: Request, res: Response) => {
   const { phone, code } = req.body;
-  const result = await authService.verifyUserOtp(phone, code);
+  const result = await AuthService.verifyUserOtp(phone, code);
   res.ok(result);
 };
 
 export const loginUserWithOtp = async (req: Request, res: Response) => {
   const { phone, salonId } = req.body;
-  const result = await authService.loginUserWithOtp(phone, salonId);
+  const result = await AuthService.loginUserWithOtp(phone, salonId);
   res.ok(result);
 };
 
 export const refresh = async (req: Request, res: Response) => {
   const { refreshToken } = req.body;
-  const result = await authService.refreshAuthToken(refreshToken);
+  const result = await AuthService.refreshAuthToken(refreshToken);
   res.ok(result);
 };
 
 export const logout = async (req: Request, res: Response) => {
   // Assuming session ID is available on req.actor after authentication middleware
   const sessionId = (req as any).actor?.sessionId; // eslint-disable-line @typescript-eslint/no-explicit-any
-  const result = await authService.logout(sessionId);
+  const result = await AuthService.logout(sessionId);
   res.ok(result);
 };
 

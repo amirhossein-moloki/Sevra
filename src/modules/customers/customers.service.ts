@@ -1,4 +1,5 @@
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import * as customerRepo from './customers.repo';
 import { CreateCustomerInput, UpdateCustomerInput, CustomerFilters } from './customers.types';
 
@@ -9,7 +10,7 @@ export async function listCustomers(salonId: string, filters: CustomerFilters) {
 export async function getCustomerDetail(salonId: string, customerId: string) {
   const customer = await customerRepo.findProfileById(salonId, customerId);
   if (!customer) {
-    throw createHttpError(404, 'Customer not found');
+    throw new AppError('Customer not found', httpStatus.NOT_FOUND);
   }
   return customer;
 }
@@ -21,7 +22,7 @@ export async function createCustomer(salonId: string, input: CreateCustomerInput
   // 2. Check if profile already exists for this salon
   const existingProfile = await customerRepo.findProfileByAccountId(salonId, account.id);
   if (existingProfile) {
-    throw createHttpError(409, 'Customer already exists in this salon');
+    throw new AppError('Customer already exists in this salon', httpStatus.CONFLICT);
   }
 
   // 3. Create salon-specific profile
@@ -41,7 +42,7 @@ export async function updateCustomer(
   // Verify it exists first for better error message
   const existing = await customerRepo.findProfileById(salonId, customerId);
   if (!existing) {
-    throw createHttpError(404, 'Customer not found');
+    throw new AppError('Customer not found', httpStatus.NOT_FOUND);
   }
 
   return customerRepo.updateProfile(customerId, salonId, input);
@@ -50,7 +51,7 @@ export async function updateCustomer(
 export async function deleteCustomer(salonId: string, customerId: string) {
   const deleted = await customerRepo.deleteProfile(customerId, salonId);
   if (!deleted) {
-    throw createHttpError(404, 'Customer not found');
+    throw new AppError('Customer not found', httpStatus.NOT_FOUND);
   }
   return deleted;
 }

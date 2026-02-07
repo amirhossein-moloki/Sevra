@@ -1,35 +1,30 @@
 import { SalonLink } from '@prisma/client';
 import { LinksRepo } from './links.repo';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 
-export class LinksService {
-  private repo: LinksRepo;
-
-  constructor() {
-    this.repo = new LinksRepo();
-  }
-
+export const LinksService = {
   async getLinks(salonId: string): Promise<SalonLink[]> {
-    return this.repo.findBySalonId(salonId);
-  }
+    return LinksRepo.findBySalonId(salonId);
+  },
 
   async createLink(salonId: string, data: any): Promise<SalonLink> {
-    return this.repo.create(salonId, data);
-  }
+    return LinksRepo.create(salonId, data);
+  },
 
   async updateLink(salonId: string, linkId: string, data: any): Promise<SalonLink> {
-    const link = await this.repo.findById(linkId);
+    const link = await LinksRepo.findById(linkId);
     if (!link || link.salonId !== salonId) {
-      throw createHttpError(404, 'Link not found');
+      throw new AppError('Link not found', httpStatus.NOT_FOUND);
     }
-    return this.repo.update(linkId, data);
-  }
+    return LinksRepo.update(linkId, data);
+  },
 
   async deleteLink(salonId: string, linkId: string): Promise<void> {
-    const link = await this.repo.findById(linkId);
+    const link = await LinksRepo.findById(linkId);
     if (!link || link.salonId !== salonId) {
-      throw createHttpError(404, 'Link not found');
+      throw new AppError('Link not found', httpStatus.NOT_FOUND);
     }
-    await this.repo.delete(linkId);
-  }
-}
+    await LinksRepo.delete(linkId);
+  },
+};

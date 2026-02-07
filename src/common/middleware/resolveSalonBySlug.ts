@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import createHttpError from 'http-errors';
+import AppError from '../errors/AppError';
+import httpStatus from 'http-status';
 import { prisma } from '../../config/prisma';
 
 /**
@@ -20,14 +21,14 @@ export const resolveSalonBySlug = async (
 
   if (!salonSlug) {
     // This indicates a routing configuration error.
-    return next(createHttpError(400, 'Salon slug is missing from the request params.'));
+    return next(new AppError('Salon slug is missing from the request params.', httpStatus.BAD_REQUEST));
   }
 
   const salon = await prisma.salon.findUnique({
     where: { slug: salonSlug, isActive: true },
   });
   if (!salon) {
-    return next(createHttpError(404, 'Salon not found'));
+    return next(new AppError('Salon not found', httpStatus.NOT_FOUND));
   }
 
   // Attach a standardized tenant context to the request.

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import * as PublicAddressesService from './addresses.public.service';
 
 type PublicSalonRequest = Request & {
@@ -10,7 +11,7 @@ export async function getPublicAddresses(req: PublicSalonRequest, res: Response)
   const salonId = req.tenant?.salonId;
 
   if (!salonId) {
-    throw createHttpError(400, 'Salon context is missing from the request.');
+    throw new AppError('Salon context is missing from the request.', httpStatus.BAD_REQUEST);
   }
 
   const addresses = await PublicAddressesService.getPublicAddressesBySalon(salonId);

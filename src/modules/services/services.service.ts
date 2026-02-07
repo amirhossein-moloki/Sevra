@@ -1,6 +1,7 @@
 import * as ServiceRepo from './services.repo';
 import { CreateServiceInput, UpdateServiceInput } from './services.types';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 
 /**
  * Business logic to create a new service.
@@ -24,7 +25,7 @@ export async function createService(salonId: string, data: CreateServiceInput) {
 export async function getServiceById(serviceId: string, salonId: string) {
   const service = await ServiceRepo.findServiceById(serviceId, salonId);
   if (!service) {
-    throw createHttpError(404, 'Service not found');
+    throw new AppError('Service not found', httpStatus.NOT_FOUND);
   }
   return service;
 }

@@ -1,6 +1,7 @@
 import { GetAvailabilityQuery } from './availability.validators';
 import { AvailabilityRepo } from './availability.repo';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import { add, isBefore, isEqual, max, differenceInMinutes } from 'date-fns';
 import { format as formatTz, toZonedTime } from 'date-fns-tz';
 import { getZonedStartAndEnd } from '../../common/utils/date';
@@ -29,7 +30,7 @@ export const getAvailableSlots = async (
   const service = await AvailabilityRepo.findServiceWithSalon(serviceId, salonSlug);
 
   if (!service) {
-    throw createHttpError(404, 'Service not found in this salon.');
+    throw new AppError('Service not found in this salon.', httpStatus.NOT_FOUND);
   }
   const salonId = service.salonId;
   const timeZone = service.salon.settings?.timeZone || 'UTC';
@@ -38,7 +39,7 @@ export const getAvailableSlots = async (
   let staffToCheck = [];
   if (staffId) {
     const staff = await AvailabilityRepo.findStaff(staffId, salonId, serviceId);
-    if (!staff) throw createHttpError(404, 'Staff member not found or does not perform this service.');
+    if (!staff) throw new AppError('Staff member not found or does not perform this service.', httpStatus.NOT_FOUND);
     staffToCheck.push(staff);
   } else {
     staffToCheck = await AvailabilityRepo.findStaffList(salonId, serviceId);

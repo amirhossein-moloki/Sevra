@@ -1,22 +1,22 @@
 import { SessionActorType } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 
-export class AuthRepository {
+export const AuthRepository = {
   async findUserByPhone(phone: string, salonId: string) {
     return prisma.user.findFirst({ where: { phone, salonId } });
-  }
+  },
 
   async findCustomerByPhone(phone: string) {
     return prisma.customerAccount.findFirst({ where: { phone } });
-  }
+  },
 
   async createCustomer(phone: string) {
     return prisma.customerAccount.create({ data: { phone } });
-  }
+  },
 
   async createOtp(data: { phone: string; purpose: any; codeHash: string; expiresAt: Date }) { // eslint-disable-line @typescript-eslint/no-explicit-any
     return prisma.phoneOtp.create({ data });
-  }
+  },
 
   async findRecentOtp(phone: string, purpose: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     return prisma.phoneOtp.findFirst({
@@ -28,7 +28,7 @@ export class AuthRepository {
       },
       orderBy: { createdAt: 'desc' },
     });
-  }
+  },
 
   async findRecentConsumedOtp(phone: string, purpose: any, window: Date) { // eslint-disable-line @typescript-eslint/no-explicit-any
     return prisma.phoneOtp.findFirst({
@@ -39,21 +39,21 @@ export class AuthRepository {
       },
       orderBy: { consumedAt: 'desc' },
     });
-  }
+  },
 
   async consumeOtp(id: string) {
     return prisma.phoneOtp.update({
       where: { id },
       data: { consumedAt: new Date() },
     });
-  }
+  },
 
   async findUsersWithSalons(phone: string) {
     return prisma.user.findMany({
       where: { phone },
       include: { salon: true },
     });
-  }
+  },
 
   async createSession(actorId: string, actorType: SessionActorType, tokenHash: string, expiresAt: Date) {
     return prisma.session.create({
@@ -64,16 +64,16 @@ export class AuthRepository {
         expiresAt,
       },
     });
-  }
+  },
 
   async findSessionByToken(tokenHash: string) {
     return prisma.session.findUnique({ where: { tokenHash } });
-  }
+  },
 
   async revokeSession(sessionId: string) {
     return prisma.session.update({
       where: { id: sessionId },
       data: { revokedAt: new Date() },
     });
-  }
-}
+  },
+};

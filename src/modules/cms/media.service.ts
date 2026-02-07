@@ -1,4 +1,5 @@
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import { MediaPurpose, MediaType } from '@prisma/client';
 import * as MediaRepo from './media.repo';
 import { CreateMediaInput, UpdateMediaInput } from './media.types';
@@ -13,7 +14,7 @@ const assertAltTextForPurpose = (
   altText: string | null | undefined
 ) => {
   if (ALT_TEXT_REQUIRED_PURPOSES.has(purpose) && !altText) {
-    throw createHttpError(400, 'Alt text is required for logo or cover media.');
+    throw new AppError('Alt text is required for logo or cover media.', httpStatus.BAD_REQUEST);
   }
 };
 
@@ -37,7 +38,7 @@ export async function updateMedia(
 ) {
   const existing = await MediaRepo.findMediaById(salonId, mediaId);
   if (!existing) {
-    throw createHttpError(404, 'Media not found');
+    throw new AppError('Media not found', httpStatus.NOT_FOUND);
   }
 
   const nextPurpose = data.purpose ?? existing.purpose;

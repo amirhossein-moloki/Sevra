@@ -12,8 +12,7 @@ import { auditService } from '../audit/audit.service';
 import { SmsService } from '../notifications/sms.service';
 import { formatInTimeZone } from 'date-fns-tz';
 import { AnalyticsRepo } from '../analytics/analytics.repo';
-
-const smsService = new SmsService();
+import { normalizePhone } from '../../common/utils/phone';
 
 type SalonWithSettings = Salon & { settings?: Settings | null };
 
@@ -43,7 +42,7 @@ const sendBookingStatusSms = async (booking: Booking, salon: SalonWithSettings, 
   ];
 
   try {
-    await smsService.sendTemplateSms(customerPhone, parseInt(templateIdStr, 10), parameters);
+    await SmsService.sendTemplateSms(customerPhone, parseInt(templateIdStr, 10), parameters);
   } catch (error) {
     console.error('Failed to send booking SMS:', error);
   }
@@ -57,25 +56,6 @@ import {
   UpdateBookingInput,
 } from './bookings.validators';
 
-const normalizePhone = (phone: string): string => {
-  const trimmed = phone.trim();
-  const hasPlus = trimmed.startsWith('+');
-  const digitsOnly = trimmed.replace(/\D/g, '');
-
-  if (hasPlus) {
-    return `+${digitsOnly}`;
-  }
-
-  if (digitsOnly.startsWith('00')) {
-    return `+${digitsOnly.slice(2)}`;
-  }
-
-  if (digitsOnly.startsWith('0')) {
-    return `+98${digitsOnly.slice(1)}`;
-  }
-
-  return `+${digitsOnly}`;
-};
 
 
 const findAndValidateBooking = async (
@@ -492,18 +472,14 @@ export const bookingsService = {
 
         const updatedBooking = await BookingsRepo.updateBooking(bookingId, updateData, tx);
 
-        await auditService.recordLog({
+        await auditService.log(
           salonId,
-          actorId: actor.id,
-          actorType: actor.actorType,
-          action: 'BOOKING_UPDATE',
-          entity: 'Booking',
-          entityId: bookingId,
-          oldData: booking,
-          newData: updatedBooking,
-          ipAddress: context?.ip,
-          userAgent: context?.userAgent,
-        });
+          actor,
+          'BOOKING_UPDATE',
+          { name: 'Booking', id: bookingId },
+          { old: booking, new: updatedBooking },
+          context
+        );
 
         return { updatedBooking, oldBooking: booking };
       }, {
@@ -614,18 +590,14 @@ export const bookingsService = {
       updatedBooking.customerAccount.fullName || ''
     );
 
-    await auditService.recordLog({
+    await auditService.log(
       salonId,
-      actorId: actor.id,
-      actorType: actor.actorType,
-      action: 'BOOKING_CANCEL',
-      entity: 'Booking',
-      entityId: bookingId,
-      oldData: booking,
-      newData: updatedBooking,
-      ipAddress: context?.ip,
-      userAgent: context?.userAgent,
-    });
+      actor,
+      'BOOKING_CANCEL',
+      { name: 'Booking', id: bookingId },
+      { old: booking, new: updatedBooking },
+      context
+    );
 
     AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
 
@@ -653,18 +625,14 @@ export const bookingsService = {
       completedAt: new Date(),
     });
 
-    await auditService.recordLog({
+    await auditService.log(
       salonId,
-      actorId: actor.id,
-      actorType: actor.actorType,
-      action: 'BOOKING_COMPLETE',
-      entity: 'Booking',
-      entityId: bookingId,
-      oldData: booking,
-      newData: updatedBooking,
-      ipAddress: context?.ip,
-      userAgent: context?.userAgent,
-    });
+      actor,
+      'BOOKING_COMPLETE',
+      { name: 'Booking', id: bookingId },
+      { old: booking, new: updatedBooking },
+      context
+    );
 
     AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
 
@@ -697,18 +665,14 @@ export const bookingsService = {
       noShowAt: new Date(),
     });
 
-    await auditService.recordLog({
+    await auditService.log(
       salonId,
-      actorId: actor.id,
-      actorType: actor.actorType,
-      action: 'BOOKING_NOSHOW',
-      entity: 'Booking',
-      entityId: bookingId,
-      oldData: booking,
-      newData: updatedBooking,
-      ipAddress: context?.ip,
-      userAgent: context?.userAgent,
-    });
+      actor,
+      'BOOKING_NOSHOW',
+      { name: 'Booking', id: bookingId },
+      { old: booking, new: updatedBooking },
+      context
+    );
 
     AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
 

@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { cmsPagesRouter } from './pages.routes';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import { cmsMediaRouter } from './media.routes';
 import { cmsLinksRouter } from './links.routes';
 import { cmsAddressesRouter } from './addresses.routes';
@@ -8,7 +9,6 @@ import { authMiddleware } from '../../common/middleware/auth';
 import { tenantGuard } from '../../common/middleware/tenantGuard';
 import { requireRole } from '../../common/middleware/requireRole';
 import { UserRole } from '@prisma/client';
-import createHttpError from 'http-errors';
 
 export const cmsRouter = Router({ mergeParams: true });
 
@@ -21,5 +21,5 @@ cmsRouter.use('/addresses', cmsAddressesRouter);
 cmsRouter.use('/site-settings', cmsSiteSettingsRouter);
 
 cmsRouter.all('*', (_req, _res, next) => {
-  next(createHttpError(501, 'CMS routes placeholder.'));
+  next(new AppError('CMS routes placeholder.', httpStatus.NOT_IMPLEMENTED));
 });
