@@ -1,6 +1,6 @@
 
 import { prisma } from '../../config/prisma';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 export const AnalyticsRepo = {
   async getSummaryStats(salonId: string, startDate: Date, endDate: Date) {
@@ -107,75 +107,146 @@ export const AnalyticsRepo = {
     const settings = await prisma.settings.findUnique({ where: { salonId } });
     const timeZone = settings?.timeZone || 'UTC';
     const dateStr = formatInTimeZone(date, timeZone, 'yyyy-MM-dd');
+    const dayStart = fromZonedTime(`${dateStr} 00:00:00`, timeZone);
+    const dayEnd = fromZonedTime(`${dateStr} 23:59:59.999`, timeZone);
 
-    await prisma.$executeRaw`
-      INSERT INTO "SalonAnalytics" ("salonId", "date", "totalBookings", "completedBookings", "canceledBookings", "revenue", "realizedCash", "updatedAt", "createdAt")
-      SELECT
-          ${salonId} as "salonId",
-          ${dateStr}::date as "date",
-          (SELECT count(*)::int FROM "Booking" WHERE "salonId" = ${salonId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date) as "totalBookings",
-          (SELECT count(*)::int FROM "Booking" WHERE "salonId" = ${salonId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND "status" = 'DONE') as "completedBookings",
-          (SELECT count(*)::int FROM "Booking" WHERE "salonId" = ${salonId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND "status" = 'CANCELED') as "canceledBookings",
-          (SELECT COALESCE(sum("amountDueSnapshot"), 0)::int FROM "Booking" WHERE "salonId" = ${salonId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND "status" = 'DONE') as "revenue",
-          (SELECT COALESCE(sum("amount"), 0)::int FROM "Payment" WHERE "salonId" = ${salonId} AND ("paidAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND "status" = 'PAID') as "realizedCash",
-          NOW(),
-          NOW()
-      ON CONFLICT ("salonId", "date") DO UPDATE SET
-          "totalBookings" = EXCLUDED."totalBookings",
-          "completedBookings" = EXCLUDED."completedBookings",
-          "canceledBookings" = EXCLUDED."canceledBookings",
-          "revenue" = EXCLUDED."revenue",
-          "realizedCash" = EXCLUDED."realizedCash",
-          "updatedAt" = EXCLUDED."updatedAt";
-    `;
+    const [bookingStats, realizedCashStats] = await Promise.all([
+      prisma.booking.groupBy({
+        by: ['status'],
+        where: { salonId, startAt: { gte: dayStart, lte: dayEnd } },
+        _count: { _all: true },
+        _sum: { amountDueSnapshot: true },
+      }),
+      prisma.payment.aggregate({
+        where: { salonId, status: 'PAID', paidAt: { gte: dayStart, lte: dayEnd } },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const totalBookings = bookingStats.reduce((sum, s) => sum + s._count._all, 0);
+    const completedStats = bookingStats.find((s) => s.status === 'DONE');
+    const canceledStats = bookingStats.find((s) => s.status === 'CANCELED');
+
+    await prisma.salonAnalytics.upsert({
+      where: { salonId_date: { salonId, date: new Date(dateStr) } },
+      create: {
+        salonId,
+        date: new Date(dateStr),
+        totalBookings,
+        completedBookings: completedStats?._count._all || 0,
+        canceledBookings: canceledStats?._count._all || 0,
+        revenue: completedStats?._sum.amountDueSnapshot || 0,
+        realizedCash: realizedCashStats._sum.amount || 0,
+      },
+      update: {
+        totalBookings,
+        completedBookings: completedStats?._count._all || 0,
+        canceledBookings: canceledStats?._count._all || 0,
+        revenue: completedStats?._sum.amountDueSnapshot || 0,
+        realizedCash: realizedCashStats._sum.amount || 0,
+        updatedAt: new Date(),
+      },
+    });
   },
 
   async syncStaffStats(salonId: string, staffId: string, date: Date) {
     const settings = await prisma.settings.findUnique({ where: { salonId } });
     const timeZone = settings?.timeZone || 'UTC';
     const dateStr = formatInTimeZone(date, timeZone, 'yyyy-MM-dd');
+    const dayStart = fromZonedTime(`${dateStr} 00:00:00`, timeZone);
+    const dayEnd = fromZonedTime(`${dateStr} 23:59:59.999`, timeZone);
 
-    await prisma.$executeRaw`
-      INSERT INTO "StaffAnalytics" ("salonId", "staffId", "date", "completedBookings", "revenue", "totalRating", "ratingCount", "updatedAt", "createdAt")
-      SELECT
-          ${salonId} as "salonId",
-          ${staffId} as "staffId",
-          ${dateStr}::date as "date",
-          (SELECT count(*)::int FROM "Booking" WHERE "salonId" = ${salonId} AND "staffId" = ${staffId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND "status" = 'DONE') as "completedBookings",
-          (SELECT COALESCE(sum("amountDueSnapshot"), 0)::int FROM "Booking" WHERE "salonId" = ${salonId} AND "staffId" = ${staffId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND "status" = 'DONE') as "revenue",
-          (SELECT COALESCE(sum(r."rating"), 0)::int FROM "Review" r JOIN "Booking" b ON r."bookingId" = b."id" WHERE b."salonId" = ${salonId} AND b."staffId" = ${staffId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND r."status" = 'PUBLISHED') as "totalRating",
-          (SELECT count(*)::int FROM "Review" r JOIN "Booking" b ON r."bookingId" = b."id" WHERE b."salonId" = ${salonId} AND b."staffId" = ${staffId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND r."status" = 'PUBLISHED') as "ratingCount",
-          NOW(),
-          NOW()
-      ON CONFLICT ("salonId", "staffId", "date") DO UPDATE SET
-          "completedBookings" = EXCLUDED."completedBookings",
-          "revenue" = EXCLUDED."revenue",
-          "totalRating" = EXCLUDED."totalRating",
-          "ratingCount" = EXCLUDED."ratingCount",
-          "updatedAt" = EXCLUDED."updatedAt";
-    `;
+    const [bookingStats, reviewStats] = await Promise.all([
+      prisma.booking.aggregate({
+        where: {
+          salonId,
+          staffId,
+          status: 'DONE',
+          startAt: { gte: dayStart, lte: dayEnd },
+        },
+        _count: { _all: true },
+        _sum: { amountDueSnapshot: true },
+      }),
+      prisma.review.aggregate({
+        where: {
+          salonId,
+          booking: {
+            staffId,
+            startAt: { gte: dayStart, lte: dayEnd },
+          },
+          status: 'PUBLISHED',
+        },
+        _count: { _all: true },
+        _sum: { rating: true },
+      }),
+    ]);
+
+    await prisma.staffAnalytics.upsert({
+      where: {
+        salonId_staffId_date: {
+          salonId,
+          staffId,
+          date: new Date(dateStr),
+        },
+      },
+      create: {
+        salonId,
+        staffId,
+        date: new Date(dateStr),
+        completedBookings: bookingStats._count._all || 0,
+        revenue: bookingStats._sum.amountDueSnapshot || 0,
+        totalRating: reviewStats._sum.rating || 0,
+        ratingCount: reviewStats._count._all || 0,
+      },
+      update: {
+        completedBookings: bookingStats._count._all || 0,
+        revenue: bookingStats._sum.amountDueSnapshot || 0,
+        totalRating: reviewStats._sum.rating || 0,
+        ratingCount: reviewStats._count._all || 0,
+        updatedAt: new Date(),
+      },
+    });
   },
 
   async syncServiceStats(salonId: string, serviceId: string, date: Date) {
     const settings = await prisma.settings.findUnique({ where: { salonId } });
     const timeZone = settings?.timeZone || 'UTC';
     const dateStr = formatInTimeZone(date, timeZone, 'yyyy-MM-dd');
+    const dayStart = fromZonedTime(`${dateStr} 00:00:00`, timeZone);
+    const dayEnd = fromZonedTime(`${dateStr} 23:59:59.999`, timeZone);
 
-    await prisma.$executeRaw`
-      INSERT INTO "ServiceAnalytics" ("salonId", "serviceId", "date", "completedBookings", "revenue", "updatedAt", "createdAt")
-      SELECT
-          ${salonId} as "salonId",
-          ${serviceId} as "serviceId",
-          ${dateStr}::date as "date",
-          (SELECT count(*)::int FROM "Booking" WHERE "salonId" = ${salonId} AND "serviceId" = ${serviceId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND "status" = 'DONE') as "completedBookings",
-          (SELECT COALESCE(sum("amountDueSnapshot"), 0)::int FROM "Booking" WHERE "salonId" = ${salonId} AND "serviceId" = ${serviceId} AND ("startAt" AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone})::date = ${dateStr}::date AND "status" = 'DONE') as "revenue",
-          NOW(),
-          NOW()
-      ON CONFLICT ("salonId", "serviceId", "date") DO UPDATE SET
-          "completedBookings" = EXCLUDED."completedBookings",
-          "revenue" = EXCLUDED."revenue",
-          "updatedAt" = EXCLUDED."updatedAt";
-    `;
+    const stats = await prisma.booking.aggregate({
+      where: {
+        salonId,
+        serviceId,
+        status: 'DONE',
+        startAt: { gte: dayStart, lte: dayEnd },
+      },
+      _count: { _all: true },
+      _sum: { amountDueSnapshot: true },
+    });
+
+    await prisma.serviceAnalytics.upsert({
+      where: {
+        salonId_serviceId_date: {
+          salonId,
+          serviceId,
+          date: new Date(dateStr),
+        },
+      },
+      create: {
+        salonId,
+        serviceId,
+        date: new Date(dateStr),
+        completedBookings: stats._count._all || 0,
+        revenue: stats._sum.amountDueSnapshot || 0,
+      },
+      update: {
+        completedBookings: stats._count._all || 0,
+        revenue: stats._sum.amountDueSnapshot || 0,
+        updatedAt: new Date(),
+      },
+    });
   },
 
   async syncAllStatsForBooking(bookingId: string) {

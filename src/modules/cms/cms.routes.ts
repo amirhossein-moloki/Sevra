@@ -4,6 +4,7 @@ import httpStatus from 'http-status';
 import { cmsMediaRouter } from './media.routes';
 import { cmsLinksRouter } from './links.routes';
 import { cmsAddressesRouter } from './addresses.routes';
+import { cmsPagesRouter } from './pages.routes';
 import { cmsSiteSettingsRouter } from './site-settings.routes';
 import { authMiddleware } from '../../common/middleware/auth';
 import { tenantGuard } from '../../common/middleware/tenantGuard';
