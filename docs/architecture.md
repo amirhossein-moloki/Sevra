@@ -5,6 +5,7 @@
 - Runtime: Node.js + Express
 - Language: TypeScript
 - Database: PostgreSQL via Prisma
+- Cache/Store: Redis (for Idempotency and Rate Limiting)
 - API base path: `/api/v1`
 
 ## Request Lifecycle (High Level)
@@ -12,7 +13,7 @@
 1. `src/app.ts` mounts middleware (JSON, CORS, Helmet, logger) and assigns a request ID.
 2. `responseMiddleware` adds the response envelope helpers (e.g., `res.ok`).
 3. `src/routes/index.ts` mounts module routers under `/api/v1`.
-4. Module routers apply auth, tenant checks, validation (Zod), and rate limiting.
+4. Module routers apply auth, tenant checks, validation (Zod), and rate limiting (via Redis).
 5. Controllers and services implement business logic and use Prisma for data access.
 
 ## Project Map
@@ -45,6 +46,25 @@
 | CMS Admin UI | `/admin` | `src/modules/cms/admin-ui.routes.ts` |
 | Public CMS | `/public/salons/:salonSlug/pages` / `media` / `links` / `addresses` | `src/modules/public/public.routes.ts` and `src/modules/public/*.public.controller.ts` |
 | Webhooks | `/api/v1/webhooks` | `src/modules/webhooks/webhooks.routes.ts`, `webhooks.controller.ts`, `middleware/verifyPaymentWebhookSignature.ts` |
+
+## Technical Optimizations
+
+### Idempotency (Redis)
+- Implemented using a Redis-backed `IdempotencyRepo`.
+- Keys are tenant-aware and scoped by method and path.
+- Ensures that sensitive operations (like creating a booking or processing a payment) are only executed once even if retried.
+
+### Rate Limiting (Redis)
+- Uses `rate-limit-redis` to store request counts in Redis.
+- Shared across multiple instances for scalable protection against brute-force and DDoS attacks.
+
+### Analytics Summary Tables
+- To ensure sub-200ms dashboard performance, metrics are pre-calculated into `SalonAnalytics`, `StaffAnalytics`, and `ServiceAnalytics` tables.
+- Synchronization occurs automatically during booking state changes or financial transactions.
+
+### Wallet & Refunds
+- Customer refunds are credited to a virtual `walletBalance` in the `CustomerAccount` model.
+- The `WalletService` handles transaction history logging and balance updates within Prisma transactions to ensure data integrity.
 
 ## Known Gaps / TODO
 

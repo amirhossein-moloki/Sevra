@@ -256,6 +256,20 @@ erDiagram
 
 - `Session` records are created for login flows, but there is no direct relation to `User`/`CustomerAccount` in the Prisma schema (by design). Documentation assumes actor lookup via `actorType`/`actorId`.
 
+## Implementation Considerations
+
+### Snapshots & Integrity
+- **Snapshots** (`serviceNameSnapshot`, `servicePriceSnapshot`, `amountDueSnapshot`) must be populated from the `Service` record at the moment of booking creation. This ensures historical integrity if service prices or names change later.
+- `paymentState` on the `Booking` must be re-calculated and updated after every successful `Payment` or `Refund` operation by summing all related payment amounts.
+
+### Booking Overlap Prevention
+- **Application Level**: Currently enforced in the application layer by checking the `[startAt, endAt)` time range for the same `staffId` before confirming a booking.
+- **Database Level (Future)**: In high-concurrency production environments, using PostgreSQL *Exclusion Constraints* (via `gist` index on time ranges) is recommended to prevent race conditions at the database level.
+
+### Analytics Summary Tables
+- The system uses summary tables (`SalonAnalytics`, `StaffAnalytics`, `ServiceAnalytics`) for high-performance dashboard queries.
+- These tables are synchronized whenever bookings are created, updated, or completed, and whenever payments or reviews are recorded.
+
 ## Source of Truth
 
 - `prisma/schema.prisma`
