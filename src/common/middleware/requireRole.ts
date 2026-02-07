@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import createHttpError from 'http-errors';
+import AppError from '../errors/AppError';
+import httpStatus from 'http-status';
 import { UserRole } from '@prisma/client';
 
 // This is a higher-order function that takes an array of allowed roles
@@ -13,7 +14,7 @@ export const requireRole = (allowedRoles: UserRole[]) => {
       // This indicates a server-side configuration error.
       // authMiddleware should have been called first.
       return next(
-        createHttpError(500, 'User role could not be determined from the request actor.'),
+        new AppError('User role could not be determined from the request actor.', httpStatus.INTERNAL_SERVER_ERROR),
       );
     }
 
@@ -23,7 +24,7 @@ export const requireRole = (allowedRoles: UserRole[]) => {
     } else {
       // User's role is not in the allowed list, deny access.
       return next(
-        createHttpError(403, 'Forbidden: You do not have the required permissions.'),
+        new AppError('Forbidden: You do not have the required permissions.', httpStatus.FORBIDDEN),
       );
     }
   };

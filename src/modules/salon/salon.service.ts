@@ -1,4 +1,5 @@
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import { salonRepository } from './salon.repository';
 import { CreateSalonInput, UpdateSalonInput } from './salon.types';
 
@@ -6,7 +7,7 @@ export const salonService = {
   async createSalon(data: CreateSalonInput) {
     const existingSalon = await salonRepository.findBySlug(data.slug);
     if (existingSalon) {
-      throw createHttpError(409, 'A salon with this slug already exists');
+      throw new AppError('A salon with this slug already exists', httpStatus.CONFLICT);
     }
     return salonRepository.create(data);
   },
@@ -14,7 +15,7 @@ export const salonService = {
   async getSalonById(id: string) {
     const salon = await salonRepository.findById(id);
     if (!salon) {
-      throw createHttpError(404, 'Salon not found');
+      throw new AppError('Salon not found', httpStatus.NOT_FOUND);
     }
     return salon;
   },
@@ -26,13 +27,13 @@ export const salonService = {
   async updateSalon(id: string, data: UpdateSalonInput) {
     const salon = await salonRepository.findById(id);
     if (!salon) {
-      throw createHttpError(404, 'Salon not found');
+      throw new AppError('Salon not found', httpStatus.NOT_FOUND);
     }
 
     if (data.slug && data.slug !== salon.slug) {
       const existingSalon = await salonRepository.findBySlug(data.slug);
       if (existingSalon) {
-        throw createHttpError(409, 'A salon with this slug already exists');
+        throw new AppError('A salon with this slug already exists', httpStatus.CONFLICT);
       }
     }
 
@@ -42,7 +43,7 @@ export const salonService = {
   async deleteSalon(id: string) {
     const salon = await salonRepository.findById(id);
     if (!salon) {
-      throw createHttpError(404, 'Salon not found');
+      throw new AppError('Salon not found', httpStatus.NOT_FOUND);
     }
     return salonRepository.softDelete(id);
   },

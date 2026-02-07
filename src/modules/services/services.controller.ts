@@ -2,7 +2,8 @@ import { NextFunction, Request, Response } from 'express';
 import * as serviceLogic from './services.service';
 import { CreateServiceInput, UpdateServiceInput } from './services.types';
 import { Salon } from '@prisma/client';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 
 // Local type extension for Request
 interface RequestWithSalon extends Request {
@@ -40,7 +41,7 @@ export async function getServices(
 
     const targetSalonId = salonId || req.salon?.id;
     if (!targetSalonId) {
-      return next(createHttpError(400, 'Salon ID or slug is required.'));
+      return next(new AppError('Salon ID or slug is required.', httpStatus.BAD_REQUEST));
     }
 
     const services = await serviceLogic.getServicesForSalon(

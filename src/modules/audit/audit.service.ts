@@ -17,6 +17,31 @@ export interface RecordLogInput {
 
 export const auditService = {
   /**
+   * A simplified helper to record audit logs from services.
+   */
+  async log(
+    salonId: string,
+    actor: { id: string; actorType: SessionActorType },
+    action: string,
+    entity: { name: string; id: string },
+    data: { old?: any; new?: any },
+    context?: { ip?: string; userAgent?: string }
+  ) {
+    return this.recordLog({
+      salonId,
+      actorId: actor.id,
+      actorType: actor.actorType,
+      action,
+      entity: entity.name,
+      entityId: entity.id,
+      oldData: data.old,
+      newData: data.new,
+      ipAddress: context?.ip,
+      userAgent: context?.userAgent,
+    });
+  },
+
+  /**
    * Records an audit log entry.
    * This is generally called by other services when a sensitive action is performed.
    */

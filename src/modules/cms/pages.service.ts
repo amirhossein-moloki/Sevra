@@ -1,4 +1,5 @@
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import { PageStatus, PageType } from '@prisma/client';
 import * as PagesRepo from './pages.repo';
 import { CreatePageInput, UpdatePageInput } from './pages.types';
@@ -49,7 +50,7 @@ export async function updatePage(
 ) {
   const existingPage = await PagesRepo.findPageById(salonId, pageId);
   if (!existingPage) {
-    throw createHttpError(404, 'Page not found');
+    throw new AppError('Page not found', httpStatus.NOT_FOUND);
   }
 
   const nextStatus = data.status ?? existingPage.status;
@@ -76,7 +77,7 @@ export async function updatePage(
 export async function getPage(salonId: string, pageId: string) {
   const page = await PagesRepo.findPageById(salonId, pageId);
   if (!page) {
-    throw createHttpError(404, 'Page not found');
+    throw new AppError('Page not found', httpStatus.NOT_FOUND);
   }
   return page;
 }

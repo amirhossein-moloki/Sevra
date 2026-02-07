@@ -3,7 +3,8 @@ import crypto from 'crypto';
 import { AuthRepository } from './auth.repository';
 import { generateAccessToken } from './auth.tokens';
 import { OtpPurpose, SessionActorType } from '@prisma/client';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import { SmsService } from '../notifications/sms.service';
 
 const hashToken = (token: string) => {
@@ -24,100 +25,93 @@ const generateNumericOtp = (length: number): string => {
   return otp;
 };
 
-export class AuthService {
-  private authRepository: AuthRepository;
-  private smsService: SmsService;
-  private otpTemplateId: number;
-
-  constructor() {
-    this.authRepository = new AuthRepository();
-    this.smsService = new SmsService();
-
-    const templateId = process.env.SMSIR_OTP_TEMPLATE_ID;
-    if (!templateId) {
-      throw new Error('SMSIR_OTP_TEMPLATE_ID must be set in the environment variables.');
-    }
-    this.otpTemplateId = parseInt(templateId, 10);
+const getOtpTemplateId = (): number => {
+  const templateId = process.env.SMSIR_OTP_TEMPLATE_ID;
+  if (!templateId) {
+    throw new Error('SMSIR_OTP_TEMPLATE_ID must be set in the environment variables.');
   }
+  return parseInt(templateId, 10);
+};
 
-  private async createAndSaveSession(actorId: string, actorType: SessionActorType) {
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+const createAndSaveSession = async (actorId: string, actorType: SessionActorType) => {
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // 1. Generate a secure, random refresh token.
-    const refreshToken = crypto.randomBytes(32).toString('hex');
+  // 1. Generate a secure, random refresh token.
+  const refreshToken = crypto.randomBytes(32).toString('hex');
 
-    // 2. Hash the refresh token for database storage.
-    const tokenHash = hashToken(refreshToken);
+  // 2. Hash the refresh token for database storage.
+  const tokenHash = hashToken(refreshToken);
 
-    // 3. Create the session with the hashed token.
-    const session = await this.authRepository.createSession(actorId, actorType, tokenHash, expiresAt);
+  // 3. Create the session with the hashed token.
+  const session = await AuthRepository.createSession(actorId, actorType, tokenHash, expiresAt);
 
-    // 4. Create the access token.
-    const payload = { sessionId: session.id, actorId, actorType };
-    const accessToken = generateAccessToken(payload);
+  // 4. Create the access token.
+  const payload = { sessionId: session.id, actorId, actorType };
+  const accessToken = generateAccessToken(payload);
 
-    // 5. Return the raw refresh token to the client. It's sent only once.
-    return { accessToken, refreshToken };
-  }
+  // 5. Return the raw refresh token to the client. It's sent only once.
+  return { accessToken, refreshToken };
+};
 
+export const AuthService = {
   async loginUser(phone: string, password: string, salonId: string) {
-    const user = await this.authRepository.findUserByPhone(phone, salonId);
+    const user = await AuthRepository.findUserByPhone(phone, salonId);
     if (!user || !user.passwordHash) {
-      throw createHttpError(401, 'Invalid credentials');
+      throw new AppError('Invalid credentials', httpStatus.UNAUTHORIZED);
     }
 
     const isPasswordValid = await argon2.verify(user.passwordHash, password);
     if (!isPasswordValid) {
-      throw createHttpError(401, 'Invalid credentials');
+      throw new AppError('Invalid credentials', httpStatus.UNAUTHORIZED);
     }
 
-    const { accessToken, refreshToken } = await this.createAndSaveSession(user.id, 'USER');
+    const { accessToken, refreshToken } = await createAndSaveSession(user.id, 'USER');
 
     return {
       user,
       tokens: { accessToken, refreshToken },
     };
-  }
+  },
 
   async requestUserOtp(phone: string) {
-    const users = await this.authRepository.findUsersWithSalons(phone);
+    const users = await AuthRepository.findUsersWithSalons(phone);
     if (users.length === 0) {
-      throw createHttpError(404, 'No user found with this phone number.');
+      throw new AppError('No user found with this phone number.', httpStatus.NOT_FOUND);
     }
 
     const code = generateNumericOtp(OTP_LENGTH);
     const codeHash = await argon2.hash(code);
     const expiresAt = new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000);
 
-    await this.authRepository.createOtp({
+    await AuthRepository.createOtp({
       phone,
       purpose: OtpPurpose.LOGIN,
       codeHash,
       expiresAt,
     });
 
-    await this.smsService.sendTemplateSms(phone, this.otpTemplateId, [{ name: 'CODE', value: code }]);
+    await SmsService.sendTemplateSms(phone, getOtpTemplateId(), [{ name: 'CODE', value: code }]);
 
     return { message: `OTP sent to ${phone}. It will expire in ${OTP_EXPIRATION_MINUTES} minutes.` };
-  }
+  },
 
   async verifyUserOtp(phone: string, code: string) {
-    const otp = await this.authRepository.findRecentOtp(phone, OtpPurpose.LOGIN);
+    const otp = await AuthRepository.findRecentOtp(phone, OtpPurpose.LOGIN);
 
     if (!otp) {
-      throw createHttpError(401, 'Invalid or expired OTP.');
+      throw new AppError('Invalid or expired OTP.', httpStatus.UNAUTHORIZED);
     }
 
     const isCodeValid = await argon2.verify(otp.codeHash, code);
 
     if (!isCodeValid) {
       // Optional: Increment an attempt counter to prevent brute-force attacks
-      throw createHttpError(401, 'Invalid or expired OTP.');
+      throw new AppError('Invalid or expired OTP.', httpStatus.UNAUTHORIZED);
     }
 
-    await this.authRepository.consumeOtp(otp.id);
+    await AuthRepository.consumeOtp(otp.id);
 
-    const users = await this.authRepository.findUsersWithSalons(phone);
+    const users = await AuthRepository.findUsersWithSalons(phone);
 
     const salons = users.map(user => ({
       id: user.salon.id,
@@ -125,46 +119,46 @@ export class AuthService {
     }));
 
     return { salons };
-  }
+  },
 
   async loginUserWithOtp(phone: string, salonId: string) {
     const verificationWindow = new Date(Date.now() - OTP_POST_VERIFICATION_WINDOW_MINUTES * 60 * 1000);
 
-    const recentVerifiedOtp = await this.authRepository.findRecentConsumedOtp(phone, OtpPurpose.LOGIN, verificationWindow);
+    const recentVerifiedOtp = await AuthRepository.findRecentConsumedOtp(phone, OtpPurpose.LOGIN, verificationWindow);
 
     if (!recentVerifiedOtp) {
-      throw createHttpError(401, 'No recent OTP verification found. Please verify again.');
+      throw new AppError('No recent OTP verification found. Please verify again.', httpStatus.UNAUTHORIZED);
     }
 
-    const user = await this.authRepository.findUserByPhone(phone, salonId);
+    const user = await AuthRepository.findUserByPhone(phone, salonId);
     if (!user) {
-      throw createHttpError(401, 'Invalid credentials for the selected salon.');
+      throw new AppError('Invalid credentials for the selected salon.', httpStatus.UNAUTHORIZED);
     }
 
-    const { accessToken, refreshToken } = await this.createAndSaveSession(user.id, 'USER');
+    const { accessToken, refreshToken } = await createAndSaveSession(user.id, 'USER');
 
     return {
       user,
       tokens: { accessToken, refreshToken },
     };
-  }
+  },
 
   async loginCustomer(phone: string) {
-    let customer = await this.authRepository.findCustomerByPhone(phone);
+    let customer = await AuthRepository.findCustomerByPhone(phone);
 
     // For now, we'll create a customer if they don't exist.
     // In a real scenario, this would be part of a signup/OTP flow.
     if (!customer) {
-      customer = await this.authRepository.createCustomer(phone);
+      customer = await AuthRepository.createCustomer(phone);
     }
 
-    const { accessToken, refreshToken } = await this.createAndSaveSession(customer.id, 'CUSTOMER');
+    const { accessToken, refreshToken } = await createAndSaveSession(customer.id, 'CUSTOMER');
 
     return {
       customer,
       tokens: { accessToken, refreshToken },
     };
-  }
+  },
 
   async refreshAuthToken(token: string) {
     // The incoming token is the raw refresh token string.
@@ -172,15 +166,15 @@ export class AuthService {
     const tokenHash = hashToken(token);
 
     // 2. Find the session.
-    const session = await this.authRepository.findSessionByToken(tokenHash);
+    const session = await AuthRepository.findSessionByToken(tokenHash);
     if (!session || session.revokedAt) {
-      throw createHttpError(401, 'Session is invalid or has been revoked');
+      throw new AppError('Session is invalid or has been revoked', httpStatus.UNAUTHORIZED);
     }
 
     // 3. Check for expiration.
     if (new Date() > session.expiresAt) {
-      await this.authRepository.revokeSession(session.id);
-      throw createHttpError(401, 'Refresh token has expired');
+      await AuthRepository.revokeSession(session.id);
+      throw new AppError('Refresh token has expired', httpStatus.UNAUTHORIZED);
     }
 
     // 4. Create and return a new access token.
@@ -188,10 +182,10 @@ export class AuthService {
     const accessToken = generateAccessToken(newPayload);
 
     return { accessToken };
-  }
+  },
 
   async logout(sessionId: string) {
-    await this.authRepository.revokeSession(sessionId);
+    await AuthRepository.revokeSession(sessionId);
     return { message: 'Logged out successfully' };
   }
-}
+};

@@ -1,35 +1,30 @@
 import { SalonAddress } from '@prisma/client';
 import { AddressesRepo } from './addresses.repo';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 
-export class AddressesService {
-  private repo: AddressesRepo;
-
-  constructor() {
-    this.repo = new AddressesRepo();
-  }
-
+export const AddressesService = {
   async getAddresses(salonId: string): Promise<SalonAddress[]> {
-    return this.repo.findBySalonId(salonId);
-  }
+    return AddressesRepo.findBySalonId(salonId);
+  },
 
   async createAddress(salonId: string, data: any): Promise<SalonAddress> {
-    return this.repo.create(salonId, data);
-  }
+    return AddressesRepo.create(salonId, data);
+  },
 
   async updateAddress(salonId: string, addressId: string, data: any): Promise<SalonAddress> {
-    const address = await this.repo.findById(addressId);
+    const address = await AddressesRepo.findById(addressId);
     if (!address || address.salonId !== salonId) {
-      throw createHttpError(404, 'Address not found');
+      throw new AppError('Address not found', httpStatus.NOT_FOUND);
     }
-    return this.repo.update(addressId, data);
-  }
+    return AddressesRepo.update(addressId, data);
+  },
 
   async deleteAddress(salonId: string, addressId: string): Promise<void> {
-    const address = await this.repo.findById(addressId);
+    const address = await AddressesRepo.findById(addressId);
     if (!address || address.salonId !== salonId) {
-      throw createHttpError(404, 'Address not found');
+      throw new AppError('Address not found', httpStatus.NOT_FOUND);
     }
-    await this.repo.delete(addressId);
-  }
-}
+    await AddressesRepo.delete(addressId);
+  },
+};

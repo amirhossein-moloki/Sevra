@@ -1,4 +1,5 @@
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import { CustomerPanelRepo } from './customer-panel.repo';
 import { GetCustomerBookingsQuery, CustomerSubmitReviewInput } from './customer-panel.validators';
 import { BookingStatus, Prisma, SessionActorType } from '@prisma/client';
@@ -11,7 +12,7 @@ export const CustomerPanelService = {
   async getProfile(customerAccountId: string) {
     const account = await CustomerPanelRepo.findCustomerAccountById(customerAccountId);
     if (!account) {
-      throw createHttpError(404, 'Customer account not found');
+      throw new AppError('Customer account not found', httpStatus.NOT_FOUND);
     }
     return account;
   },
@@ -45,7 +46,7 @@ export const CustomerPanelService = {
   async getBookingDetails(bookingId: string, customerAccountId: string) {
     const booking = await CustomerPanelRepo.findBookingById(bookingId, customerAccountId);
     if (!booking) {
-      throw createHttpError(404, 'Booking not found');
+      throw new AppError('Booking not found', httpStatus.NOT_FOUND);
     }
     return booking;
   },
@@ -58,11 +59,11 @@ export const CustomerPanelService = {
   ) {
     const booking = await CustomerPanelRepo.findBookingById(bookingId, customerAccountId);
     if (!booking) {
-      throw createHttpError(404, 'Booking not found');
+      throw new AppError('Booking not found', httpStatus.NOT_FOUND);
     }
 
     if (!([BookingStatus.PENDING, BookingStatus.CONFIRMED] as BookingStatus[]).includes(booking.status)) {
-      throw createHttpError(400, 'Booking cannot be canceled in its current state');
+      throw new AppError('Booking cannot be canceled in its current state', httpStatus.BAD_REQUEST);
     }
 
     const updatedBooking = await CustomerPanelRepo.transaction(async (tx) => {
@@ -78,18 +79,14 @@ export const CustomerPanelService = {
       return result;
     });
 
-    await auditService.recordLog({
-      salonId: booking.salonId,
-      actorId: customerAccountId,
-      actorType: SessionActorType.CUSTOMER,
-      action: 'BOOKING_CANCEL',
-      entity: 'Booking',
-      entityId: bookingId,
-      oldData: booking,
-      newData: updatedBooking,
-      ipAddress: context?.ip,
-      userAgent: context?.userAgent,
-    });
+    await auditService.log(
+      booking.salonId,
+      { id: customerAccountId, actorType: SessionActorType.CUSTOMER },
+      'BOOKING_CANCEL',
+      { name: 'Booking', id: bookingId },
+      { old: booking, new: updatedBooking },
+      context
+    );
 
     AnalyticsRepo.syncAllStatsForBooking(bookingId).catch(console.error);
 
@@ -103,11 +100,11 @@ export const CustomerPanelService = {
   ) {
     const booking = await CustomerPanelRepo.findBookingById(bookingId, customerAccountId);
     if (!booking) {
-      throw createHttpError(404, 'Booking not found');
+      throw new AppError('Booking not found', httpStatus.NOT_FOUND);
     }
 
     if (booking.status !== BookingStatus.DONE) {
-      throw createHttpError(400, 'Only completed bookings can be reviewed');
+      throw new AppError('Only completed bookings can be reviewed', httpStatus.BAD_REQUEST);
     }
 
     // Check if review already exists for this target
@@ -127,7 +124,7 @@ export const CustomerPanelService = {
         return review;
     } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-            throw createHttpError(409, 'Review already exists for this booking/target');
+            throw new AppError('Review already exists for this booking/target', httpStatus.CONFLICT);
         }
         throw error;
     }

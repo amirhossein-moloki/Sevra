@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import { PageStatus, PageType } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { renderPageDocument } from './page-renderer';
@@ -14,14 +15,14 @@ export async function getPublicSalonHome(req: PublicPageRequest, res: Response) 
 
   if (!tenant?.salonId) {
     if (!salonSlug) {
-      throw createHttpError(400, 'Salon slug is missing from the request params.');
+      throw new AppError('Salon slug is missing from the request params.', httpStatus.BAD_REQUEST);
     }
 
     const salon = await prisma.salon.findUnique({
       where: { slug: salonSlug, isActive: true },
     });
     if (!salon) {
-      throw createHttpError(404, 'Salon not found');
+      throw new AppError('Salon not found', httpStatus.NOT_FOUND);
     }
 
     tenant = { salonId: salon.id, salonSlug: salon.slug };
@@ -40,7 +41,7 @@ export async function getPublicSalonHome(req: PublicPageRequest, res: Response) 
   });
 
   if (!page) {
-    throw createHttpError(404, 'Home page not found');
+    throw new AppError('Home page not found', httpStatus.NOT_FOUND);
   }
 
   const { sections, salon, ...pageData } = page;
@@ -59,12 +60,12 @@ export async function getPublicPage(req: PublicPageRequest, res: Response) {
 
   if (!tenant?.salonId) {
     if (!salonSlug) {
-      throw createHttpError(400, 'Salon slug is missing from the request params.');
+      throw new AppError('Salon slug is missing from the request params.', httpStatus.BAD_REQUEST);
     }
 
     const salon = await prisma.salon.findUnique({ where: { slug: salonSlug } });
     if (!salon) {
-      throw createHttpError(404, 'Salon not found');
+      throw new AppError('Salon not found', httpStatus.NOT_FOUND);
     }
 
     tenant = { salonId: salon.id, salonSlug: salon.slug };
@@ -130,7 +131,7 @@ export async function getPublicPage(req: PublicPageRequest, res: Response) {
   });
 
   if (!slugHistory?.page) {
-    throw createHttpError(404, 'Page not found');
+    throw new AppError('Page not found', httpStatus.NOT_FOUND);
   }
 
   res.redirect(

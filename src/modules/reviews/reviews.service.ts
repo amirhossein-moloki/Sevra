@@ -1,4 +1,5 @@
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import * as reviewsRepo from './reviews.repo';
 import { SubmitReviewInput } from './reviews.types';
 import { ReviewStatus, BookingStatus } from '@prisma/client';
@@ -9,12 +10,12 @@ export async function submitReview(salonSlug: string, input: SubmitReviewInput) 
   const booking = await reviewsRepo.findBookingForReview(input.bookingId, salonSlug);
 
   if (!booking) {
-    throw createHttpError(404, 'Booking not found');
+    throw new AppError('Booking not found', httpStatus.NOT_FOUND);
   }
 
   // 2. check if booking is completed
   if (booking.status !== BookingStatus.DONE) {
-    throw createHttpError(400, 'Only completed bookings can be reviewed');
+    throw new AppError('Only completed bookings can be reviewed', httpStatus.BAD_REQUEST);
   }
 
   // 3. Create the review
@@ -34,7 +35,7 @@ export async function getPublishedReviews(salonSlug: string) {
 export async function moderateReview(salonId: string, reviewId: string, status: ReviewStatus) {
   const review = await reviewsRepo.findReviewById(reviewId, salonId);
   if (!review) {
-    throw createHttpError(404, 'Review not found');
+    throw new AppError('Review not found', httpStatus.NOT_FOUND);
   }
 
   const updatedReview = await reviewsRepo.updateReviewStatus(reviewId, salonId, status);

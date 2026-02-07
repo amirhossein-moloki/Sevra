@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import createHttpError from 'http-errors';
+import AppError from '../../common/errors/AppError';
+import httpStatus from 'http-status';
 import * as PublicMediaService from './media.public.service';
 
 type PublicSalonRequest = Request & {
@@ -10,7 +11,7 @@ export async function getPublicMedia(req: PublicSalonRequest, res: Response) {
   const salonId = req.tenant?.salonId;
 
   if (!salonId) {
-    throw createHttpError(400, 'Salon context is missing from the request.');
+    throw new AppError('Salon context is missing from the request.', httpStatus.BAD_REQUEST);
   }
 
   const media = await PublicMediaService.getPublicMediaBySalon(salonId);
