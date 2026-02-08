@@ -14,7 +14,12 @@ export async function getSettings(req: Request, res: Response, next: NextFunctio
 export async function updateSettings(req: Request, res: Response, next: NextFunction) {
   try {
     const { salonId } = req.params;
-    const settings = await settingsService.updateSettings(salonId, req.body);
+    const settings = await settingsService.updateSettings(
+      salonId,
+      req.body,
+      (req as any).actor, // eslint-disable-line @typescript-eslint/no-explicit-any
+      { ip: req.ip, userAgent: req.headers['user-agent'] }
+    );
     res.ok(settings);
   } catch (error) {
     next(error);

@@ -13,10 +13,11 @@ import { UserRole } from '@prisma/client';
 import { idParamSchema } from '../../common/validators/common.validators';
 import { tenantGuard } from '../../common/middleware/tenantGuard';
 import { privateApiRateLimiter } from '../../common/middleware/rateLimit';
+import { env } from '../../config/env';
 
 const router = Router({ mergeParams: true });
 
-if (process.env.NODE_ENV !== 'test') {
+if (env.NODE_ENV !== 'test') {
   router.use(privateApiRateLimiter);
 }
 router.use(authMiddleware, tenantGuard);

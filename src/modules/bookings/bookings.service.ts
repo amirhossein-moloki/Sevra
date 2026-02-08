@@ -1,7 +1,7 @@
 
 import { addMinutes, isBefore } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { Booking, BookingSource, BookingStatus, Prisma, SessionActorType, UserRole, Salon, Settings } from '@prisma/client';
+import { Booking, BookingSource, BookingStatus, Prisma, SessionActorType, UserRole } from '@prisma/client';
 import { BookingsRepo } from './bookings.repo';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
@@ -9,44 +9,8 @@ import { getZonedStartAndEnd } from '../../common/utils/date';
 import { commissionsService } from '../commissions/commissions.service';
 import { WalletService } from '../wallet/wallet.service';
 import { auditService } from '../audit/audit.service';
-import { SmsService } from '../notifications/sms.service';
-import { formatInTimeZone } from 'date-fns-tz';
-import { AnalyticsRepo } from '../analytics/analytics.repo';
 import { normalizePhone } from '../../common/utils/phone';
-
-type SalonWithSettings = Salon & { settings?: Settings | null };
-
-const sendBookingStatusSms = async (booking: Booking, salon: SalonWithSettings, customerPhone: string, customerName: string) => {
-  let templateIdStr: string | undefined;
-
-  if (booking.status === BookingStatus.CONFIRMED) {
-    templateIdStr = process.env.SMSIR_BOOKING_CONFIRMED_TEMPLATE_ID;
-  } else if (booking.status === BookingStatus.PENDING) {
-    templateIdStr = process.env.SMSIR_BOOKING_PENDING_TEMPLATE_ID;
-  } else if (booking.status === BookingStatus.CANCELED) {
-    templateIdStr = process.env.SMSIR_BOOKING_CANCELED_TEMPLATE_ID;
-  }
-
-  if (!templateIdStr) return;
-
-  const timeZone = salon.settings?.timeZone || 'UTC';
-  const dateStr = formatInTimeZone(booking.startAt, timeZone, 'yyyy/MM/dd');
-  const timeStr = formatInTimeZone(booking.startAt, timeZone, 'HH:mm');
-
-  const parameters = [
-    { name: 'CUSTOMER_NAME', value: customerName },
-    { name: 'SERVICE_NAME', value: booking.serviceNameSnapshot },
-    { name: 'DATE', value: dateStr },
-    { name: 'TIME', value: timeStr },
-    { name: 'SALON_NAME', value: salon.name },
-  ];
-
-  try {
-    await SmsService.sendTemplateSms(customerPhone, parseInt(templateIdStr, 10), parameters);
-  } catch (error) {
-    console.error('Failed to send booking SMS:', error);
-  }
-};
+import { AppEvents, eventEmitter } from '../../common/events/event-emitter';
 
 import {
   CancelBookingInput,
@@ -161,16 +125,12 @@ export const bookingsService = {
       isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
     });
 
-    // Sync analytics
-    AnalyticsRepo.syncAllStatsForBooking(result.booking.id).catch(console.error);
-
-    // Send SMS notification
-    await sendBookingStatusSms(
-      result.booking,
-      result.salon,
-      result.customerAccount.phone,
-      input.customer.fullName
-    );
+    // Emit event
+    eventEmitter.emit(AppEvents.BOOKING_CREATED, {
+      booking: result.booking,
+      salon: result.salon,
+      customerAccount: result.customerAccount,
+    });
 
     return result.booking;
   },
@@ -275,16 +235,12 @@ export const bookingsService = {
         isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
       });
 
-      // Sync analytics
-      AnalyticsRepo.syncAllStatsForBooking(result.booking.id).catch(console.error);
-
-      // Send SMS notification
-      await sendBookingStatusSms(
-        result.booking,
-        result.salon,
-        result.customerAccount.phone,
-        input.customer.fullName
-      );
+      // Emit event
+      eventEmitter.emit(AppEvents.BOOKING_CREATED, {
+        booking: result.booking,
+        salon: result.salon,
+        customerAccount: result.customerAccount,
+      });
 
       return result.booking;
     } catch (error: unknown) {
@@ -485,21 +441,7 @@ export const bookingsService = {
       }, {
         isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
       }).then(({ updatedBooking, oldBooking }) => {
-        // Sync analytics for both old and new dates/staff/services
-        AnalyticsRepo.syncSpecificStats(
-          oldBooking.salonId,
-          oldBooking.startAt,
-          oldBooking.staffId,
-          oldBooking.serviceId
-        ).catch(console.error);
-
-        AnalyticsRepo.syncSpecificStats(
-          updatedBooking.salonId,
-          updatedBooking.startAt,
-          updatedBooking.staffId,
-          updatedBooking.serviceId
-        ).catch(console.error);
-
+        eventEmitter.emit(AppEvents.BOOKING_UPDATED, { updatedBooking, oldBooking });
         return updatedBooking;
       });
     } catch (error: unknown) {
@@ -532,14 +474,11 @@ export const bookingsService = {
       }
     );
 
-    await sendBookingStatusSms(
-      updatedBooking,
-      updatedBooking.salon,
-      updatedBooking.customerAccount.phone,
-      updatedBooking.customerAccount.fullName || ''
-    );
-
-    AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
+    eventEmitter.emit(AppEvents.BOOKING_CONFIRMED, {
+      booking: updatedBooking,
+      salon: updatedBooking.salon,
+      customerAccount: updatedBooking.customerAccount,
+    });
 
     return updatedBooking;
   },
@@ -583,12 +522,11 @@ export const bookingsService = {
       return result;
     });
 
-    await sendBookingStatusSms(
-      updatedBooking,
-      updatedBooking.salon,
-      updatedBooking.customerAccount.phone,
-      updatedBooking.customerAccount.fullName || ''
-    );
+    eventEmitter.emit(AppEvents.BOOKING_CANCELED, {
+      booking: updatedBooking,
+      salon: updatedBooking.salon,
+      customerAccount: updatedBooking.customerAccount,
+    });
 
     await auditService.log(
       salonId,
@@ -598,8 +536,6 @@ export const bookingsService = {
       { old: booking, new: updatedBooking },
       context
     );
-
-    AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
 
     return updatedBooking;
   },
@@ -634,7 +570,7 @@ export const bookingsService = {
       context
     );
 
-    AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
+    eventEmitter.emit(AppEvents.BOOKING_COMPLETED, { booking: updatedBooking });
 
     // Trigger commission calculation
     await commissionsService.calculateCommission(bookingId).catch((err) => {
@@ -674,7 +610,7 @@ export const bookingsService = {
       context
     );
 
-    AnalyticsRepo.syncAllStatsForBooking(updatedBooking.id).catch(console.error);
+    eventEmitter.emit(AppEvents.BOOKING_NOSHOW, { booking: updatedBooking });
 
     return updatedBooking;
   },

@@ -41,9 +41,10 @@ const EnvSchema = z.object({
 
   // Database
   DATABASE_URL: z.string().min(1),
+  PRISMA_LOG_QUERIES: z.preprocess(toBool, z.boolean()).default(false),
 
   // Redis
-  REDIS_URL: z.string().min(1).optional(),
+  REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
 
   // Rate Limiting
   RATE_LIMIT_ENABLED: z.preprocess(toBool, z.boolean()).default(true),
@@ -81,6 +82,14 @@ const EnvSchema = z.object({
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENABLED: z.preprocess(toBool, z.boolean()).default(false),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(1.0),
+
+  // SmsIr
+  SMSIR_API_KEY: z.string().optional(),
+  SMSIR_LINE_NUMBER: z.coerce.number().optional(),
+  SMSIR_OTP_TEMPLATE_ID: z.coerce.number().optional(),
+  SMSIR_BOOKING_CONFIRMED_TEMPLATE_ID: z.coerce.number().optional(),
+  SMSIR_BOOKING_PENDING_TEMPLATE_ID: z.coerce.number().optional(),
+  SMSIR_BOOKING_CANCELED_TEMPLATE_ID: z.coerce.number().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

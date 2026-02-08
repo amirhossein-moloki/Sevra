@@ -27,6 +27,18 @@ export const verifyUserOtp = async (req: Request, res: Response) => {
   res.ok(result);
 };
 
+export const requestCustomerOtp = async (req: Request, res: Response) => {
+  const { phone } = req.body;
+  const result = await AuthService.requestCustomerOtp(phone);
+  res.ok(result);
+};
+
+export const verifyCustomerOtp = async (req: Request, res: Response) => {
+  const { phone, code } = req.body;
+  const result = await AuthService.verifyCustomerOtp(phone, code);
+  res.ok(result);
+};
+
 export const loginUserWithOtp = async (req: Request, res: Response) => {
   const { phone, salonId } = req.body;
   const result = await AuthService.loginUserWithOtp(phone, salonId);

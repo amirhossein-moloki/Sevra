@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import httpStatus from 'http-status';
 import { ApiFailure } from '../utils/response';
+import { env } from '../../config/env';
 
 type NormalizedError = {
   status: number;
@@ -115,7 +116,7 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
 
   // For 5xx errors in production, we don't want to leak implementation details
   const isServerError = normalized.status >= 500;
-  const includeDetails = !isServerError || process.env.NODE_ENV !== 'production';
+  const includeDetails = !isServerError || env.NODE_ENV !== 'production';
 
   const body: ApiFailure = {
     success: false,

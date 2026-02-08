@@ -81,7 +81,13 @@ export async function updateService(
 ) {
   try {
     const { salonId, serviceId } = req.params;
-    const updatedService = await serviceLogic.updateService(serviceId, salonId, req.body);
+    const updatedService = await serviceLogic.updateService(
+      serviceId,
+      salonId,
+      req.body,
+      (req as any).actor, // eslint-disable-line @typescript-eslint/no-explicit-any
+      { ip: req.ip, userAgent: req.headers['user-agent'] }
+    );
     res.ok(updatedService);
   } catch (error) {
     next(error);
@@ -98,7 +104,12 @@ export async function deleteService(
 ) {
   try {
     const { salonId, serviceId } = req.params;
-    await serviceLogic.deactivateService(serviceId, salonId);
+    await serviceLogic.deactivateService(
+      serviceId,
+      salonId,
+      (req as any).actor, // eslint-disable-line @typescript-eslint/no-explicit-any
+      { ip: req.ip, userAgent: req.headers['user-agent'] }
+    );
     res.noContent();
   } catch (error) {
     next(error);
