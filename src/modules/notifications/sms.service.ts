@@ -1,9 +1,9 @@
 import { Smsir } from 'smsir-js';
-import 'dotenv/config';
+import { env } from '../../config/env';
 
-const apiKey = process.env.SMSIR_API_KEY;
-const lineNumber = process.env.SMSIR_LINE_NUMBER;
-const smsir = apiKey && lineNumber ? new Smsir(apiKey, parseInt(lineNumber, 10)) : null;
+const apiKey = env.SMSIR_API_KEY;
+const lineNumber = env.SMSIR_LINE_NUMBER;
+const smsir = apiKey && lineNumber ? new Smsir(apiKey, lineNumber) : null;
 
 if (!smsir) {
   console.warn('SMSIR_API_KEY and SMSIR_LINE_NUMBER are not set. SMS service will run in MOCK mode.');

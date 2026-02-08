@@ -24,7 +24,7 @@ export const auditService = {
     actor: { id: string; actorType: SessionActorType },
     action: string,
     entity: { name: string; id: string },
-    data: { old?: any; new?: any },
+    data: { old?: any; new?: any }, // eslint-disable-line @typescript-eslint/no-explicit-any
     context?: { ip?: string; userAgent?: string }
   ) {
     return this.recordLog({

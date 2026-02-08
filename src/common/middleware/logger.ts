@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
+import { env } from '../../config/env';
 
 let loggerMiddleware: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-if (process.env.NODE_ENV === 'test') {
+if (env.NODE_ENV === 'test') {
   // In a test environment, export a mock middleware to avoid pino-http issues with Jest
   loggerMiddleware = (req: Request, res: Response, next: NextFunction) => next();
 } else {

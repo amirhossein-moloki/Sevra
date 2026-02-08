@@ -6,6 +6,7 @@ import { OtpPurpose, SessionActorType } from '@prisma/client';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { SmsService } from '../notifications/sms.service';
+import { env } from '../../config/env';
 
 const hashToken = (token: string) => {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -26,11 +27,11 @@ const generateNumericOtp = (length: number): string => {
 };
 
 const getOtpTemplateId = (): number => {
-  const templateId = process.env.SMSIR_OTP_TEMPLATE_ID;
+  const templateId = env.SMSIR_OTP_TEMPLATE_ID;
   if (!templateId) {
     throw new Error('SMSIR_OTP_TEMPLATE_ID must be set in the environment variables.');
   }
-  return parseInt(templateId, 10);
+  return templateId;
 };
 
 const createAndSaveSession = async (actorId: string, actorType: SessionActorType) => {
@@ -121,6 +122,41 @@ export const AuthService = {
     return { salons };
   },
 
+  async requestCustomerOtp(phone: string) {
+    const code = generateNumericOtp(OTP_LENGTH);
+    const codeHash = await argon2.hash(code);
+    const expiresAt = new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000);
+
+    await AuthRepository.createOtp({
+      phone,
+      purpose: OtpPurpose.LOGIN,
+      codeHash,
+      expiresAt,
+    });
+
+    await SmsService.sendTemplateSms(phone, getOtpTemplateId(), [{ name: 'CODE', value: code }]);
+
+    return { message: `OTP sent to ${phone}. It will expire in ${OTP_EXPIRATION_MINUTES} minutes.` };
+  },
+
+  async verifyCustomerOtp(phone: string, code: string) {
+    const otp = await AuthRepository.findRecentOtp(phone, OtpPurpose.LOGIN);
+
+    if (!otp) {
+      throw new AppError('Invalid or expired OTP.', httpStatus.UNAUTHORIZED);
+    }
+
+    const isCodeValid = await argon2.verify(otp.codeHash, code);
+
+    if (!isCodeValid) {
+      throw new AppError('Invalid or expired OTP.', httpStatus.UNAUTHORIZED);
+    }
+
+    await AuthRepository.consumeOtp(otp.id);
+
+    return { message: 'OTP verified successfully.' };
+  },
+
   async loginUserWithOtp(phone: string, salonId: string) {
     const verificationWindow = new Date(Date.now() - OTP_POST_VERIFICATION_WINDOW_MINUTES * 60 * 1000);
 
@@ -144,10 +180,16 @@ export const AuthService = {
   },
 
   async loginCustomer(phone: string) {
+    const verificationWindow = new Date(Date.now() - OTP_POST_VERIFICATION_WINDOW_MINUTES * 60 * 1000);
+
+    const recentVerifiedOtp = await AuthRepository.findRecentConsumedOtp(phone, OtpPurpose.LOGIN, verificationWindow);
+
+    if (!recentVerifiedOtp) {
+      throw new AppError('No recent OTP verification found. Please verify again.', httpStatus.UNAUTHORIZED);
+    }
+
     let customer = await AuthRepository.findCustomerByPhone(phone);
 
-    // For now, we'll create a customer if they don't exist.
-    // In a real scenario, this would be part of a signup/OTP flow.
     if (!customer) {
       customer = await AuthRepository.createCustomer(phone);
     }

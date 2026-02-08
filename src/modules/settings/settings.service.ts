@@ -1,3 +1,5 @@
+import { SessionActorType } from '@prisma/client';
+import { auditService } from '../audit/audit.service';
 import * as settingsRepo from './settings.repo';
 import { UpdateSettingsInput } from './settings.types';
 
@@ -15,6 +17,23 @@ export async function getSettings(salonId: string) {
   return settings;
 }
 
-export async function updateSettings(salonId: string, input: UpdateSettingsInput) {
-  return settingsRepo.updateBySalonId(salonId, input);
+export async function updateSettings(
+  salonId: string,
+  input: UpdateSettingsInput,
+  actor: { id: string; actorType: SessionActorType },
+  context?: { ip?: string; userAgent?: string }
+) {
+  const oldSettings = await settingsRepo.findBySalonId(salonId);
+  const updatedSettings = await settingsRepo.updateBySalonId(salonId, input);
+
+  await auditService.log(
+    salonId,
+    actor,
+    'SETTINGS_UPDATE',
+    { name: 'Settings', id: updatedSettings.id },
+    { old: oldSettings, new: updatedSettings },
+    context
+  );
+
+  return updatedSettings;
 }

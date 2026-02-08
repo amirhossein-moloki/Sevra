@@ -2,6 +2,7 @@ import rateLimit from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import { Request, Response, NextFunction } from 'express';
 import redis from '../../config/redis';
+import { env } from '../../config/env';
 
 const mockMiddleware = (req: Request, res: Response, next: NextFunction) => next();
 
@@ -23,7 +24,7 @@ const publicApiKeyGenerator = (req: Request): string => {
 /**
  * Rate limiter for authenticated (private) API routes.
  */
-export const privateApiRateLimiter = process.env.NODE_ENV === 'test'
+export const privateApiRateLimiter = env.NODE_ENV === 'test'
   ? mockMiddleware
   : rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -37,7 +38,7 @@ export const privateApiRateLimiter = process.env.NODE_ENV === 'test'
 /**
  * Rate limiter for general public API GET routes.
  */
-export const publicApiRateLimiter = process.env.NODE_ENV === 'test'
+export const publicApiRateLimiter = env.NODE_ENV === 'test'
   ? mockMiddleware
   : rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -52,7 +53,7 @@ export const publicApiRateLimiter = process.env.NODE_ENV === 'test'
 /**
  * Strictest rate limiter for the public booking creation endpoint.
  */
-export const publicBookingRateLimiter = process.env.NODE_ENV === 'test'
+export const publicBookingRateLimiter = env.NODE_ENV === 'test'
   ? mockMiddleware
   : rateLimit({
     windowMs: 15 * 60 * 1000,

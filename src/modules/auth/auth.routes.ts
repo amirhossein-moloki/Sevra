@@ -6,7 +6,9 @@ import {
   me,
   requestUserOtp,
   verifyUserOtp,
-  loginUserWithOtp
+  loginUserWithOtp,
+  requestCustomerOtp,
+  verifyCustomerOtp
 } from './auth.controller';
 import { validate } from '../../common/middleware/validate';
 import {
@@ -18,10 +20,11 @@ import {
 } from './auth.validators';
 import { authMiddleware } from '../../common/middleware/auth';
 import { publicApiRateLimiter } from '../../common/middleware/rateLimit';
+import { env } from '../../config/env';
 
 const router = Router();
 
-if (process.env.NODE_ENV !== 'test') {
+if (env.NODE_ENV !== 'test') {
   router.use(publicApiRateLimiter);
 }
 
@@ -29,6 +32,10 @@ if (process.env.NODE_ENV !== 'test') {
 router.post('/user/otp/request', validate(requestOtpSchema), requestUserOtp);
 router.post('/user/otp/verify', validate(verifyOtpSchema), verifyUserOtp);
 router.post('/user/login/otp', validate(loginWithOtpSchema), loginUserWithOtp);
+
+// --- Customer OTP Flow ---
+router.post('/customer/otp/request', validate(requestOtpSchema), requestCustomerOtp);
+router.post('/customer/otp/verify', validate(verifyOtpSchema), verifyCustomerOtp);
 
 // --- Classic Login ---
 router.post('/login', validate(loginSchema), login);

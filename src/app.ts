@@ -11,6 +11,10 @@ import routes from './routes';
 import { errorHandler } from './common/errors/errorHandler';
 import { responseMiddleware } from './common/middleware/response';
 import { env } from './config/env';
+import { initBookingEvents } from './modules/bookings/bookings.events';
+
+// Initialize Event Listeners
+initBookingEvents();
 
 if (env.SENTRY_ENABLED && env.SENTRY_DSN) {
   Sentry.init({
@@ -43,7 +47,7 @@ app.use((req, res, next) => {
 });
 
 // Disable pino-http logger in test environment to avoid Jest compatibility issues
-if (process.env.NODE_ENV !== 'test') {
+if (env.NODE_ENV !== 'test') {
   app.use(loggerMiddleware);
 }
 

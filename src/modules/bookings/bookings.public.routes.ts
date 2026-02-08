@@ -5,13 +5,14 @@ import { createPublicBookingSchema } from './bookings.validators';
 import { idempotencyMiddleware } from '../../common/middleware/idempotency';
 import { publicBookingRateLimiter } from '../../common/middleware/rateLimit';
 import { resolveSalonBySlug } from '../../common/middleware/resolveSalonBySlug';
+import { env } from '../../config/env';
 
 const router = Router({ mergeParams: true });
 
 // 1. Create Online Booking
 router.post(
   '/',
-  ...(process.env.NODE_ENV !== 'test' ? [publicBookingRateLimiter] : []),
+  ...(env.NODE_ENV !== 'test' ? [publicBookingRateLimiter] : []),
   resolveSalonBySlug,
   validate(createPublicBookingSchema),
   idempotencyMiddleware,

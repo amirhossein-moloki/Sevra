@@ -1,6 +1,5 @@
 import { Prisma, BookingPaymentState, PaymentStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
-import { PrismaClient } from '@prisma/client/extension';
 import { validateBookingTransition, validatePaymentTransition } from './payments.state';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';

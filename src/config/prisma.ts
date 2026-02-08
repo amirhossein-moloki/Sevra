@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import logger from './logger';
+import { env } from './env';
 
 declare global {
   // جلوگیری از ساخت چندباره PrismaClient در dev (hot reload)
@@ -7,7 +8,7 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = env.NODE_ENV === 'production';
 
 /**
  * Create a PrismaClient instance with sensible defaults.
@@ -15,8 +16,7 @@ const isProd = process.env.NODE_ENV === 'production';
  * - In prod: keep logs to warn/error unless you explicitly need more
  */
 function createPrismaClient() {
-  const enableQueryLogs =
-    !isProd && (process.env.PRISMA_LOG_QUERIES === 'true' || process.env.PRISMA_LOG_QUERIES === '1');
+  const enableQueryLogs = !isProd && env.PRISMA_LOG_QUERIES;
 
   const client = new PrismaClient({
     log: enableQueryLogs

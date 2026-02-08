@@ -1,3 +1,5 @@
+import { SessionActorType } from '@prisma/client';
+import { auditService } from '../audit/audit.service';
 import * as ServiceRepo from './services.repo';
 import { CreateServiceInput, UpdateServiceInput } from './services.types';
 import AppError from '../../common/errors/AppError';
@@ -48,10 +50,39 @@ export async function getServicesForSalon(salonId: string, isActive?: boolean) {
  * @returns The updated service.
  * @throws {HttpError} 404 if the service is not found in this salon.
  */
-export async function updateService(serviceId: string, salonId: string, data: UpdateServiceInput) {
+export async function updateService(
+  serviceId: string,
+  salonId: string,
+  data: UpdateServiceInput,
+  actor: { id: string; actorType: SessionActorType },
+  context?: { ip?: string; userAgent?: string }
+) {
   // First, ensure the service exists within this salon before updating.
-  await getServiceById(serviceId, salonId);
-  return ServiceRepo.updateService(serviceId, salonId, data);
+  const oldService = await getServiceById(serviceId, salonId);
+  const updatedService = await ServiceRepo.updateService(serviceId, salonId, data);
+
+  // Log if price changed
+  if (data.price !== undefined && data.price !== oldService.price) {
+    await auditService.log(
+      salonId,
+      actor,
+      'SERVICE_PRICE_UPDATE',
+      { name: 'Service', id: serviceId },
+      { old: oldService, new: updatedService },
+      context
+    );
+  } else {
+    await auditService.log(
+      salonId,
+      actor,
+      'SERVICE_UPDATE',
+      { name: 'Service', id: serviceId },
+      { old: oldService, new: updatedService },
+      context
+    );
+  }
+
+  return updatedService;
 }
 
 /**
@@ -61,8 +92,24 @@ export async function updateService(serviceId: string, salonId: string, data: Up
  * @returns The deactivated service.
  * @throws {HttpError} 404 if the service is not found in this salon.
  */
-export async function deactivateService(serviceId: string, salonId: string) {
+export async function deactivateService(
+  serviceId: string,
+  salonId: string,
+  actor: { id: string; actorType: SessionActorType },
+  context?: { ip?: string; userAgent?: string }
+) {
   // First, ensure the service exists within this salon before deactivating.
-  await getServiceById(serviceId, salonId);
-  return ServiceRepo.deactivateService(serviceId, salonId);
+  const oldService = await getServiceById(serviceId, salonId);
+  const updatedService = await ServiceRepo.deactivateService(serviceId, salonId);
+
+  await auditService.log(
+    salonId,
+    actor,
+    'SERVICE_DEACTIVATE',
+    { name: 'Service', id: serviceId },
+    { old: oldService, new: updatedService },
+    context
+  );
+
+  return updatedService;
 }
