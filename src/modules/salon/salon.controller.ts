@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { salonService } from './salon.service';
-import { createSalonSchema, updateSalonSchema } from './salon.validation';
+import { createSalonSchema, updateSalonSchema, listSalonsSchema } from './salon.validation';
 
 export const salonController = {
   async createSalon(req: Request, res: Response, next: NextFunction) {
@@ -25,7 +25,8 @@ export const salonController = {
 
   async getAllSalons(req: Request, res: Response, next: NextFunction) {
     try {
-      const salons = await salonService.getAllSalons();
+      const validatedQuery = listSalonsSchema.parse(req.query);
+      const salons = await salonService.getAllSalons(validatedQuery);
       res.ok(salons);
     } catch (error) {
       next(error);

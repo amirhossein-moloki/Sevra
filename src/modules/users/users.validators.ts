@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { UserRole } from '@prisma/client';
+import { baseFilterSchema } from '../../common/validators/query.validators';
 
 export const createUserSchema = z.object({
   body: z.object({
@@ -28,5 +29,15 @@ export const updateUserSchema = z.object({
   })
 });
 
+export const listUsersSchema = baseFilterSchema.extend({
+  role: z.nativeEnum(UserRole).optional(),
+  isPublic: z.preprocess(
+    (val) => (val === 'true' ? true : val === 'false' ? false : undefined),
+    z.boolean().optional()
+  ),
+  serviceId: z.string().optional(),
+});
+
 export type CreateUserInput = z.infer<typeof createUserSchema>['body'];
 export type UpdateUserInput = z.infer<typeof updateUserSchema>['body'];
+export type ListUsersQuery = z.infer<typeof listUsersSchema>;

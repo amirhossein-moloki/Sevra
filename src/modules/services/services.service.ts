@@ -2,6 +2,7 @@ import { SessionActorType } from '@prisma/client';
 import { auditService } from '../audit/audit.service';
 import * as ServiceRepo from './services.repo';
 import { CreateServiceInput, UpdateServiceInput } from './services.types';
+import { ListServicesQuery } from './services.validators';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 
@@ -35,11 +36,11 @@ export async function getServiceById(serviceId: string, salonId: string) {
 /**
  * Business logic to get all services for a salon.
  * @param salonId - The ID of the salon.
- * @param isActive - Optional filter for service status.
+ * @param query - Filtering and pagination criteria.
  * @returns A list of services.
  */
-export async function getServicesForSalon(salonId: string, isActive?: boolean) {
-  return ServiceRepo.findServicesBySalonId(salonId, { isActive });
+export async function getServicesForSalon(salonId: string, query: ListServicesQuery) {
+  return ServiceRepo.findServicesBySalonId(salonId, query);
 }
 
 /**

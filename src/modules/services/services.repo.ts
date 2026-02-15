@@ -1,6 +1,8 @@
 import { prisma } from '../../config/prisma';
 import { CreateServiceInput, UpdateServiceInput } from './services.types';
 import { Prisma } from '@prisma/client';
+import { ListServicesQuery } from './services.validators';
+import { getPaginationParams, formatPaginatedResult } from '../../common/utils/pagination';
 
 /**
  * Creates a new service for a given salon.
@@ -36,16 +38,64 @@ export async function findServiceById(serviceId: string, salonId: string) {
  * @param options - Optional filtering criteria (e.g., isActive).
  * @returns A list of services.
  */
-export async function findServicesBySalonId(salonId: string, options: { isActive?: boolean } = {}) {
-  return prisma.service.findMany({
-    where: {
-      salonId,
-      ...options,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+export async function findServicesBySalonId(salonId: string, query: ListServicesQuery) {
+  const {
+    page,
+    limit,
+    search,
+    isActive,
+    sortBy,
+    sortOrder,
+    minPrice,
+    maxPrice,
+    minDuration,
+    maxDuration,
+    staffId,
+  } = query;
+  const { skip, take } = getPaginationParams(page, limit);
+
+  const where: Prisma.ServiceWhereInput = {
+    salonId,
+    isActive: isActive !== undefined ? isActive : true,
+  };
+
+  if (search) {
+    where.name = { contains: search, mode: 'insensitive' };
+  }
+
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    where.price = {
+      gte: minPrice,
+      lte: maxPrice,
+    };
+  }
+
+  if (minDuration !== undefined || maxDuration !== undefined) {
+    where.durationMinutes = {
+      gte: minDuration,
+      lte: maxDuration,
+    };
+  }
+
+  if (staffId) {
+    where.userServices = {
+      some: {
+        userId: staffId,
+      },
+    };
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.service.findMany({
+      where,
+      skip,
+      take,
+      orderBy: sortBy ? { [sortBy]: sortOrder } : { createdAt: 'desc' },
+    }),
+    prisma.service.count({ where }),
+  ]);
+
+  return formatPaginatedResult(data, total, page, limit);
 }
 
 /**

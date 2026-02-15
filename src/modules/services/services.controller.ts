@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import * as serviceLogic from './services.service';
 import { CreateServiceInput, UpdateServiceInput } from './services.types';
+import { listServicesSchema } from './services.validators';
 import { Salon } from '@prisma/client';
 import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
@@ -37,16 +38,17 @@ export async function getServices(
 ) {
   try {
     const { salonId } = req.params;
-    const { isActive } = req.query;
 
     const targetSalonId = salonId || req.salon?.id;
     if (!targetSalonId) {
       return next(new AppError('Salon ID or slug is required.', httpStatus.BAD_REQUEST));
     }
 
+    const validatedQuery = listServicesSchema.parse(req.query);
+
     const services = await serviceLogic.getServicesForSalon(
       targetSalonId,
-      isActive === 'true'
+      validatedQuery
     );
     res.ok(services);
   } catch (error) {

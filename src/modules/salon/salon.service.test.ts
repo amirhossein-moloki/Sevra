@@ -184,4 +184,21 @@ describe('SalonService', () => {
       expect(salonRepository.softDelete).not.toHaveBeenCalled();
     });
   });
+
+  describe('getAllSalons', () => {
+    it('should call repository.findAll with query', async () => {
+      const query = { page: 1, limit: 10 };
+      const salons = {
+        data: [{ id: '1', name: 'Salon 1' }],
+        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      };
+
+      (salonRepository.findAll as jest.Mock).mockResolvedValue(salons);
+
+      const result = await salonService.getAllSalons(query as any);
+
+      expect(salonRepository.findAll).toHaveBeenCalledWith(query);
+      expect(result).toEqual(salons);
+    });
+  });
 });

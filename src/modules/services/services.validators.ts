@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { baseFilterSchema } from '../../common/validators/query.validators';
 
 // Base schema for common fields
 const serviceBaseSchema = {
@@ -29,6 +30,16 @@ export const updateServiceSchema = z.object({
     serviceId: z.string().cuid('Invalid service ID format'),
   }),
 });
+
+export const listServicesSchema = baseFilterSchema.extend({
+  minPrice: z.coerce.number().optional(),
+  maxPrice: z.coerce.number().optional(),
+  minDuration: z.coerce.number().optional(),
+  maxDuration: z.coerce.number().optional(),
+  staffId: z.string().optional(),
+});
+
+export type ListServicesQuery = z.infer<typeof listServicesSchema>;
 
 // Schema for URL parameters that include a serviceId
 export const serviceIdParamSchema = z.object({

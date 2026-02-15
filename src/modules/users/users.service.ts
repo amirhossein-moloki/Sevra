@@ -1,5 +1,5 @@
 import * as userRepo from './users.repo';
-import { CreateUserInput, UpdateUserInput } from './users.validators';
+import { CreateUserInput, UpdateUserInput, ListUsersQuery } from './users.validators';
 import AppError from '../../common/errors/AppError';
 import { SessionActorType } from '@prisma/client';
 import { auditService } from '../audit/audit.service';
@@ -30,8 +30,8 @@ export const createStaffMember = async (
   return newUser;
 };
 
-export const getStaffList = async (salonId: string) => {
-  const staff = await userRepo.listUsersBySalon(salonId);
+export const getStaffList = async (salonId: string, query: ListUsersQuery) => {
+  const staff = await userRepo.listUsersBySalon(salonId, query);
   return staff;
 };
 

@@ -2,6 +2,7 @@ import AppError from '../../common/errors/AppError';
 import httpStatus from 'http-status';
 import { salonRepository } from './salon.repository';
 import { CreateSalonInput, UpdateSalonInput } from './salon.types';
+import { ListSalonsQuery } from './salon.validation';
 
 export const salonService = {
   async createSalon(data: CreateSalonInput) {
@@ -20,8 +21,8 @@ export const salonService = {
     return salon;
   },
 
-  async getAllSalons() {
-    return salonRepository.findAll();
+  async getAllSalons(query: ListSalonsQuery) {
+    return salonRepository.findAll(query);
   },
 
   async updateSalon(id: string, data: UpdateSalonInput) {
