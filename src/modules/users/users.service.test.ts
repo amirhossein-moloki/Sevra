@@ -92,13 +92,17 @@ describe('UserService', () => {
   describe('getStaffList', () => {
     it('should return list of staff', async () => {
       const salonId = 'salon-1';
-      const mockStaff = [{ id: 'user-1', fullName: 'Staff 1' }];
+      const query = { page: 1, limit: 10 };
+      const mockStaff = {
+        data: [{ id: 'user-1', fullName: 'Staff 1' }],
+        meta: { total: 1, page: 1, limit: 10, totalPages: 1 },
+      };
       mockedUserRepo.listUsersBySalon.mockResolvedValue(mockStaff as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-      const result = await userService.getStaffList(salonId);
+      const result = await userService.getStaffList(salonId, query as any);
 
       expect(result).toEqual(mockStaff);
-      expect(mockedUserRepo.listUsersBySalon).toHaveBeenCalledWith(salonId);
+      expect(mockedUserRepo.listUsersBySalon).toHaveBeenCalledWith(salonId, query);
     });
   });
 

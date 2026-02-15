@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { baseFilterSchema } from '../../common/validators/query.validators';
 
 export const createSalonSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters long'),
@@ -24,3 +25,9 @@ export const updateSalonSchema = z.object({
     .optional(),
   isActive: z.boolean().optional(),
 });
+
+export const listSalonsSchema = baseFilterSchema.extend({
+  city: z.string().optional(),
+});
+
+export type ListSalonsQuery = z.infer<typeof listSalonsSchema>;

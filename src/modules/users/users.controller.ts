@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import * as userService from './users.service';
 import { AppRequest } from '../../types/express';
+import { listUsersSchema } from './users.validators';
 
 export const createUserController = async (
   req: AppRequest,
@@ -47,7 +48,8 @@ export const getUsersController = async (
 ) => {
   try {
     const { salonId } = req.params;
-    const staff = await userService.getStaffList(salonId);
+    const validatedQuery = listUsersSchema.parse(req.query);
+    const staff = await userService.getStaffList(salonId, validatedQuery);
     res.ok(staff);
   } catch (error) {
     next(error);
