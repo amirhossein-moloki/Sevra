@@ -131,7 +131,7 @@ components:
           type: string
         role:
           type: string
-          enum: [MANAGER, RECEPTIONIST, STAFF]
+          enum: [PLATFORM_ADMIN, MANAGER, RECEPTIONIST, STAFF]
         isActive:
           type: boolean
 
@@ -1587,6 +1587,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+
+  /platform/cms/pages/copy-all:
+    post:
+      summary: Copy all pages from one salon to another
+      tags:
+        - Platform
+        - CMS
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sourceSalonId
+                - targetSalonId
+              properties:
+                sourceSalonId:
+                  type: string
+                targetSalonId:
+                  type: string
+      responses:
+        '200':
+          description: Pages copied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Slug conflict in target salon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /platform/cms/pages/copy:
+    post:
+      summary: Copy a specific page to another salon
+      tags:
+        - Platform
+        - CMS
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sourcePageId
+                - targetSalonId
+              properties:
+                sourcePageId:
+                  type: string
+                targetSalonId:
+                  type: string
+      responses:
+        '200':
+          description: Page copied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Slug conflict in target salon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/me:
     get:

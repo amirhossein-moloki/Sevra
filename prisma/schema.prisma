@@ -12,6 +12,7 @@ generator client {
 // =======================
 
 enum UserRole {
+  PLATFORM_ADMIN
   MANAGER
   RECEPTIONIST
   STAFF

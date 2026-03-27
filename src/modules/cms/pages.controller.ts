@@ -57,3 +57,15 @@ export async function getPage(
   const page = await PagesService.getPage(salonId, pageId);
   res.ok(page);
 }
+
+export async function copyAllPages(req: Request, res: Response) {
+  const { sourceSalonId, targetSalonId } = req.body;
+  const result = await PagesService.copyAllPages(sourceSalonId, targetSalonId);
+  res.ok(result);
+}
+
+export async function copyPage(req: Request, res: Response) {
+  const { sourcePageId, targetSalonId } = req.body;
+  const result = await PagesService.copyPage(sourcePageId, targetSalonId);
+  res.ok(result);
+}

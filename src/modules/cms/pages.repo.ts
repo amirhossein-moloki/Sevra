@@ -37,6 +37,83 @@ export async function createPage(salonId: string, data: CreatePageData) {
   });
 }
 
+export async function copyPage(sourcePageId: string, targetSalonId: string) {
+  const sourcePage = await prisma.salonPage.findUnique({
+    where: { id: sourcePageId },
+    include: { sections: true },
+  });
+
+  if (!sourcePage) throw new Error('Source page not found');
+
+  const {
+    id: _id,
+    salonId: _salonId,
+    createdAt: _c,
+    updatedAt: _u,
+    sections,
+    ...pageData
+  } = sourcePage;
+
+  return prisma.salonPage.create({
+    data: {
+      ...pageData,
+      salonId: targetSalonId,
+      sections: {
+        create: sections.map(
+          ({
+            id: _sid,
+            pageId: _pid,
+            createdAt: _sc,
+            updatedAt: _su,
+            ...sectionData
+          }) => sectionData
+        ),
+      },
+    },
+    include: {
+      sections: { orderBy: { sortOrder: 'asc' } },
+    },
+  });
+}
+
+export async function copyAllPages(sourceSalonId: string, targetSalonId: string) {
+  const sourcePages = await prisma.salonPage.findMany({
+    where: { salonId: sourceSalonId },
+    include: { sections: true },
+  });
+
+  const creations = sourcePages.map((page) => {
+    const {
+      id: _id,
+      salonId: _salonId,
+      createdAt: _c,
+      updatedAt: _u,
+      sections,
+      ...pageData
+    } = page;
+
+    return prisma.salonPage.create({
+      data: {
+        ...pageData,
+        salonId: targetSalonId,
+        sections: {
+          create: sections.map(
+            ({
+              id: _sid,
+              pageId: _pid,
+              createdAt: _sc,
+              updatedAt: _su,
+              ...sectionData
+            }) => sectionData
+          ),
+        },
+      },
+    });
+  });
+
+  return prisma.$transaction(creations);
+}
+
 export async function findPageById(salonId: string, pageId: string) {
   return prisma.salonPage.findFirst({
     where: { id: pageId, salonId },
